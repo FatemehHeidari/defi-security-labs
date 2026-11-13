@@ -1,0 +1,1678 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>DeFi Risk Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a risk engineer's bench. Sticky lab tabs; each lab = parameter rail on the left, monitors + readouts + charts on the right. */
+:root {
+  --bg: #EDF1EF; --surface: #FFFFFF; --sunk: #F4F7F5; --ink: #122420; --muted: #56665F; --faint: #85948E; --line: #D2DCD8;
+  --accent: #0A6C8A; --accent-ink: #FFFFFF; --accent-soft: #DCEEF3;
+  --warm: #C2541A; --violet: #6552B0;
+  --ok: #1F7346; --ok-soft: #E0F1E6; --warn: #8F5B00; --warn-soft: #FAEDD2; --crit: #B42318; --crit-soft: #FBE3DF;
+  --font-display: 'IBM Plex Sans Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0C1311; --surface: #141D1A; --sunk: #101815; --ink: #E0E9E5; --muted: #9AA9A3; --faint: #6F7E78; --line: #27342F;
+  --accent: #5CB8D6; --accent-ink: #06222B; --accent-soft: #12313B;
+  --warm: #F08A4B; --violet: #AC9EEC;
+  --ok: #5CC48A; --ok-soft: #12291D; --warn: #E6AE4A; --warn-soft: #2D2310; --crit: #F2867B; --crit-soft: #351714;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0C1311; --surface: #141D1A; --sunk: #101815; --ink: #E0E9E5; --muted: #9AA9A3; --faint: #6F7E78; --line: #27342F;
+  --accent: #5CB8D6; --accent-ink: #06222B; --accent-soft: #12313B;
+  --warm: #F08A4B; --violet: #AC9EEC;
+  --ok: #5CC48A; --ok-soft: #12291D; --warn: #E6AE4A; --warn-soft: #2D2310; --crit: #F2867B; --crit-soft: #351714;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.top .wrap { padding-block: 28px 18px; display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 24px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 34px; line-height: 1.05; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.tagline { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
+.legend-key { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend-key span { display: inline-flex; align-items: center; gap: 6px; }
+nav.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+nav.tabs .wrap { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs .wrap::-webkit-scrollbar { display: none; }
+.tab { appearance: none; border: 0; background: none; color: var(--muted); font: 500 14px/1 var(--font-body); padding: 14px 12px 12px; border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; display: inline-flex; gap: 8px; align-items: center; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.tab .dot.ok { background: var(--ok); } .tab .dot.warn { background: var(--warn); } .tab .dot.crit { background: var(--crit); }
+.tab:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+main .wrap { padding-block: 22px 40px; }
+.lab-head { display: grid; gap: 10px; margin-bottom: 16px; }
+.lab-head h2 { font-family: var(--font-display); font-weight: 600; font-size: 26px; margin: 0; line-height: 1.1; }
+.lab-head p { margin: 0; color: var(--muted); max-width: 72ch; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.presets .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); margin-right: 4px; }
+.chip { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 500 13px/1 var(--font-body); padding: 8px 11px; border-radius: 999px; cursor: pointer; }
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.preset-note { font-size: 14px; color: var(--ink); background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; max-width: 80ch; }
+.preset-note b { font-weight: 600; }
+.lab-grid { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
+@media (min-width: 960px) { .lab-grid { grid-template-columns: 318px minmax(0, 1fr); } .params { position: sticky; top: 64px; max-height: calc(100vh - 80px); overflow-y: auto; } }
+.params { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px 16px 14px; }
+.grp { font-family: var(--font-display); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin: 16px 0 6px; }
+.ctl { padding: 7px 0; }
+.ctl-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.ctl label, .ctl .lbl { font-size: 13.5px; color: var(--ink); }
+.ctl output { font-family: var(--font-mono); font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ctl input[type=range] { width: 100%; margin: 6px 0 0; accent-color: var(--accent); }
+.seg { display: flex; margin-top: 6px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { flex: 1; appearance: none; border: 0; background: var(--sunk); color: var(--muted); font: 500 13px/1 var(--font-body); padding: 9px 6px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.btn { appearance: none; border: 1px solid var(--line); background: var(--sunk); color: var(--ink); font: 500 13px/1 var(--font-body); padding: 9px 12px; border-radius: 8px; cursor: pointer; margin-top: 8px; }
+.btn:hover { border-color: var(--accent); }
+.outputs { display: grid; gap: 16px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.panel h3 { font-family: var(--font-display); font-weight: 600; font-size: 16px; margin: 0 0 10px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.panel h3 small { font-family: var(--font-body); font-weight: 400; font-size: 12.5px; color: var(--muted); }
+.mon { display: grid; gap: 0; }
+.mon-row { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
+.mon-row:first-child { border-top: 0; padding-top: 2px; }
+.pill { font: 600 11px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.06em; padding: 5px 0; border-radius: 4px; text-align: center; margin-top: 2px; }
+.ok .pill { background: var(--ok-soft); color: var(--ok); }
+.warn .pill { background: var(--warn-soft); color: var(--warn); }
+.crit .pill { background: var(--crit-soft); color: var(--crit); }
+.mon-row .t { font-weight: 600; font-size: 14px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.mon-row .d { font-size: 14px; color: var(--muted); margin: 2px 0 0; }
+.ref { font: 500 11px/1 var(--font-mono); color: var(--violet); border: 1px solid currentColor; border-radius: 4px; padding: 3px 5px; white-space: nowrap; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.m { background: var(--surface); padding: 12px 14px; min-width: 0; box-shadow: 1px 0 0 var(--line), 0 1px 0 var(--line); }
+.m .l { font-size: 12px; color: var(--muted); }
+.m .v { font-family: var(--font-mono); font-weight: 500; font-size: 20px; font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
+.m .s { font-size: 12px; color: var(--faint); margin-top: 2px; }
+.m .v.bad { color: var(--crit); } .m .v.good { color: var(--ok); }
+.charts { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 1180px) { .charts.two { grid-template-columns: 1fr 1fr; } }
+canvas.chart { width: 100%; height: 230px; display: block; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.sw.dash { background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px) !important; height: 2px; }
+.sw.band { height: 10px; width: 12px; border-radius: 2px; }
+details.notes { font-size: 14px; color: var(--muted); }
+details.notes summary { cursor: pointer; color: var(--ink); font-weight: 500; }
+details.notes ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.tbl-wrap { overflow-x: auto; }
+table.log { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+table.log th, table.log td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+table.log th { font-weight: 500; color: var(--muted); font-size: 12px; border-top: 0; }
+table.log td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+table.log th.n { text-align: right; }
+.tag { font: 600 11px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 6px; border-radius: 4px; }
+.tag.pass { background: var(--ok-soft); color: var(--ok); } .tag.fail { background: var(--crit-soft); color: var(--crit); }
+code { font-family: var(--font-mono); font-size: 0.92em; background: var(--sunk); padding: 1px 4px; border-radius: 4px; }
+.head-right { display: grid; gap: 10px; justify-items: end; }
+.viewsw { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.viewsw .seg { margin-top: 0; min-width: 230px; }
+.viewsw .seg button { padding: 9px 12px; }
+.you-only { display: none; }
+body.view-users .you-only { display: block; }
+body.view-users .legend-key { visibility: hidden; }
+.you-box { background: var(--accent-soft); border-radius: 8px; padding: 2px 12px 8px; margin: 10px 0 2px; }
+.you-box .grp { margin-top: 10px; }
+.roles { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.story { display: grid; gap: 12px; }
+.who { margin: 0; color: var(--muted); max-width: 75ch; }
+.result { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.result .big { font-family: var(--font-mono); font-size: 30px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.result .pp { font-family: var(--font-mono); font-size: 16px; }
+.gain { color: var(--ok); } .loss { color: var(--crit); }
+table.ledger { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.ledger td { padding: 7px 0; border-top: 1px solid var(--line); vertical-align: top; }
+table.ledger td.n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 14px; }
+table.ledger tr.base td { border-top: 0; color: var(--muted); }
+table.ledger tr.total td { font-weight: 600; border-top: 2px solid var(--ink); }
+table.ledger tr.info td { color: var(--faint); font-size: 13px; }
+.verdict { margin: 0; padding: 10px 12px; background: var(--sunk); border-radius: 8px; max-width: 80ch; }
+table.everyone { min-width: 640px; }
+table.everyone tr.sel td { background: var(--accent-soft); }
+.rolebtn { appearance: none; border: 0; background: none; padding: 0; font: 500 13.5px/1.3 var(--font-body); color: var(--accent); cursor: pointer; text-align: left; }
+.rolebtn:hover { text-decoration: underline; }
+td.ret { display: flex; align-items: center; gap: 10px; min-width: 200px; }
+td.ret .n { font-family: var(--font-mono); font-size: 13px; min-width: 64px; text-align: right; }
+.bar { position: relative; height: 10px; background: var(--sunk); border-radius: 2px; flex: 1; min-width: 110px; display: block; }
+.bar::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
+.bar i { position: absolute; top: 0; bottom: 0; }
+.bar i.pos { left: 50%; background: var(--ok); border-radius: 0 2px 2px 0; }
+.bar i.neg { right: 50%; background: var(--crit); border-radius: 2px 0 0 2px; }
+@media (max-width: 720px) { .head-right { justify-items: start; } }
+footer .wrap { padding-block: 0 32px; color: var(--faint); font-size: 13px; }
+@media (max-width: 520px) { h1 { font-size: 28px; } .mon-row { grid-template-columns: 1fr; } .pill { justify-self: start; padding: 5px 8px; } .m .v { font-size: 18px; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<header class="top"><div class="wrap">
+  <div>
+    <h1>DeFi Risk <span>Lab</span></h1>
+    <p class="tagline">Pick a protocol, set its parameters, stress it, and read the monitors the way a risk engineer would. Every number is computed live from the model in that lab's notes.</p>
+  </div>
+  <div class="head-right">
+  <div class="viewsw" role="group" aria-label="View"><span>View as</span><div class="seg"><button type="button" id="view-eng" aria-pressed="true">Risk engineer</button><button type="button" id="view-users" aria-pressed="false">Users</button></div></div>
+  <div class="legend-key" aria-label="Monitor states">
+    <span><i class="sw" style="background:var(--ok)"></i>OK</span>
+    <span><i class="sw" style="background:var(--warn)"></i>Warning</span>
+    <span><i class="sw" style="background:var(--crit)"></i>Critical</span>
+  </div>
+  </div>
+</div></header>
+<nav class="tabs" aria-label="Labs"><div class="wrap" role="tablist" id="tabs"></div></nav>
+<main><div class="wrap" id="labs"></div></main>
+<footer><div class="wrap">Practice models, simplified on purpose. Each lab lists what it leaves out.</div></footer>
+
+<script>
+const Sim = (() => {
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function gauss(r) {
+    let u = 0, v = 0;
+    while (u === 0) u = r();
+    while (v === 0) v = r();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  // ---------------- Lending ----------------
+  function borrowRate(U, m) {
+    if (U <= m.kink) return m.base + m.slope1 * (U / m.kink);
+    return m.base + m.slope1 + m.slope2 * ((U - m.kink) / (1 - m.kink));
+  }
+
+  function makeBorrowers(p) {
+    const r = rng(p.seed || 11);
+    const n = p.n || 300;
+    const sizes = [];
+    for (let i = 0; i < n; i++) sizes.push(Math.pow(r(), -0.55));
+    const sum = sizes.reduce((a, b) => a + b, 0);
+    const whaleUSD = p.totalCollUSD * p.whaleShare;
+    const restUSD = p.totalCollUSD - whaleUSD;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      let ltv = p.avgLTV + p.spread * gauss(r);
+      ltv = Math.min(p.maxLTV, Math.max(0.05, ltv));
+      out.push({ usd: (restUSD * sizes[i]) / sum, ltv, whale: false });
+    }
+    if (whaleUSD > 0) out.push({ usd: whaleUSD, ltv: Math.max(0.05, p.maxLTV - 0.02), whale: true });
+    return out;
+  }
+
+  // One crash run. capacity = collateral value liquidators can sell before slippage eats the bonus.
+  function runLending(p, shock, capacity) {
+    const P0 = p.price0, P1 = P0 * (1 - shock);
+    const LT = p.lt, b = p.bonus, CF = p.closeFactor;
+    const pos = p.borrowers.map(x => ({ coll: x.usd / P0, debt: x.usd * x.ltv, debt0: x.usd * x.ltv, whale: x.whale, liq: false }));
+    pos.sort((a, c) => (c.debt / c.coll) - (a.debt / a.coll)); // highest liquidation price first
+    const steps = [];
+    if (p.mode === 'gap' || shock <= 0) steps.push(P1);
+    else { const k = p.steps || 60; for (let i = 1; i <= k; i++) steps.push(P0 + (P1 - P0) * (i / k)); }
+    let used = 0, repaid = 0, exhausted = false;
+    for (const price of steps) {
+      for (const q of pos) {
+        if (q.coll * price * LT >= q.debt) continue;
+        let rounds = 0;
+        while (q.debt > 1e-6 && q.coll > 1e-12 && q.coll * price * LT < q.debt && rounds < 400) {
+          rounds++;
+          let R = Math.min(CF * q.debt, (q.coll * price) / (1 + b));
+          let val = R * (1 + b);
+          if (used + val > capacity) {
+            val = Math.max(0, capacity - used); R = val / (1 + b); exhausted = true;
+          }
+          if (R <= 1e-9) break;
+          q.debt -= R; q.coll -= val / price; used += val; repaid += R; q.liq = true;
+          if (exhausted) break;
+        }
+      }
+    }
+    let badDebt = 0, stuckCount = 0, stuckDebt = 0, whaleBad = 0;
+    for (const q of pos) {
+      const bd = Math.max(0, q.debt - q.coll * P1);
+      badDebt += bd;
+      if (q.whale) whaleBad += bd;
+      if (q.coll * P1 * LT < q.debt - 1e-6) { stuckCount++; stuckDebt += q.debt; }
+    }
+    return { badDebt, seized: used, repaid, stuckCount, stuckDebt, exhausted, whaleBad, P1, positions: pos };
+  }
+
+  function lending(p) {
+    const borrowers = makeBorrowers(p);
+    const q = Object.assign({}, p, { borrowers });
+    const totalBorrowed = borrowers.reduce((s, x) => s + x.usd * x.ltv, 0);
+    const P1 = p.price0 * (1 - p.shock);
+    let liqCount = 0, liqDebt = 0;
+    for (const x of borrowers) {
+      const coll = x.usd / p.price0, debt = x.usd * x.ltv;
+      if (coll * P1 * p.lt < debt) { liqCount++; liqDebt += debt; }
+    }
+    const capacity = p.bonus * p.dexDepth;
+    const demand = runLending(q, p.shock, Infinity);
+    const real = runLending(q, p.shock, capacity);
+    const slipAll = demand.seized / (p.dexDepth + demand.seized);
+    const U = totalBorrowed / p.supply;
+    const bRate = borrowRate(Math.min(U, 1), p.rates);
+    const sRate = bRate * Math.min(U, 1) * (1 - p.rates.reserve);
+    const curve = [];
+    const qs = Object.assign({}, q, { steps: 30 });
+    for (let s = 0; s <= 0.8001; s += 0.02) curve.push([s, runLending(qs, s, capacity).badDebt]);
+    const whale = borrowers.find(x => x.whale);
+    return {
+      n: borrowers.length, totalBorrowed, totalColl: p.totalCollUSD, liqCount, liqDebt, capacity,
+      demand: demand.seized, slipAll, seized: real.seized, badDebt: real.badDebt, stuckCount: real.stuckCount,
+      stuckDebt: real.stuckDebt, exhausted: real.exhausted, whaleBad: real.whaleBad, whaleShare: p.whaleShare,
+      whaleLTV: whale ? whale.ltv : 0,
+      U, bRate, sRate, curve, P1,
+      paramLtvOk: p.maxLTV < p.lt, paramBonusOk: p.lt * (1 + p.bonus) < 1,
+      cushion: 1 - p.maxLTV / p.lt
+    };
+  }
+
+  // ---------------- AMM ----------------
+  function cpSell(x, y, dx, fee) { const d = dx * (1 - fee); return (y * d) / (x + d); }
+  function cpBuy(x, y, dy, fee) { const d = dy * (1 - fee); return (x * d) / (y + d); }
+
+  function clLiquidity(capital, P, Pa, Pb) {
+    const sp = Math.sqrt(P), sa = Math.sqrt(Pa), sb = Math.sqrt(Pb);
+    const perL = (1 / sp - 1 / sb) * P + (sp - sa);
+    return capital / perL;
+  }
+  function clSell(L, P, Pa, dx, fee) {
+    const sp = Math.sqrt(P), sa = Math.sqrt(Pa);
+    const d = dx * (1 - fee);
+    const maxIn = L * (1 / sa - 1 / sp);
+    if (d >= maxIn) return { out: L * (sp - sa), filledIn: maxIn / (1 - fee), exhausted: true, newP: Pa };
+    const spNew = (L * sp) / (L + d * sp);
+    return { out: L * (sp - spNew), filledIn: dx, exhausted: false, newP: spNew * spNew };
+  }
+
+  function amm(p) {
+    const P = p.price, fee = p.fee;
+    const x = p.tvl / 2 / P, y = p.tvl / 2;
+    const dx = p.trade / P;
+    const cpOut = cpSell(x, y, dx, fee);
+    const cpNewP = (y - cpOut) / (x + dx * (1 - fee));
+    const cpSlip = 1 - cpOut / (dx * P);
+    const Pa = P * (1 - p.range), Pb = P * (1 + p.range);
+    const L = clLiquidity(p.tvl, P, Pa, Pb);
+    const cl = clSell(L, P, Pa, dx, fee);
+    const clSlip = cl.exhausted ? 1 - cl.out / (dx * P) : 1 - cl.out / (dx * P);
+    const efficiency = (2 * L * Math.sqrt(P)) / p.tvl;
+    const curveCP = [], curveCL = [];
+    for (let i = 0; i <= 60; i++) {
+      const v = Math.pow(10, 3 + (i / 60) * 4); // $1k .. $10M
+      const ddx = v / P;
+      curveCP.push([v, (1 - cpSell(x, y, ddx, fee) / (ddx * P)) * 100]);
+      const c = clSell(L, P, Pa, ddx, fee);
+      curveCL.push([v, (1 - c.out / (ddx * P)) * 100]);
+    }
+    return { x, y, cpOut, cpNewP, cpSlip, L, cl, clSlip, Pa, Pb, efficiency, curveCP, curveCL };
+  }
+
+  function sandwich(p) {
+    const fee = p.fee, P = p.price;
+    const x0 = p.tvl / 2 / P, y0 = p.tvl / 2;
+    const U = p.victim;
+    const expected = cpBuy(x0, y0, U, fee);
+    const minOut = expected * (1 - p.tol);
+    function attempt(A) {
+      const xa = cpBuy(x0, y0, A, fee);
+      const x1 = x0 - xa, y1 = y0 + A;
+      const ov = cpBuy(x1, y1, U, fee);
+      if (ov < minOut) return null;
+      const x2 = x1 - ov, y2 = y1 + U;
+      const proceeds = cpSell(x2, y2, xa, fee);
+      return { A, profit: proceeds - A, victimOut: ov };
+    }
+    let lo = 0, hi = y0 * 50;
+    for (let i = 0; i < 80; i++) { const mid = (lo + hi) / 2; if (attempt(mid)) lo = mid; else hi = mid; }
+    const maxA = lo;
+    let best = { A: 0, profit: 0, victimOut: expected };
+    for (let i = 1; i <= 200; i++) {
+      const r = attempt((maxA * i) / 200);
+      if (r && r.profit > best.profit) best = r;
+    }
+    const victimLossTokens = expected - best.victimOut;
+    return {
+      expected, minOut, maxA, best, profitable: best.profit > 1,
+      victimLossUSD: victimLossTokens * (U / expected), victimLossPct: victimLossTokens / expected
+    };
+  }
+
+  // ---------------- Perps (vAMM, in the style of Perpetual Protocol v1) ----------------
+  function traderValue(Q, B, n) { return (Q * n) / (B + n); } // value traders get if the net position closes
+  function perps(p) {
+    const P0 = p.price0, B0 = p.depth, Q0 = P0 * B0, k = Q0 * B0;
+    const n = p.skew;
+    const B = B0 - n, Q = k / B, mark = Q / B;
+    const index = P0 * (1 + p.oracleMove);
+    const premium = mark - index;
+    const spread = premium / index;
+    const longs = (p.oi + n) / 2, shorts = (p.oi - n) / 2;
+    const perHour = premium / 24;
+    const longsPayHr = longs * perHour, shortsGetHr = shorts * perHour, fundHr = n * perHour;
+    const trigger = Math.abs(spread) > 0.10;
+    const target = mark > index ? index * 1.05 : index * 0.95;
+    let Qr = B * Math.sqrt(mark * target), Br = B * Math.sqrt(mark / target);
+    let fallback = false;
+    if (n < 0 && Br <= Math.abs(n)) { Qr = B * target; Br = B; fallback = true; }
+    const repegCost = traderValue(Qr, Br, n) - traderValue(Q, B, n);
+    const kCutCost = traderValue(0.99 * Qr, 0.99 * Br, n) - traderValue(Q, B, n);
+    const budget = p.fund * p.budgetShare;
+    const s = p.kScale;
+    const kCost = traderValue(s * Q, s * B, n) - traderValue(Q, B, n);
+    const kb = s * s * k;
+    const slip1 = (() => { const Bn = B - 1; const cost = k / Bn - Q; return cost / mark - 1; })();
+    const slip1k = (() => { const Bs = s * B, Qs = s * Q; const cost = kb / (Bs - 1) - Qs; return cost / mark - 1; })();
+    const mevPct = trigger ? Math.abs((mark > index ? Math.min(mark, index * 1.10) - target : Math.max(mark, index * 0.90) - target)) / (mark > index ? Math.min(mark, index * 1.10) : Math.max(mark, index * 0.90)) : 0;
+    return {
+      B, Q, mark, index, premium, spread, longs, shorts, longsPayHr, shortsGetHr, fundHr, fundDay: fundHr * 24,
+      trigger, target, repegCost, kCutCost, budget, fallback, kCost, slip1, slip1k, mevPct
+    };
+  }
+
+  function perpCrash(p) {
+    const r = rng(p.seed || 5);
+    const N = 200, P0 = p.price0, P1 = P0 * (1 - p.crash);
+    const MM = p.mm, fee = p.liqFee;
+    const unit = p.oi / N; // contracts per trader
+    let bad = 0, toFund = 0, toLiq = 0, liquidated = 0, underwater = 0;
+    for (let i = 0; i < N; i++) {
+      const isLong = r() < p.longShare;
+      const lev = Math.max(1, Math.min(20, 1 + r() * 2 * (p.avgLev - 1)));
+      const notional0 = unit * P0, margin = notional0 / lev;
+      const dir = isLong ? 1 : -1;
+      const liqPrice = isLong ? (unit * P0 - margin) / (unit * (1 - MM)) : (margin + unit * P0) / (unit * (1 + MM));
+      const hit = isLong ? P1 <= liqPrice : P1 >= liqPrice;
+      if (!hit) continue;
+      liquidated++;
+      const px = p.mode === 'gap' ? P1 : liqPrice;
+      const equity = margin + dir * unit * (px - P0);
+      const f = unit * px * fee;
+      if (equity < 0) { bad += -equity; underwater++; continue; }
+      const liqCut = Math.min(equity, f / 2);
+      toLiq += liqCut; toFund += equity - liqCut;
+    }
+    const blocks = Math.log(1 - p.crash) / Math.log(1 - 0.02);
+    return { bad, toFund, toLiq, liquidated, underwater, net: toFund - bad, blocks, N };
+  }
+
+  // ---------------- Liquid staking ----------------
+  function lst(p) {
+    const rate = Math.pow(1 + p.apr / 365, p.days);
+    const d = p.discount;
+    const marketRate = rate * (1 - d);
+    const arbReturn = d / (1 - d);
+    const arbAnnual = arbReturn * (365 / Math.max(1, p.wait));
+    const collSUI = p.collUnits * rate;
+    const debt = collSUI * p.ltv;
+    const hfRedeem = (collSUI * p.lt) / debt;
+    const hfMarket = (collSUI * (1 - d) * p.lt) / debt;
+    const oracleToMarket = p.oracle === 'market' ? 1 : (1 - d);
+    const liqProfit = (1 + p.bonus) * oracleToMarket * (1 - p.dexSlip) - 1;
+    const loops = p.loops;
+    const lev = (1 - Math.pow(p.ltv, loops + 1)) / (1 - p.ltv);
+    const leff = (lev - 1) / lev;
+    const netApr = p.apr * lev - p.borrowApr * (lev - 1);
+    const loopHfMarket = ((1 - d) * p.lt) / leff;
+    const loopHfRedeem = p.lt / leff;
+    const loopLiqDiscount = 1 - leff / p.lt;
+    return { rate, marketRate, arbReturn, arbAnnual, hfRedeem, hfMarket, liqProfit, lev, leff, netApr, loopHfMarket, loopHfRedeem, loopLiqDiscount };
+  }
+
+  // ---------------- Oracles ----------------
+  function oracle(p) {
+    const r = rng(p.seed || 3);
+    const T = 240;
+    const truth = [];
+    let price = p.price0;
+    for (let t = 0; t <= T; t++) {
+      if (t > 0) {
+        let ret = p.vol * gauss(r);
+        if (t > p.crashAt && t <= p.crashAt + p.crashLen) ret += Math.log(1 - p.crash) / p.crashLen;
+        price = price * Math.exp(ret);
+      }
+      truth.push(price);
+    }
+    const reported = [], age = [], conf = [];
+    let last = truth[0], lastT = 0, volEma = p.vol;
+    for (let t = 0; t <= T; t++) {
+      if (t > 0) volEma = 0.75 * volEma + 0.25 * Math.abs(Math.log(truth[t] / truth[t - 1]));
+      const out = p.outageLen > 0 && t >= p.outageAt && t < p.outageAt + p.outageLen;
+      if (!out) {
+        const dev = Math.abs(truth[t] - last) / last;
+        if (t === 0 || dev >= p.deviation || t - lastT >= p.heartbeat) { last = truth[t]; lastT = t; }
+      }
+      reported.push(last); age.push(t - lastT);
+      conf.push(0.0005 + 3 * volEma);
+    }
+    const twap = [];
+    for (let t = 0; t <= T; t++) {
+      const a = Math.max(0, t - p.twap + 1);
+      let s = 0; for (let u = a; u <= t; u++) s += reported[u];
+      twap.push(s / (t - a + 1));
+    }
+    const source = p.source === 'twap' ? twap : reported;
+    const accepted = [];
+    let pausedMin = 0, staleMin = 0, confMin = 0;
+    for (let t = 0; t <= T; t++) {
+      const stale = age[t] > p.maxAge, wide = conf[t] > p.maxConf;
+      if (stale) staleMin++;
+      if (wide) confMin++;
+      const ok = !stale && !wide;
+      if (!ok) pausedMin++;
+      accepted.push(ok);
+    }
+    let maxDev = 0, maxDevT = 0;
+    for (let t = 0; t <= T; t++) {
+      const dv = Math.abs(source[t] - truth[t]) / truth[t];
+      if (dv > maxDev) { maxDev = dv; maxDevT = t; }
+    }
+    const level = p.price0 * (1 - p.trigger);
+    let tTrue = -1, tProt = -1;
+    for (let t = 0; t <= T; t++) { if (truth[t] <= level) { tTrue = t; break; } }
+    for (let t = 0; t <= T; t++) { if (accepted[t] && source[t] <= level) { tProt = t; break; } }
+    return { T, truth, reported, twap, source, conf, age, accepted, pausedMin, staleMin, confMin, maxDev, maxDevT, level, tTrue, tProt };
+  }
+
+  function flashAttack(p) {
+    const m = Math.pow(1 + p.loan / p.depth, 2); // spot price multiplier after buying with the loan
+    const twapM = 1 + (m - 1) * Math.min(1, p.hold / (p.twapWin * 60));
+    const roundTrip = p.loan * (1 - Math.pow(1 - p.fee, 2)) + p.loan * p.loanFee;
+    const spotBorrow = p.coll * m * p.ltv;
+    const twapBorrow = p.coll * twapM * p.ltv;
+    const spotProfit = spotBorrow - p.coll - roundTrip;
+    const twapProfit = twapBorrow - p.coll - roundTrip;
+    const breakEvenM = (p.coll + roundTrip) / (p.coll * p.ltv);
+    const loanNeeded = p.depth * (Math.sqrt(breakEvenM) - 1);
+    return { m, twapM, roundTrip, spotBorrow, twapBorrow, spotProfit, twapProfit, breakEvenM, loanNeeded };
+  }
+
+  // ---------------- Vault (ERC-4626 share accounting) ----------------
+  function mulDiv(a, b, c, up) {
+    if (c === 0n) return 0n;
+    const q = (a * b) / c;
+    if (up && (a * b) % c !== 0n) return q + 1n;
+    return q;
+  }
+  function vault(p) {
+    const off = p.defense === 'none' ? null : BigInt(10) ** BigInt(p.offset);
+    let A = p.A0, S = p.S0;
+    const vs = () => (off === null ? S : S + off);
+    const va = () => (off === null ? A : A + 1n);
+    function toShares(assets) {
+      if (off === null && S === 0n) return assets;
+      if (off === null && A === 0n) return assets;
+      return mulDiv(assets, vs(), va(), p.roundUp);
+    }
+    function toAssets(shares) {
+      if (off === null && S === 0n) return 0n;
+      return mulDiv(shares, va(), vs(), false);
+    }
+    const log = [];
+    let attShares = 0n, vicShares = 0n;
+    function snap(step, action, kind) {
+      log.push({ step, action, A, S, vsh: vs(), vas: va(), kind });
+    }
+    snap(0, 'Starting vault', 'start');
+    const s1 = toShares(p.attDeposit); A += p.attDeposit; S += s1; attShares += s1;
+    snap(1, 'Attacker deposits', 'deposit');
+    A += p.donation;
+    snap(2, 'Attacker donates (direct transfer)', 'donate');
+    const s3 = toShares(p.victim); A += p.victim; S += s3; vicShares += s3;
+    snap(3, 'Victim deposits', 'deposit');
+    const a4 = toAssets(attShares); A -= a4; S -= attShares;
+    snap(4, 'Attacker redeems all shares', 'redeem');
+    const a5 = toAssets(vicShares); A -= a5; S -= vicShares;
+    snap(5, 'Victim redeems all shares', 'redeem');
+    // prover-style check on deposits and redeems: new_vs * old_va <= old_vs * new_va  (share price never decreases)
+    for (let i = 1; i < log.length; i++) {
+      const o = log[i - 1], c = log[i];
+      if (c.kind === 'deposit' || c.kind === 'redeem') {
+        if (o.vsh === 0n || c.vsh === 0n) { c.check = 'n/a'; continue; }
+        c.check = (c.vsh * o.vas <= o.vsh * c.vas) ? 'pass' : 'fail';
+      } else c.check = '';
+    }
+    const attSpent = p.attDeposit + p.donation;
+    return {
+      log, s1, s3, a4, a5, attProfit: a4 - attSpent, victimLoss: p.victim - a5,
+      victimShares: s3, leftover: A
+    };
+  }
+
+  return { rng, gauss, borrowRate, lending, runLending, makeBorrowers, cpSell, cpBuy, clLiquidity, clSell, amm, sandwich, traderValue, perps, perpCrash, lst, oracle, flashAttack, vault, mulDiv };
+})();
+if (typeof module !== 'undefined') module.exports = Sim;
+
+</script>
+<script>
+const Roles = (() => {
+  const S = typeof Sim !== 'undefined' ? Sim : require('./sim.js');
+  const MINUS = '−';
+  // tiny local formatters so role text is self-contained
+  const num = (v, d = 2) => Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const money = (unit, v) => {
+    const s = v < 0 ? MINUS : '';
+    if (unit === 'usd') return s + '$' + num(v, Math.abs(v) >= 1e5 ? 0 : 2);
+    if (unit === 'usdc') return s + num(v, Math.abs(v) >= 1e5 ? 0 : 2) + ' USDC';
+    if (unit === 'eth') return s + num(v, 3) + ' ETH';
+    if (unit === 'sui') return s + num(v, 2) + ' SUI';
+    return s + num(v);
+  };
+  const pct = (v, d = 1) => (v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%';
+  const spct = (v, d = 1) => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%';
+
+  // ---------- Lending ----------
+  function lending(st, r, you) {
+    const A = you.yAmount, s = st.shock, P0 = 2, P1 = P0 * (1 - s), b = st.bonus, $ = v => money('usd', v);
+    const roles = [];
+    const interest = A * r.sRate;
+    const loss = Math.min(A, (r.badDebt / st.supply) * A);
+    const freeShare = Math.max(0, 1 - r.U);
+    roles.push({
+      key: 'lender', name: 'Lender', unit: 'usd', start: A,
+      who: `Deposits ${$(A)} of USDC for borrowers to use.`,
+      steps: [['Interest for one year at ' + pct(r.sRate, 2), interest], ['Share of the crash’s bad debt', -loss]],
+      end: A + interest - loss,
+      verdict: loss > 0
+        ? `Lenders absorb bad debt. Your share is ${$(loss)}, which would take ${(loss / Math.max(interest, 1e-9)).toFixed(1)} years of interest to earn back.`
+        : r.U > 0.95 ? `No loss, but only ${pct(freeShare, 0)} of the pool is free to withdraw right now.` : `No bad debt reaches you at a ${pct(s, 0)} drop. You earn the lender rate.`
+    });
+    const L = Math.min(you.yLtv, st.maxLTV);
+    const D = A * L;
+    const run = S.runLending({ price0: P0, lt: st.lt, bonus: b, closeFactor: st.cf, mode: st.mode, steps: 60, borrowers: [{ usd: A, ltv: L }] }, s, Infinity);
+    const q = run.positions[0];
+    const collVal = q.coll * P1;
+    const under = q.debt > collVal + 1e-9;
+    const bEnd = D + Math.max(0, collVal - q.debt);
+    const hold = A * (1 - s);
+    const bSteps = [['SUI price drop (same as just holding)', -A * s]];
+    const bonusPaid = run.repaid * b, earlyEffect = bEnd - hold + bonusPaid;
+    if (q.liq && under) bSteps.push(['Debt you walk away from (lenders absorb it)', bEnd - hold]);
+    else if (q.liq) {
+      bSteps.push(['Liquidation bonus paid to liquidators', -bonusPaid]);
+      if (Math.abs(earlyEffect) > 0.005) bSteps.push(['Collateral sold earlier in the drop, at higher prices', earlyEffect]);
+    }
+    const hf0 = (A * st.lt) / D, hf1 = (A * (1 - s) * st.lt) / D;
+    const capNote = you.yLtv > st.maxLTV ? `Max LTV is ${pct(st.maxLTV, 0)}, so that is all you can borrow. ` : '';
+    roles.push({
+      key: 'borrower', name: 'Borrower', unit: 'usd', start: A,
+      who: `Posts ${$(A)} of SUI and borrows ${$(D)} of USDC (${pct(L, 0)} LTV), keeping the USDC in the wallet.`,
+      steps: bSteps, end: bEnd,
+      verdict: capNote + (!q.liq
+        ? `Health factor ${hf0.toFixed(2)} → ${hf1.toFixed(2)}. You’re never liquidated, so you lose only what SUI lost.`
+        : under
+          ? `Your loan ended underwater: the collateral left is worth less than the debt. You keep the ${$(D)} you borrowed, and lenders absorb ${$(q.debt - collVal)}.`
+          : `Liquidators took ${num(A / P0 - q.coll, 0)} SUI of your collateral and charged ${$(bonusPaid)} in bonuses. Repaying or adding collateral before your health factor hit 1 would have avoided that.` + (earlyEffect > 0.005 ? ` Because they sold part of your SUI on the way down, you still end above someone who just held.` : ''))
+    });
+    const depth = st.depth, out = X => (X * depth) / (depth + X);
+    if (r.demand <= 0) {
+      ['first', 'last'].forEach(k => roles.push({ key: 'liq-' + k, name: k === 'first' ? 'Liquidator, first in line' : 'Liquidator, last in line', unit: 'usd', start: A, steps: [], end: A, who: `Holds ${$(A)} of USDC, ready to liquidate.`, verdict: 'Nothing to liquidate at this drop. The capital sits idle.' }));
+    } else {
+      const R = Math.min(A, r.demand / (1 + b)), V = R * (1 + b);
+      const Uq = Math.max(0, Math.min(r.demand, r.capacity) - V);
+      const oF = out(V), oL = out(Uq + V) - out(Uq);
+      roles.push({ key: 'liq-first', name: 'Liquidator, first in line', unit: 'usd', start: A, who: `Holds ${$(A)} of USDC and wins the race to liquidate.`,
+        steps: [['Repays borrowers’ debt', -R], ['Receives SUI worth (debt + bonus)', V], ['Slippage selling that SUI', oF - V]], end: A - R + oF,
+        verdict: `You sell ${$(V)} of SUI into an untouched market at ${pct(1 - oF / V, 2)} slippage, under the ${pct(b, 1)} bonus.` });
+      roles.push({ key: 'liq-last', name: 'Liquidator, last in line', unit: 'usd', start: A, who: `Same capital, but ${$(Uq)} of seized SUI was sold ahead of you.`,
+        steps: [['Repays borrowers’ debt', -R], ['Receives SUI worth (debt + bonus)', V], ['Slippage selling that SUI', oL - V]], end: A - R + oL,
+        verdict: oL - R < 0 ? `By the time you sell, slippage is ${pct(1 - oL / V, 2)}, more than the bonus. Rational liquidators stop here, which is how positions get stuck.` : `Even last in line, slippage of ${pct(1 - oL / V, 2)} stays under the bonus.` });
+    }
+    roles.push({ key: 'holder', name: 'Just holds SUI', unit: 'usd', start: A, who: `Owns ${$(A)} of SUI and does nothing.`, steps: [['SUI price drop', -A * s]], end: hold, verdict: 'The baseline: no DeFi, only the price move.' });
+    return roles;
+  }
+
+  // ---------- AMM ----------
+  function amm(st, model, you) {
+    const A = you.yAmount, P = 2, fee = st.fee, $ = v => money('usd', v);
+    const x = st.tvl / 2 / P, y = st.tvl / 2;
+    const Pa = P * (1 - st.range), Pb = P * (1 + st.range);
+    const roles = [];
+    const oCP = S.cpSell(x, y, A / P, fee);
+    roles.push({ key: 'seller', name: 'Seller, full-range pool', unit: 'usd', start: A, who: `Sells ${$(A)} of SUI into the $${(st.tvl / 1e6).toFixed(1)}M pool.`,
+      steps: [['Price impact and fee', oCP - A]], end: oCP, verdict: `You receive ${$(oCP)}, ${pct(1 - oCP / A, 2)} below the $2.00 price.` });
+    const Lp = S.clLiquidity(st.tvl, P, Pa, Pb);
+    const cl = S.clSell(Lp, P, Pa, A / P, fee);
+    const unsold = Math.max(0, A / P - cl.filledIn) * P;
+    roles.push({ key: 'seller-cl', name: 'Seller, concentrated pool', unit: 'usd', start: A, who: `Sells the same ${$(A)} into the same capital concentrated in ±${pct(st.range, 0)}.`,
+      steps: [['Price impact and fee', cl.out + unsold - A]].concat(unsold > 0 ? [['(SUI left unsold, valued at $2.00)', unsold, 'info']] : []), end: cl.out + unsold,
+      verdict: cl.exhausted ? `The price hits the bottom of the range at $${Pa.toFixed(2)}. Only ${$(cl.filledIn * P)} sells; you keep ${$(unsold)} of SUI.` : `Same capital, ${(model.r.efficiency).toFixed(1)}× deeper near the price: ${pct(1 - cl.out / A, 2)} slippage.` });
+    const rr = 1 + you.yMove, P2 = P * rr;
+    const v2 = A * Math.sqrt(rr), hodl2 = (A * (1 + rr)) / 2, fees2 = you.yVol * fee * A;
+    roles.push({ key: 'lp', name: 'LP, full range', unit: 'usd', start: A, who: `Deposits ${$(A)} half SUI, half USDC across all prices.`,
+      steps: [[`SUI moves ${spct(you.yMove, 0)}: position value change`, v2 - A], [`Fees on ${you.yVol}× the pool in volume`, fees2]], end: v2 + fees2,
+      verdict: `Holding the same SUI and USDC instead would be worth ${$(hodl2)}. Impermanent loss: ${$(v2 - hodl2)}${fees2 + v2 - hodl2 >= 0 ? ', which the fees cover.' : ', more than the fees earned.'}` });
+    const Lc = S.clLiquidity(A, P, Pa, Pb), sa = Math.sqrt(Pa), sb = Math.sqrt(Pb), s0 = Math.sqrt(P), s2 = Math.sqrt(P2);
+    const amt = sp => sp <= sa ? [Lc * (1 / sa - 1 / sb), 0] : sp >= sb ? [0, Lc * (sb - sa)] : [Lc * (1 / sp - 1 / sb), Lc * (sp - sa)];
+    const [x0, y0] = amt(s0), [x2, y2] = amt(s2);
+    const vCL = x2 * P2 + y2, hodlC = x0 * P2 + y0;
+    const eff = (2 * Lc * s0) / A;
+    const inRange = Math.abs(you.yMove) <= st.range ? 1 : st.range / Math.abs(you.yMove);
+    const feesC = you.yVol * fee * A * eff * inRange;
+    roles.push({ key: 'lp-cl', name: `LP, ±${pct(st.range, 0)} range`, unit: 'usd', start: A, who: `Deposits ${$(A)} concentrated between $${Pa.toFixed(2)} and $${Pb.toFixed(2)}.`,
+      steps: [[`SUI moves ${spct(you.yMove, 0)}: position value change`, vCL - A], [`Fees (${eff.toFixed(1)}× a full-range share${inRange < 1 ? `, in range ${pct(inRange, 0)} of the way` : ''})`, feesC]], end: vCL + feesC,
+      verdict: (P2 < Pa || P2 > Pb ? `The price left your range, so the position is now all ${P2 < Pa ? 'SUI' : 'USDC'} and earns nothing more. ` : '') + `Holding instead: ${$(hodlC)}. Impermanent loss: ${$(vCL - hodlC)}.` });
+    const sw = S.sandwich({ price: P, tvl: st.tvl, victim: A, tol: st.tol, fee });
+    const got = sw.profitable ? sw.best.victimOut : sw.expected;
+    roles.push({ key: 'victim', name: 'Buyer (sandwich victim)', unit: 'usd', start: A, who: `Buys SUI with ${$(A)} at ${pct(st.tol, 1)} slippage tolerance.`,
+      steps: [['Normal price impact and fee', sw.expected * P - A], ['Taken by a sandwich bot', (got - sw.expected) * P]], end: got * P,
+      verdict: sw.profitable ? `A bot front-runs with ${$(sw.best.A)} and pushes you to your minimum. Tighter tolerance or a private transaction route prevents it.` : `At this tolerance a sandwich doesn’t pay, so you only pay normal price impact.` });
+    roles.push({ key: 'bot', name: 'Sandwich bot', unit: 'usd', start: sw.profitable ? sw.best.A : 0, who: sw.profitable ? `Buys ${$(sw.best.A)} of SUI just before the victim and sells right after.` : 'Watches the mempool for loose slippage settings.',
+      steps: sw.profitable ? [['Front-run, victim trade, back-run', sw.best.profit]] : [], end: sw.profitable ? sw.best.A + sw.best.profit : 0,
+      verdict: sw.profitable ? `Risk-free inside one block, paid for by the victim.` : 'No profitable sandwich on this trade, so the bot stays out.' });
+    return roles;
+  }
+
+  // ---------- Perps ----------
+  function perps(st, model, you) {
+    const { r, c } = model, A = you.yAmount, L = you.yLev, MM = 0.0625, e = v => money('eth', v);
+    const k = r.Q * r.B, q = Math.min(A * L, 0.9 * r.Q);
+    const Bl = k / (r.Q + q), baseL = r.B - Bl, entryL = q / baseL;
+    const Bs = k / (r.Q - q), baseS = Bs - r.B, entryS = q / baseS;
+    const P1 = r.mark * (1 - st.crash);
+    const roles = [];
+    function trader(dir) {
+      const base = dir > 0 ? baseL : baseS, entry = dir > 0 ? entryL : entryS;
+      const fund = -dir * r.premium * base; // + means trader receives
+      const m0 = A + fund;
+      const pnl = dir * base * (P1 - entry);
+      const eq = m0 + pnl;
+      const liqP = dir > 0 ? (base * entry - m0) / (base * (1 - MM)) : (m0 + base * entry) / (base * (1 + MM));
+      const hit = dir > 0 ? P1 <= liqP : P1 >= liqP;
+      const gap = st.mode === 'gap';
+      const exitP = hit && !gap ? liqP : P1;
+      const pnlX = dir * base * (exitP - entry), eqX = m0 + pnlX;
+      const steps = [[`Funding for one day`, fund], [`Price ${entry.toFixed(2)} → ${exitP.toFixed(2)} ETH`, pnlX]];
+      let end = eqX;
+      if (hit) {
+        if (eqX < 0) steps.push(['Losses past your margin, paid by the insurance fund', -eqX]);
+        else steps.push(['Liquidated: what’s left goes to the liquidator and the fund', -eqX]);
+        end = 0;
+      }
+      const slip = dir > 0 ? entry / r.mark - 1 : 1 - entry / r.mark;
+      return {
+        key: dir > 0 ? 'long' : 'short', name: dir > 0 ? `Long ${L}×` : `Short ${L}×`, unit: 'eth', start: A,
+        who: `Opens ${L}× with ${e(A)}: ${base.toFixed(3)} contracts at ${entry.toFixed(2)} ETH (${pct(slip, 2)} vAMM price impact), holds a day, then the ${pct(st.crash, 0)} ${st.mode === 'gap' ? 'gap' : 'drop'} hits.`,
+        steps, end,
+        verdict: hit ? (eqX < 0 ? `The gap jumped straight past your liquidation price (${liqP.toFixed(2)} ETH) to ${P1.toFixed(2)}. You lose all your margin, and the fund covers ${e(-eqX)} more.` : `${gap ? `The gap took the price past your liquidation price (${liqP.toFixed(2)} ETH)` : `Liquidated at ${liqP.toFixed(2)} ETH on the way down`}. In Perpetual Protocol v1 a full liquidation sends the remaining margin to the liquidator and the fund, so you get nothing back.`)
+          : `Liquidation price ${liqP.toFixed(2)} ETH; the price ends at ${P1.toFixed(2)}.`
+      };
+    }
+    roles.push(trader(1), trader(-1));
+    const fSteps = [['Funding for one day', r.fundDay]];
+    if (r.trigger) fSteps.push(['Forced repeg', -r.repegCost]);
+    fSteps.push(['Remaining margin from crash liquidations', c.toFund], ['Bad debt from the crash', -c.bad]);
+    const fRaw = st.fund + fSteps.reduce((a, s) => a + s[1], 0);
+    if (fRaw < 0) fSteps.push(['Shortfall nobody covers (falls on traders in profit)', -fRaw]);
+    const fEnd = Math.max(0, fRaw);
+    roles.push({ key: 'fund', name: 'Insurance fund', unit: 'eth', start: st.fund, who: 'Built from trading fees; pays bad debt, repeg costs, and funding imbalances.', steps: fSteps, end: fEnd,
+      verdict: fRaw < 0 ? `The fund is wiped out, and ${e(-fRaw)} of losses are left with nobody to pay them. Traders in profit, like the short above, can’t be paid in full.` : fEnd < st.fund ? `The fund shrinks by ${e(st.fund - fEnd)}.` : `The fund grows by ${e(fEnd - st.fund)}.` });
+    roles.push({ key: 'liquidator', name: 'Liquidation bot', unit: 'eth', start: 0, who: 'Calls liquidate() on unhealthy positions for half the 1.25% fee.', steps: [['Fees from crash liquidations', c.toLiq]], end: c.toLiq,
+      verdict: c.liquidated ? `Liquidates ${c.liquidated} traders${c.underwater ? `; ${c.underwater} were already underwater and paid no fee` : ''}.` : 'No positions to liquidate.' });
+    const mevProfit = r.trigger ? A * L * r.mevPct : 0;
+    roles.push({ key: 'mev', name: 'Same-block repeg trader', unit: 'eth', start: A, who: `Uses ${e(A)} at ${L}× around a pending forced repeg.`, steps: r.trigger ? [['Open, trigger payFunding(), close', mevProfit]] : [], end: A + mevProfit,
+      verdict: r.trigger ? `About ${pct(r.mevPct, 1)} of the notional, risk-free in one transaction, paid by other traders and the fund.` : 'No forced repeg is due, so there is no same-block trade.' });
+    return roles;
+  }
+
+  // ---------- Liquid staking ----------
+  function lst(st, model, you) {
+    const { r } = model, A = you.yAmount, d = st.discount, b = st.bonus, s = v => money('sui', v);
+    const roles = [];
+    roles.push({ key: 'sell', name: 'LST holder, sells today', unit: 'sui', start: A, who: `Stakes ${s(A)} for ${(A / r.rate).toFixed(2)} LST, then needs to exit now.`,
+      steps: [[`Market discount of ${pct(d, 1)}`, -A * d]], end: A * (1 - d), verdict: d > 0 ? `Selling now costs ${s(A * d)}. Redeeming avoids that but takes ${st.wait} day${st.wait > 1 ? 's' : ''}.` : 'At peg, selling costs nothing beyond slippage.' });
+    const wr = Math.pow(1 + st.apr / 365, st.wait) - 1;
+    roles.push({ key: 'redeem', name: 'LST holder, redeems', unit: 'sui', start: A, who: `Same position, but waits ${st.wait} day${st.wait > 1 ? 's' : ''} to redeem for SUI.`,
+      steps: [['Staking rewards during the wait', A * wr]], end: A * (1 + wr), verdict: 'Full value back, at the cost of having the SUI locked for the wait.' });
+    const lev = r.lev, mk = st.oracle === 'market';
+    let C = A * lev * (1 - d), D = A * (lev - 1), pen = 0, liq = false;
+    if (mk && D > 0) {
+      for (let i = 0; i < 300 && C * st.lt < D; i++) { const R = Math.min(0.5 * D, C / (1 + b)); if (R < 1e-12) break; C -= R * (1 + b); D -= R; pen += R * b; liq = true; }
+    }
+    const loopSteps = [[`Depeg on ${lev.toFixed(2)}× exposure (at market price)`, -A * lev * d]];
+    if (liq) loopSteps.push(['Liquidation bonus paid', -pen]);
+    roles.push({ key: 'looper', name: `Looper ${lev.toFixed(2)}×`, unit: 'sui', start: A, who: `Deposits ${s(A)} and loops ${st.loops} time${st.loops === 1 ? '' : 's'} at ${pct(st.ltv, 0)} LTV. Shown at market value today.`,
+      steps: loopSteps, end: C - D,
+      verdict: (mk ? (liq ? `The market-price oracle marked the position down and liquidators took ${s(pen)} in bonuses.` : `Not liquidated yet; that happens past a ${pct(r.loopLiqDiscount, 1)} discount.`) : 'The redemption-rate oracle never marks the position down, so it isn’t liquidated, and it’s worth the full amount at redemption value.') + ` In a normal year, looping earns ${pct(r.netApr, 2)}.` });
+    roles.push({ key: 'arb', name: 'Arbitrageur', unit: 'sui', start: A, who: `Buys LST on the market with ${s(A)} and redeems it.`, steps: [['Discount captured', (A * d) / (1 - d)]], end: A / (1 - d),
+      verdict: d > 0 ? `${pct(d / (1 - d), 2)} over ${st.wait} day${st.wait > 1 ? 's' : ''}, ${r.arbAnnual > 10 ? 'over 1,000%' : pct(r.arbAnnual, 0)} a year. This trade is what pulls the price back to peg.` : 'No discount, no trade.' });
+    roles.push({ key: 'liq', name: 'Liquidator', unit: 'sui', start: A, who: `Repays ${s(A)} of a borrower’s SUI debt and sells the seized LST.`, steps: [['Bonus minus discount and slippage', A * r.liqProfit]], end: A * (1 + r.liqProfit),
+      verdict: r.liqProfit < 0 ? 'A loss on every liquidation, so liquidators stay away and unhealthy loans pile up.' : 'Profitable, so unhealthy loans get cleared.' });
+    roles.push({ key: 'sui', name: 'Just holds SUI', unit: 'sui', start: A, who: `Keeps ${s(A)} unstaked.`, steps: [], end: A, verdict: 'No yield and no depeg risk.' });
+    return roles;
+  }
+
+  // ---------- Oracles ----------
+  function oracle(st, model, you) {
+    const { o, fa } = model, A = you.yAmount, pool = you.yPool, $ = v => money('usd', v);
+    const roles = [];
+    const spot = st.aSource === 'spot', borrow = spot ? fa.spotBorrow : fa.twapBorrow, prof = spot ? fa.spotProfit : fa.twapProfit;
+    const hole = prof > 0 ? Math.max(0, Math.min(borrow, pool) - st.aColl) : 0;
+    const loss = Math.min(A, (hole / pool) * A);
+    roles.push({ key: 'lender', name: 'Lender, DEX-priced market', unit: 'usd', start: A, who: `Deposits ${$(A)} in a ${$(pool)} lending market that prices collateral from a DEX ${spot ? 'spot price' : 'TWAP'}.`,
+      steps: [['Share of the hole the attacker leaves', -loss]], end: A - loss, verdict: prof > 0 ? `The attacker borrows ${$(Math.min(borrow, pool))} against collateral really worth ${$(st.aColl)} and leaves. Lenders share the ${$(hole)} difference.` : 'The attack doesn’t pay, so nothing is taken.' });
+    roles.push({ key: 'attacker', name: 'Flash-loan attacker', unit: 'usd', start: st.aColl, who: `Posts ${$(st.aColl)} of the token as collateral and borrows ${$(st.aLoan)} in a flash loan.`,
+      steps: prof > 0 ? [['Borrowed against the pumped price, minus costs, collateral abandoned', prof]] : [], end: st.aColl + Math.max(0, prof),
+      verdict: prof > 0 ? 'All in one transaction: pump, borrow, repay the flash loan, walk away.' : 'Not profitable, so a rational attacker doesn’t try.' });
+    const P0 = 2, coll = A / P0, D = A * (1 - st.trigger) * 0.8;
+    const endPrice = o.truth[o.T];
+    if (o.tTrue < 0) {
+      roles.push({ key: 'borrower', name: 'Borrower near the trigger', unit: 'usd', start: A, who: `Posts ${$(A)} of SUI, borrowed so the loan hits health factor 1 after a ${pct(st.trigger, 0)} drop.`, steps: [['SUI price change over four hours', A * (endPrice / P0 - 1)]], end: A * endPrice / P0, verdict: 'The market never reached your liquidation price.' });
+      roles.push({ key: 'liq', name: 'Liquidator', unit: 'usd', start: A, who: `Holds ${$(A)} to liquidate that loan.`, steps: [], end: A, verdict: 'Nothing to liquidate.' });
+    } else if (o.tProt < 0) {
+      roles.push({ key: 'borrower', name: 'Borrower near the trigger', unit: 'usd', start: A, who: `Posts ${$(A)} of SUI, borrowed so the loan hits health factor 1 after a ${pct(st.trigger, 0)} drop.`, steps: [['SUI price change over four hours', A * (endPrice / P0 - 1)]], end: A * endPrice / P0,
+        verdict: `The market crossed your liquidation price at minute ${o.tTrue}, but the protocol never liquidated you. The loan keeps sinking and lenders carry the risk.` });
+      roles.push({ key: 'liq', name: 'Liquidator', unit: 'usd', start: A, who: `Holds ${$(A)} to liquidate that loan.`, steps: [], end: A, verdict: 'The protocol never accepted a price low enough to allow a liquidation.' });
+    } else {
+      const pp = o.source[o.tProt], m = o.truth[o.tProt], R = 0.5 * D, seized = (R * 1.05) / pp;
+      const end = (coll - seized) * m + R, fair = (coll - (R * 1.05) / m) * m + R;
+      roles.push({ key: 'borrower', name: 'Borrower near the trigger', unit: 'usd', start: A, who: `Posts ${$(A)} of SUI, borrowed so the loan hits health factor 1 after a ${pct(st.trigger, 0)} drop. Bonus 5%, close factor 50%.`,
+        steps: [[`SUI at $${m.toFixed(3)} when you’re liquidated (minute ${o.tProt})`, A * (m / P0 - 1)], [`Liquidation, priced at the protocol’s $${pp.toFixed(3)}`, end - (A * m) / P0]], end,
+        verdict: (o.tProt - o.tTrue > 2 ? `Liquidated at minute ${o.tProt}, ${o.tProt - o.tTrue} minutes after the market crossed your liquidation price. ` : '') + (pp > m * 1.001 ? `The protocol valued your SUI above the market, so liquidators took fewer SUI than a fair liquidation would: you keep ${$(end - fair)} more. Liquidators and lenders carry that.` : 'The protocol price matched the market at that moment, so the liquidation itself was fair.') });
+      const lp = A * ((1.05 * m) / pp - 1);
+      roles.push({ key: 'liq', name: 'Liquidator', unit: 'usd', start: A, who: `Repays ${$(A)} of that kind of debt at minute ${o.tProt}.`, steps: [['Bonus, minus the gap between protocol and market price', lp]], end: A + lp,
+        verdict: lp < 0 ? `The protocol price sits ${pct(pp / m - 1, 1)} above the market, more than the 5% bonus. Rational liquidators wait, and loans go bad in the meantime.` : `The protocol price is close enough to the market that the bonus still pays.` });
+    }
+    return roles;
+  }
+
+  // ---------- Vault ----------
+  function vault(st, model, you) {
+    const A = you.yAmount, u = x => BigInt(Math.round(x * 1e6)), toN = b => Number(b) / 1e6, c = v => money('usdc', v);
+    const run = S.vault({ A0: u(st.A0), S0: BigInt(Math.round(st.S0)), attDeposit: BigInt(Math.max(1, Math.round(st.att))), donation: u(st.donation), victim: u(A), defense: st.defense, offset: st.offset, roundUp: st.round === 'up' });
+    const roles = [];
+    const got = toN(run.a5);
+    roles.push({ key: 'depositor', name: 'Depositor after the attacker', unit: 'usdc', start: A, who: `Deposits ${c(A)} right after the attacker’s setup, then redeems.`, steps: [['Rounding plus the attacker’s donation trick', got - A]], end: got,
+      verdict: A <= 0 ? 'No deposit.' : run.s3 === 0n ? 'Your deposit minted zero shares. You own nothing in the vault.' : `Your deposit minted ${run.s3.toLocaleString('en-US')} raw shares and redeems for ${c(got)}.` });
+    const spent = Math.max(1, Math.round(st.att)) / 1e6 + st.donation;
+    roles.push({ key: 'attacker', name: 'Attacker', unit: 'usdc', start: spent, who: `Deposits ${Math.max(1, Math.round(st.att)).toLocaleString('en-US')} raw units and sends ${c(st.donation)} straight to the vault.`, steps: [['Redeemed minus spent', toN(run.a4) - spent]], end: toN(run.a4),
+      verdict: toN(run.a4) > spent ? 'The attack pays.' : 'The attack costs more than it takes.' });
+    const last = run.log[run.log.length - 1];
+    if (st.A0 > 0 && st.S0 > 0 && last.vsh > 0n) {
+      const val = (st.S0 * Number(last.vas)) / Number(last.vsh) / 1e6;
+      roles.push({ key: 'existing', name: 'Earlier depositors', unit: 'usdc', start: st.A0, who: `Already held ${Math.round(st.S0).toLocaleString('en-US')} raw shares backed by ${c(st.A0)}.`, steps: [['Change in what their shares redeem for', val - st.A0]], end: val,
+        verdict: val < st.A0 ? 'Their shares now redeem for less: someone took value from them.' : 'Their shares hold their value.' });
+    }
+    return roles;
+  }
+
+  return { lending, amm, perps, lst, oracle, vault, money, pct };
+})();
+if (typeof module !== 'undefined') module.exports = Roles;
+
+</script>
+<script>
+(() => {
+  const MINUS = '−';
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const F = {
+    usd(v) {
+      const a = Math.abs(v), s = v < 0 ? MINUS : '';
+      if (a >= 1e9) return s + '$' + (a / 1e9).toFixed(2) + 'B';
+      if (a >= 1e6) return s + '$' + (a / 1e6).toFixed(2) + 'M';
+      if (a >= 1e3) return s + '$' + (a / 1e3).toFixed(1) + 'K';
+      return s + '$' + a.toFixed(a < 10 ? 2 : 0);
+    },
+    pct(v, d = 1) { return (v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%'; },
+    spct(v, d = 1) { return (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%'; },
+    eth(v, d = 2) { return (v < 0 ? MINUS : '') + Math.abs(v).toFixed(d) + ' ETH'; },
+    seth(v, d = 2) { return (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v).toFixed(d) + ' ETH'; },
+    int(v) { return Math.round(v).toLocaleString('en-US'); },
+    usdc(v) { return v.toLocaleString('en-US', { maximumFractionDigits: v < 1 ? 6 : 2 }) + ' USDC'; },
+    units(u) {
+      const neg = u < 0n, a = neg ? -u : u;
+      const whole = a / 1000000n, frac = (a % 1000000n).toString().padStart(6, '0').replace(/0+$/, '');
+      return (neg ? MINUS : '') + whole.toLocaleString('en-US') + (frac ? '.' + frac : '') + ' USDC';
+    }
+  };
+
+  // ---------- charts ----------
+  function niceStep(range, n) {
+    const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+  }
+  function niceMax(v) { if (!(v > 0)) return 1; const s = niceStep(v, 4); return Math.ceil((v * 1.08) / s) * s; }
+  function ticks(min, max, n) {
+    const s = niceStep(max - min, n), out = [];
+    for (let v = Math.ceil(min / s - 1e-9) * s; v <= max + s * 1e-9; v += s) out.push(+v.toFixed(12));
+    return out;
+  }
+  function cssv(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'; }
+  function drawChart(cv, spec) {
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const mono = cssv('--font-mono');
+    g.font = '11px ' + mono;
+    const X = spec.x, Y = spec.y;
+    const yt = ticks(Y.min, Y.max, 4);
+    const yLabels = yt.map(Y.fmt);
+    const lw = Math.max(...yLabels.map(s => g.measureText(s).width));
+    const pad = { l: Math.ceil(lw) + 12, r: 12, t: 14, b: X.label ? 44 : 30 };
+    const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+    const xv = v => (X.log ? Math.log10(v) : v);
+    const x0 = xv(X.min), x1 = xv(X.max);
+    const px = v => pad.l + ((xv(v) - x0) / (x1 - x0)) * pw;
+    const py = v => pad.t + (1 - (v - Y.min) / (Y.max - Y.min)) * ph;
+    const line = cssv('--line'), muted = cssv('--muted');
+    // bands
+    for (const b of spec.bands || []) {
+      g.fillStyle = cssv(b.color);
+      g.fillRect(px(b.x0), pad.t, Math.max(1, px(b.x1) - px(b.x0)), ph);
+    }
+    // grid + y labels
+    g.strokeStyle = line; g.lineWidth = 1; g.fillStyle = muted; g.textBaseline = 'middle'; g.textAlign = 'right';
+    yt.forEach((v, i) => {
+      const y = Math.round(py(v)) + 0.5;
+      g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+      g.fillText(yLabels[i], pad.l - 6, y);
+    });
+    // x ticks
+    let xt;
+    if (X.log) { xt = []; for (let e = Math.ceil(x0 - 1e-9); e <= x1 + 1e-9; e++) xt.push(Math.pow(10, e)); }
+    else xt = ticks(X.min, X.max, Math.max(3, Math.min(8, Math.floor(pw / 70))));
+    g.textAlign = 'center'; g.textBaseline = 'top';
+    xt.forEach(v => { const x = px(v); g.fillText(X.fmt(v), x, pad.t + ph + 7); g.beginPath(); g.moveTo(Math.round(x) + 0.5, pad.t + ph); g.lineTo(Math.round(x) + 0.5, pad.t + ph + 4); g.stroke(); });
+    if (X.label) { g.font = '12px ' + cssv('--font-body'); g.textAlign = 'right'; g.fillText(X.label, w - pad.r, pad.t + ph + 26); g.font = '11px ' + mono; }
+    g.save();
+    g.beginPath(); g.rect(pad.l, pad.t - 2, pw, ph + 4); g.clip();
+    for (const hl of spec.hlines || []) {
+      g.strokeStyle = cssv(hl.color); g.lineWidth = 1.5; g.setLineDash(hl.dash ? [5, 4] : []);
+      const y = py(hl.y); g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+    }
+    for (const s of spec.series) {
+      const pts = s.pts.filter(p => isFinite(p[0]) && isFinite(p[1]));
+      if (!pts.length) continue;
+      const c = cssv(s.color);
+      g.setLineDash(s.dash ? [6, 4] : []);
+      g.lineWidth = s.width || 2; g.strokeStyle = c; g.lineJoin = 'round';
+      g.beginPath();
+      pts.forEach((p, i) => {
+        const x = px(p[0]), y = py(clamp(p[1], Y.min - (Y.max - Y.min), Y.max * 2));
+        if (i === 0) g.moveTo(x, y);
+        else if (s.step) { g.lineTo(x, py(pts[i - 1][1])); g.lineTo(x, y); }
+        else g.lineTo(x, y);
+      });
+      g.stroke();
+      if (s.fill) {
+        g.lineTo(px(pts[pts.length - 1][0]), py(Math.max(Y.min, 0))); g.lineTo(px(pts[0][0]), py(Math.max(Y.min, 0))); g.closePath();
+        g.globalAlpha = 0.14; g.fillStyle = c; g.fill(); g.globalAlpha = 1;
+      }
+    }
+    g.setLineDash([]);
+    g.restore();
+    for (const vl of spec.vlines || []) {
+      if (vl.x < X.min || vl.x > X.max) continue;
+      const x = Math.round(px(vl.x)) + 0.5;
+      g.strokeStyle = cssv(vl.color); g.lineWidth = 1.5; g.setLineDash(vl.dash ? [4, 3] : []);
+      g.beginPath(); g.moveTo(x, pad.t); g.lineTo(x, pad.t + ph); g.stroke(); g.setLineDash([]);
+      if (vl.label) {
+        g.fillStyle = cssv(vl.color); g.textBaseline = 'top';
+        const tw = g.measureText(vl.label).width;
+        const right = x + 5 + tw < w - pad.r;
+        g.textAlign = right ? 'left' : 'right';
+        g.fillText(vl.label, right ? x + 5 : x - 5, pad.t + (vl.row || 0) * 14);
+      }
+    }
+    for (const p of spec.points || []) {
+      if (!isFinite(p.y)) continue;
+      g.fillStyle = cssv(p.color); g.strokeStyle = cssv('--surface'); g.lineWidth = 2;
+      g.beginPath(); g.arc(px(p.x), py(clamp(p.y, Y.min, Y.max)), 4.5, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+  }
+
+  // ---------- HTML builders ----------
+  const LV = { ok: 'OK', warn: 'Warning', crit: 'Critical' };
+  const RANK = { crit: 0, warn: 1, ok: 2 };
+  function monitor(rows) {
+    const c = { ok: 0, warn: 0, crit: 0 };
+    rows.forEach(r => c[r.lv]++);
+    const sum = [c.crit ? c.crit + ' critical' : '', c.warn ? c.warn + (c.warn > 1 ? ' warnings' : ' warning') : '', c.ok ? c.ok + ' OK' : ''].filter(Boolean).join(' · ');
+    const sorted = rows.map((r, i) => [r, i]).sort((a, b) => RANK[a[0].lv] - RANK[b[0].lv] || a[1] - b[1]).map(x => x[0]);
+    return `<section class="panel" aria-label="Monitors"><h3>Monitors <small>${sum}</small></h3><div class="mon">${sorted.map(r =>
+      `<div class="mon-row ${r.lv}"><span class="pill">${LV[r.lv]}</span><div><div class="t">${r.t}${r.ref ? `<span class="ref">${r.ref}</span>` : ''}</div><p class="d">${r.d}</p></div></div>`).join('')}</div></section>`;
+  }
+  function worst(rows) { return rows.reduce((w, r) => (RANK[r.lv] < RANK[w] ? r.lv : w), 'ok'); }
+  function metrics(items) {
+    return `<section class="metrics" aria-label="Readouts">${items.map(m => `<div class="m"><div class="l">${m.l}</div><div class="v ${m.cls || ''}">${m.v}</div>${m.s ? `<div class="s">${m.s}</div>` : ''}</div>`).join('')}</section>`;
+  }
+  function chartPanel(id, title, sub, legend) {
+    return `<section class="panel"><h3>${title}${sub ? ` <small>${sub}</small>` : ''}</h3><canvas class="chart" id="${id}" role="img" aria-label="${title}"></canvas><div class="chart-legend">${(legend || []).map(l =>
+      `<span><i class="sw${l.dash ? ' dash' : ''}${l.band ? ' band' : ''}" style="background:var(${l.color});color:var(${l.color})"></i>${l.label}</span>`).join('')}</div></section>`;
+  }
+  function notes(items) {
+    return `<section class="panel"><details class="notes"><summary>Model assumptions and what this leaves out</summary><ul>${items.map(i => `<li>${i}</li>`).join('')}</ul></details></section>`;
+  }
+  const pctFmt0 = v => Math.round(v * 100) + '%';
+  const usdAxis = v => (v === 0 ? '$0' : F.usd(v));
+
+  // ---------- Labs ----------
+  const LABS = [];
+
+  // ===== Lending =====
+  LABS.push({
+    key: 'lending', name: 'Lending',
+    title: 'Lending market: SUI collateral, USDC debt',
+    blurb: '300 borrowers post SUI and borrow USDC. Set the risk parameters, crash SUI, and see whether liquidators can sell the collateral fast enough to keep lenders whole.',
+    you: [
+      { id: 'yAmount', label: 'Your amount', type: 'log', min: 100, max: 10e6, value: 10000, fmt: F.usd },
+      { id: 'yLtv', label: 'Your LTV if you borrow', min: 5, max: 95, step: 1, value: 60, scale: 0.01, fmt: v => v + '%' }
+    ],
+    youNotes: [
+      'Your amount is used for every role, so the rows compare like for like.',
+      'Lender: one year of interest at today’s lender rate, plus a share of the crash’s bad debt in proportion to deposits, assuming the protocol’s reserves are empty.',
+      'Borrower: posts SUI, borrows USDC at your LTV (capped at max LTV), and keeps the USDC. Liquidations follow this lab’s close factor, bonus, and price path. Loans are non-recourse: an underwater borrower walks away.',
+      'Liquidators: repay up to your amount of debt and sell the seized SUI into the crash liquidity. “Last in line” sells after the other liquidators, up to the capacity limit.'
+    ],
+    controls: [
+      { grp: 'Market' },
+      { id: 'coll', label: 'SUI collateral deposited', min: 10, max: 200, step: 5, value: 50, scale: 1e6, fmt: v => '$' + v + 'M' },
+      { id: 'avgLTV', label: 'Average borrower LTV', min: 20, max: 74, step: 1, value: 55, scale: 0.01, fmt: v => v + '%' },
+      { id: 'whale', label: 'Largest borrower’s share of collateral', min: 0, max: 50, step: 1, value: 0, scale: 0.01, fmt: v => v + '%' },
+      { id: 'supply', label: 'USDC supplied by lenders', min: 25, max: 200, step: 1, value: 40, scale: 1e6, fmt: v => '$' + v + 'M' },
+      { grp: 'Risk parameters' },
+      { id: 'maxLTV', label: 'Max LTV', min: 30, max: 95, step: 1, value: 75, scale: 0.01, fmt: v => v + '%' },
+      { id: 'lt', label: 'Liquidation threshold', min: 35, max: 98, step: 1, value: 80, scale: 0.01, fmt: v => v + '%' },
+      { id: 'bonus', label: 'Liquidation bonus', min: 1, max: 15, step: 0.5, value: 5, scale: 0.01, fmt: v => v + '%' },
+      { id: 'cf', label: 'Close factor', min: 10, max: 100, step: 5, value: 50, scale: 0.01, fmt: v => v + '%' },
+      { grp: 'Stress test' },
+      { id: 'shock', label: 'SUI price drop', min: 0, max: 80, step: 1, value: 10, scale: 0.01, fmt: v => v + '%' },
+      { id: 'mode', label: 'Price path', type: 'seg', options: [['gradual', 'Gradual'], ['gap', 'Gap down']], value: 'gradual' },
+      { id: 'depth', label: 'Liquidity to sell SUI into during the crash', min: 1, max: 200, step: 1, value: 60, scale: 1e6, fmt: v => '$' + v + 'M' },
+      { grp: 'Interest rate curve' },
+      { id: 'kink', label: 'Kink (target utilization)', min: 50, max: 95, step: 1, value: 80, scale: 0.01, fmt: v => v + '%' },
+      { id: 'slope1', label: 'Borrow rate at the kink', min: 0, max: 20, step: 0.5, value: 4, scale: 0.01, fmt: v => v + '%' },
+      { id: 'slope2', label: 'Extra rate from kink to 100%', min: 0, max: 300, step: 5, value: 75, scale: 0.01, fmt: v => v + '%' },
+      { id: 'rf', label: 'Reserve factor (protocol’s cut)', min: 0, max: 50, step: 1, value: 10, scale: 0.01, fmt: v => v + '%' }
+    ],
+    presets: [
+      { name: 'Healthy market', note: '<b>Start here.</b> A 10% drop needs about $2.3M of SUI sold, under the $3M the market absorbs before slippage passes the 5% bonus. Drag the price drop up and watch which monitor turns first.', set: {} },
+      { name: 'Thin liquidity', note: 'Only $15M of liquidity and a 20% drop. Liquidations stall while every loan is still above water: <b>stuck positions show up before bad debt does.</b>', set: { depth: 15, shock: 20 } },
+      { name: 'Gap crash', note: 'A 35% gap down. Switch the price path to <b>Gradual</b> at the same drop and compare the bad debt: in a gap, liquidators never get to act on the way down.', set: { shock: 35, mode: 'gap' } },
+      { name: 'Whale borrower', note: 'One borrower holds 30% of the collateral near max LTV, the shape of the CRV position on Aave in November 2022. Check how much of the bad debt is theirs.', set: { whale: 30, shock: 35 } },
+      { name: 'Broken parameters', note: 'Max LTV 90%, threshold 95%, bonus 8%, so 0.95 × 1.08 ≥ 1. Even a 15% drop creates bad debt, because each liquidation leaves the loan worse off than before.', set: { maxLTV: 90, lt: 95, bonus: 8, shock: 15 } },
+      { name: 'Lenders trapped', note: 'Lenders supplied $29M against $27.6M borrowed. Utilization passes 95%: almost nothing is left to withdraw, and the rate curve jumps to push borrowers out.', set: { supply: 29 } }
+    ],
+    render(st) {
+      const r = Sim.lending({
+        price0: 2, totalCollUSD: st.coll, avgLTV: st.avgLTV, spread: 0.12, maxLTV: st.maxLTV, lt: st.lt, bonus: st.bonus,
+        closeFactor: st.cf, shock: st.shock, mode: st.mode, dexDepth: st.depth, whaleShare: st.whale, supply: st.supply,
+        rates: { base: 0, slope1: st.slope1, kink: st.kink, slope2: st.slope2, reserve: st.rf }
+      });
+      const rows = [];
+      rows.push(r.paramLtvOk
+        ? { lv: 'ok', t: 'Max LTV sits below the liquidation threshold', d: `A loan opened at the ${F.pct(st.maxLTV, 0)} max survives a ${F.pct(r.cushion)} price drop before it can be liquidated.` }
+        : { lv: 'crit', t: 'Max LTV is at or above the liquidation threshold', d: 'A loan can be liquidatable the moment it opens. Keep max LTV a few points under the threshold.' });
+      const prod = st.lt * (1 + st.bonus);
+      rows.push(r.paramBonusOk
+        ? { lv: 'ok', t: 'Threshold leaves room for the bonus', d: `${st.lt.toFixed(2)} × (1 + ${st.bonus.toFixed(3).replace(/0+$/, '')}) = ${prod.toFixed(3)}, below 1. At health factor 1, the collateral still covers the debt plus the liquidator’s bonus.` }
+        : { lv: 'crit', t: 'Threshold leaves no room for the bonus', d: `${st.lt.toFixed(2)} × (1 + ${st.bonus.toFixed(3).replace(/0+$/, '')}) = ${prod.toFixed(3)}, at or above 1. At health factor 1 the collateral can’t pay the debt plus the bonus, so each liquidation pushes the loan further under.` });
+      if (r.demand <= 0) rows.push({ lv: 'ok', t: 'Liquidation capacity', d: `No loan reaches health factor 1 at a ${F.pct(st.shock, 0)} drop.` });
+      else if (r.stuckCount === 0) rows.push({ lv: 'ok', t: 'Liquidation capacity', d: `Liquidators need to sell ${F.usd(r.demand)} of SUI. The market absorbs ${F.usd(r.capacity)} before slippage passes the ${F.pct(st.bonus)} bonus.` });
+      else rows.push({ lv: r.badDebt > 0 ? 'crit' : 'warn', t: 'Liquidation capacity exceeded', d: `Liquidations need ${F.usd(r.demand)} of SUI sold, but only ${F.usd(r.capacity)} sells before slippage eats the ${F.pct(st.bonus)} bonus. ${r.stuckCount} position${r.stuckCount > 1 ? 's are' : ' is'} left unliquidated with ${F.usd(r.stuckDebt)} of debt.` });
+      const bdShare = r.badDebt / r.totalBorrowed;
+      if (r.badDebt < 1) rows.push({ lv: 'ok', t: 'Bad debt', d: `None at a ${F.pct(st.shock, 0)} drop${st.mode === 'gap' ? ' with a gap down' : ''}.` });
+      else rows.push({ lv: bdShare < 0.01 ? 'warn' : 'crit', t: 'Bad debt', d: `${F.usd(r.badDebt)} of debt has no collateral behind it, ${F.pct(bdShare, 2)} of everything lent. Reserves pay first, then lenders take the loss.` });
+      if (r.U >= 1) rows.push({ lv: 'crit', t: 'Utilization', d: 'Borrowing exceeds what lenders supplied. Lenders can’t withdraw anything.' });
+      else if (r.U <= st.kink) rows.push({ lv: 'ok', t: 'Utilization', d: `${F.pct(r.U)} of the pool is lent out. Borrowers pay ${F.pct(r.bRate, 2)}, lenders earn ${F.pct(r.sRate, 2)}.` });
+      else if (r.U <= 0.95) rows.push({ lv: 'warn', t: 'Utilization above the kink', d: `${F.pct(r.U)} lent out. The borrow rate jumps to ${F.pct(r.bRate, 1)} to pull utilization back under ${F.pct(st.kink, 0)}.` });
+      else rows.push({ lv: 'crit', t: 'Lenders are nearly trapped', d: `${F.pct(r.U)} lent out: only ${F.usd(st.supply * (1 - r.U))} can be withdrawn. Borrow rate ${F.pct(r.bRate, 1)}.` });
+      if (st.whale > 0) rows.push({ lv: st.whale >= 0.25 ? 'crit' : st.whale >= 0.1 ? 'warn' : 'ok', t: 'Concentration', d: `One borrower holds ${F.pct(st.whale, 0)} of the collateral at ${F.pct(r.whaleLTV, 0)} LTV.${r.badDebt >= 1 ? ` ${F.usd(r.whaleBad)} of the bad debt is theirs.` : ''}` });
+      const curveMax = Math.max(...r.curve.map(p => p[1]));
+      const charts = [
+        { id: 'c-lend-bd', spec: { x: { min: 0, max: 0.8, fmt: pctFmt0, label: 'SUI price drop' }, y: { min: 0, max: niceMax(Math.max(curveMax, 1e6)), fmt: usdAxis },
+          series: [{ pts: r.curve, color: '--crit', fill: true }], vlines: [{ x: st.shock, color: '--accent', label: 'now ' + F.pct(st.shock, 0), dash: true }],
+          points: [{ x: st.shock, y: r.badDebt, color: '--accent' }] } },
+        { id: 'c-lend-rate', spec: (() => {
+          const m = { base: 0, slope1: st.slope1, kink: st.kink, slope2: st.slope2 };
+          const b = [], s = [];
+          for (let u = 0; u <= 1.0001; u += 0.01) { const br = Sim.borrowRate(u, m); b.push([u, br]); s.push([u, br * u * (1 - st.rf)]); }
+          const Uc = Math.min(r.U, 1);
+          return { x: { min: 0, max: 1, fmt: pctFmt0, label: 'Utilization' }, y: { min: 0, max: niceMax(Sim.borrowRate(1, m)), fmt: v => Math.round(v * 100) + '%' },
+            series: [{ pts: b, color: '--accent' }, { pts: s, color: '--violet' }], vlines: [{ x: Uc, color: '--muted', dash: true, label: 'now ' + F.pct(Uc, 0) }],
+            points: [{ x: Uc, y: r.bRate, color: '--accent' }, { x: Uc, y: r.sRate, color: '--violet' }] };
+        })() }
+      ];
+      const html = monitor(rows) + metrics([
+        { l: 'Total borrowed', v: F.usd(r.totalBorrowed), s: `${r.n} borrowers` },
+        { l: 'Utilization', v: r.U >= 1 ? '>100%' : F.pct(r.U), s: `borrow ${F.pct(r.bRate, 2)} · supply ${F.pct(r.sRate, 2)}` },
+        { l: 'SUI after the drop', v: '$' + r.P1.toFixed(2), s: `${MINUS}${F.pct(st.shock, 0)} from $2.00` },
+        { l: 'Liquidatable loans', v: String(r.liqCount), s: `${F.usd(r.liqDebt)} of debt` },
+        { l: 'SUI liquidators must sell', v: F.usd(r.demand), s: `capacity ${F.usd(r.capacity)}` },
+        { l: 'Slippage if sold at once', v: F.pct(r.slipAll), s: `bonus ${F.pct(st.bonus)}`, cls: r.slipAll > st.bonus / (1 + st.bonus) ? 'bad' : '' },
+        { l: 'Bad debt', v: F.usd(r.badDebt), s: F.pct(bdShare, 2) + ' of borrowed', cls: r.badDebt >= 1 ? 'bad' : 'good' }
+      ]) + `<div class="charts two">${chartPanel('c-lend-bd', 'Bad debt vs SUI price drop', 'same market, every drop from 0 to 80%', [{ label: 'Bad debt', color: '--crit' }, { label: 'Current drop', color: '--accent', dash: true }])}${chartPanel('c-lend-rate', 'Interest rate curve', 'set by utilization', [{ label: 'Borrow rate', color: '--accent' }, { label: 'Lender rate', color: '--violet' }])}</div>` + notes([
+        'Borrowers: 300 positions with heavy-tailed sizes; LTVs spread around the average (standard deviation 12 points) and capped at max LTV. The optional whale sits 2 points under max LTV.',
+        'Each liquidation round repays close factor × debt and seizes repay × (1 + bonus) of SUI at the oracle price, repeating until the loan is healthy or the collateral runs out.',
+        'Capacity: a liquidator breaks even when slippage equals bonus ÷ (1 + bonus). On a constant-product market that caps profitable selling at bonus × depth. “Depth” means all liquidity reachable during the crash window; arbitrage refills are not modeled.',
+        'Gradual: the price falls in 60 steps and liquidators act at each one, riskiest loans first. Gap: the price jumps straight to the shocked level.',
+        'Bad debt = debt left with no collateral behind it at the final price.',
+        'Left out: gas costs, oracle delay (see the Oracles lab), lenders withdrawing during the crash, and the pool’s USD depth shrinking as SUI falls.'
+      ]);
+      return { html, charts, level: worst(rows), model: r };
+    },
+    renderUsers(st, m) { return usersView(this, Roles.lending(st, m, st)); }
+  });
+
+  // ===== AMM =====
+  LABS.push({
+    key: 'amm', name: 'AMM and MEV',
+    title: 'AMMs: slippage, concentrated liquidity, sandwiches',
+    blurb: 'A SUI/USDC pool at $2.00. Sell into it, spread the same capital over a narrow range, then see what a sandwich bot can take from a buyer with loose slippage settings.',
+    you: [
+      { id: 'yAmount', label: 'Your amount', type: 'log', min: 100, max: 10e6, value: 10000, fmt: F.usd },
+      { id: 'yMove', label: 'SUI price move (for LPs)', min: -60, max: 60, step: 1, value: -20, scale: 0.01, fmt: v => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v) + '%' },
+      { id: 'yVol', label: 'Volume while you provide (× pool size)', min: 0, max: 50, step: 1, value: 5, fmt: v => v + '×' }
+    ],
+    youNotes: [
+      'Sellers sell your amount of SUI at $2.00; the buyer spends your amount of USDC.',
+      'LPs: the market moves by “SUI price move” and arbitrage brings the pool to that price. Fees = fee tier × volume × your share. A concentrated position earns its depth multiple in fees while in range, prorated by how much of the move stayed inside the range.',
+      'Victim and bot: the same sandwich search as the engineer view, run on your amount.'
+    ],
+    controls: [
+      { grp: 'Pool (SUI at $2.00)' },
+      { id: 'tvl', label: 'Pool liquidity (both sides)', type: 'log', min: 0.2e6, max: 200e6, value: 10e6, fmt: F.usd },
+      { id: 'fee', label: 'Fee tier', type: 'seg', options: [[0.0005, '0.05%'], [0.003, '0.3%'], [0.01, '1%']], value: 0.003 },
+      { grp: 'Your trade' },
+      { id: 'trade', label: 'Sell SUI worth', type: 'log', min: 1e3, max: 10e6, value: 50e3, fmt: F.usd },
+      { grp: 'Concentrated liquidity' },
+      { id: 'range', label: 'Same capital in a price range of', min: 1, max: 90, step: 1, value: 10, scale: 0.01, fmt: v => '±' + v + '%' },
+      { grp: 'Sandwich attack' },
+      { id: 'victim', label: 'Victim buys SUI with', type: 'log', min: 1e3, max: 2e6, value: 50e3, fmt: F.usd },
+      { id: 'tol', label: 'Victim’s slippage tolerance', min: 0, max: 10, step: 0.1, value: 0.5, scale: 0.01, fmt: v => v.toFixed(1) + '%' }
+    ],
+    presets: [
+      { name: 'Deep pool, small trade', note: '<b>Start here.</b> A $50K sale into a $10M pool costs about 1.3% including the 0.3% fee, and concentrating the same capital in ±10% nearly removes that. Even the common 0.5% slippage setting leaves a $50K buyer open to a small sandwich.', set: {} },
+      { name: 'Thin pool, big trade', note: 'A $500K sale into a $2M pool, the size of a liquidator dumping seized collateral into a thin market. Look at the spot price the pool shows afterwards.', set: { tvl: 2e6, trade: 500e3 } },
+      { name: 'Tight range', note: 'A $2M pool concentrated in ±2% acts like a full-range pool 100× bigger: a $1M sale costs about 1.3% instead of 50%. At $1.2M the order runs out of the range. Drag the trade size across that edge.', set: { range: 2, tvl: 2e6, trade: 1.2e6 } },
+      { name: 'Sandwich bait', note: 'A $50K buy with 5% tolerance in a $2M pool. The bot front-runs until the victim gets exactly their minimum, then sells back.', set: { tol: 5, tvl: 2e6 } }
+    ],
+    render(st) {
+      const r = Sim.amm({ price: 2, tvl: st.tvl, trade: st.trade, range: st.range, fee: st.fee });
+      const sw = Sim.sandwich({ price: 2, tvl: st.tvl, victim: st.victim, tol: st.tol, fee: st.fee });
+      const rows = [];
+      rows.push({ lv: r.cpSlip < 0.03 ? 'ok' : r.cpSlip < 0.1 ? 'warn' : 'crit', t: 'Slippage on a full-range pool', d: `Selling ${F.usd(st.trade)} of SUI returns ${F.usd(r.cpOut)}, ${F.pct(r.cpSlip, 2)} below $2.00 (fee included).` });
+      if (r.cl.exhausted) rows.push({ lv: 'crit', t: 'Order runs out of the range', d: `The price hits the range’s lower edge at $${r.Pa.toFixed(2)}. Only ${F.usd(r.cl.filledIn * 2)} of the ${F.usd(st.trade)} order sells into this position; the rest needs other liquidity.` });
+      else rows.push({ lv: 'ok', t: 'Concentrated position holds', d: `The trade stays inside ±${F.pct(st.range, 0)}. The same capital behaves like a full-range pool ${r.efficiency.toFixed(1)}× bigger: slippage ${F.pct(r.clSlip, 2)}.` });
+      const move = r.cpNewP / 2 - 1;
+      rows.push({ lv: Math.abs(move) < 0.03 ? 'ok' : Math.abs(move) < 0.1 ? 'warn' : 'crit', t: 'Spot price after the trade', d: `Right after this one trade the pool quotes SUI at $${r.cpNewP.toFixed(3)} (${F.spct(move)}). A protocol using this pool’s spot price as its oracle would read that number.` });
+      if (sw.profitable) rows.push({ lv: 'crit', t: 'Sandwich is profitable', ref: 'MEV', d: `A bot buys ${F.usd(sw.best.A)} first, the victim receives ${F.pct(sw.victimLossPct, 2)} fewer SUI (worth ${F.usd(sw.victimLossUSD)}), and the bot sells back for ${F.usd(sw.best.profit)} profit after fees.` });
+      else rows.push({ lv: 'ok', t: 'No profitable sandwich', ref: 'MEV', d: `With ${F.pct(st.tol, 1)} tolerance on a ${F.usd(st.victim)} buy, fees cost a bot more than it could squeeze out.` });
+      const near = r.curveCP.concat(r.curveCL).filter(p => p[0] <= st.trade * 10).map(p => p[1]);
+      const ymax = niceMax(Math.min(60, Math.max(1, ...near)));
+      const charts = [{ id: 'c-amm', spec: { x: { min: 1e3, max: 1e7, log: true, fmt: v => F.usd(v).replace('.0K', 'K').replace('.00M', 'M'), label: 'Trade size' }, y: { min: 0, max: ymax, fmt: v => v + '%' },
+        series: [{ pts: r.curveCP, color: '--accent' }, { pts: r.curveCL, color: '--warm' }], vlines: [{ x: st.trade, color: '--muted', dash: true, label: 'your trade' }],
+        points: [{ x: st.trade, y: r.cpSlip * 100, color: '--accent' }, { x: st.trade, y: r.clSlip * 100, color: '--warm' }] } }];
+      const html = monitor(rows) + metrics([
+        { l: 'Full range: you receive', v: F.usd(r.cpOut), s: 'slippage ' + F.pct(r.cpSlip, 2) },
+        { l: `±${F.pct(st.range, 0)} range: you receive`, v: F.usd(r.cl.out), s: (r.cl.exhausted ? 'range exhausted · ' : '') + 'slippage ' + F.pct(r.clSlip, 2), cls: r.cl.exhausted ? 'bad' : '' },
+        { l: 'Range acts like a pool', v: r.efficiency.toFixed(1) + '× bigger', s: 'while the price stays in range' },
+        { l: 'Spot price after', v: '$' + r.cpNewP.toFixed(3), s: F.spct(move) + ' from $2.00' },
+        { l: 'Sandwich bot profit', v: F.usd(sw.profitable ? sw.best.profit : 0), s: sw.profitable ? 'front-run ' + F.usd(sw.best.A) : 'not profitable', cls: sw.profitable ? 'bad' : 'good' },
+        { l: 'Victim’s loss', v: F.usd(sw.profitable ? sw.victimLossUSD : 0), s: 'tolerance ' + F.pct(st.tol, 1) }
+      ]) + chartPanel('c-amm', 'Slippage vs trade size', 'same capital, two shapes', [{ label: 'Full range (x·y = k)', color: '--accent' }, { label: `Concentrated ±${F.pct(st.range, 0)}`, color: '--warm' }]) + notes([
+        'Full range: constant product x · y = k, with the fee taken from the input.',
+        'Concentrated: one position with the same capital spread over [P(1 − r), P(1 + r)], using Uniswap v3 math. Once the price leaves the range, this position stops trading. Real pools stack many positions.',
+        'Sandwich: the bot tries front-run sizes and keeps the most profitable one that still leaves the victim at or above their minimum output. It pays the fee both ways; gas is ignored.',
+        'The same pool math drives the Lending lab’s liquidation capacity and the Oracles lab’s flash-loan attack.'
+      ]);
+      return { html, charts, level: worst(rows), model: { r, sw } };
+    },
+    renderUsers(st, m) { return usersView(this, Roles.amm(st, m, st)); }
+  });
+
+  // ===== Perps =====
+  LABS.push({
+    key: 'perps', name: 'Perps (vAMM)',
+    title: 'Perpetuals on a virtual AMM',
+    blurb: 'Perpetuals priced by a vAMM, pulled toward the oracle by funding and forced repegs, with an insurance fund paying for whatever doesn’t add up. The mechanics follow the public Perpetual Protocol v1 design, plus an automatic repeg rule.',
+    you: [
+      { id: 'yAmount', label: 'Your margin', type: 'log', min: 0.1, max: 100, value: 10, fmt: v => v.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ETH' },
+      { id: 'yLev', label: 'Your leverage', min: 1, max: 20, step: 1, value: 5, fmt: v => v + '×' }
+    ],
+    youNotes: [
+      'Traders open at today’s vAMM price with your margin and leverage (paying the vAMM price impact), pay or receive one day of funding, then the flash crash moves the price.',
+      'A full liquidation leaves the trader nothing: Perpetual Protocol v1 sends the remaining margin to the liquidator and the fund. In a gap, losses past the margin fall on the fund.',
+      'Insurance fund: one day of funding, any forced repeg, and the crash. Liquidation bot: half the 1.25% fee on each liquidation it performs.'
+    ],
+    controls: [
+      { grp: 'vAMM (oracle starts at 70 ETH)' },
+      { id: 'depth', label: 'vAMM depth (virtual base reserve)', min: 20, max: 500, step: 5, value: 100, fmt: v => v + ' units' },
+      { id: 'skew', label: 'Net trader position', min: -30, max: 30, step: 0.5, value: 2, fmt: v => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v) + ' contracts' + (v > 0 ? ' long' : v < 0 ? ' short' : '') },
+      { id: 'oi', label: 'Open interest (longs + shorts)', min: 5, max: 200, step: 1, value: 40, fmt: v => v + ' contracts' },
+      { id: 'oracleMove', label: 'Oracle (real price) moves', min: -50, max: 50, step: 1, value: 0, scale: 0.01, fmt: v => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v) + '%' },
+      { grp: 'Insurance fund' },
+      { id: 'fund', label: 'Fund balance', min: 5, max: 500, step: 5, value: 50, fmt: v => v + ' ETH' },
+      { id: 'budgetShare', label: 'Repeg budget (share of fund)', min: 5, max: 100, step: 5, value: 50, scale: 0.01, fmt: v => v + '%' },
+      { id: 'kScale', label: 'Adjust k (vAMM depth) by', min: 0.5, max: 2, step: 0.05, value: 1, fmt: v => '×' + v.toFixed(2) },
+      { grp: 'Flash crash' },
+      { id: 'crash', label: 'Floor price drop', min: 0, max: 80, step: 1, value: 15, scale: 0.01, fmt: v => v + '%' },
+      { id: 'mode', label: 'Price path', type: 'seg', options: [['gradual', 'Gradual'], ['gap', 'Gap down']], value: 'gap' },
+      { id: 'longShare', label: 'Share of open interest that is long', min: 0, max: 100, step: 5, value: 60, scale: 0.01, fmt: v => v + '%' },
+      { id: 'avgLev', label: 'Average leverage', min: 1, max: 10, step: 0.5, value: 3, fmt: v => v + '×' }
+    ],
+    presets: [
+      { name: 'Calm market', note: '<b>Start here.</b> Traders are 2 contracts net long, so the vAMM sits a little above the oracle. Longs pay funding, and because there are more longs than shorts, the fund keeps the difference.', set: {} },
+      { name: 'Price rallies', note: 'The real price jumps 20% while the vAMM lags. Now longs <b>receive</b> funding, and with a net-long skew the fund pays the imbalance every hour.', set: { oracleMove: 20, skew: 3 } },
+      { name: 'Repeg over budget', note: 'The forced repeg costs more than its budget. A simple fallback cuts k by 1% once and assumes that is enough. Check whether it is.', set: { oracleMove: 25, skew: 5, budgetShare: 20 } },
+      { name: 'Same-block MEV', note: 'The vAMM sits 14% above the oracle, so a forced repeg is due. A trader shorts, calls payFunding() to trigger it, and closes in the same transaction.', set: { oracleMove: -12, skew: 0 } },
+      { name: 'Flash crash', note: 'A 45% gap with traders at 6× average leverage. Compare the bad debt with the fund, then switch the path to Gradual.', set: { crash: 45, avgLev: 6 } }
+    ],
+    render(st) {
+      const n = clamp(st.skew, -0.8 * st.depth, 0.8 * st.depth), oi = Math.max(st.oi, Math.abs(n));
+      const r = Sim.perps({ price0: 70, depth: st.depth, skew: n, oracleMove: st.oracleMove, oi, fund: st.fund, budgetShare: st.budgetShare, kScale: st.kScale });
+      const c = Sim.perpCrash({ price0: 70, crash: st.crash, oi, longShare: st.longShare, avgLev: st.avgLev, mm: 0.0625, liqFee: 0.0125, mode: st.mode });
+      const rows = [];
+      const sp = r.spread, asp = Math.abs(sp);
+      rows.push({ lv: asp <= 0.05 ? 'ok' : asp <= 0.10 ? 'warn' : 'crit', t: 'vAMM vs oracle', ref: asp > 0.10 ? 'Repeg trigger' : '', d: `vAMM ${r.mark.toFixed(2)} ETH vs oracle ${r.index.toFixed(2)} ETH (${F.spct(sp)}).` + (asp <= 0.05 ? '' : asp <= 0.10 ? ' Funding pushes it back; no repeg yet.' : ` Past the 10% trigger: after three checks in a row, the vAMM is forced to ${r.target.toFixed(2)} ETH, 5% from the oracle.`) });
+      const pay = r.longsPayHr >= 0 ? `Longs pay ${F.eth(r.longsPayHr, 3)}/h and shorts receive ${F.eth(r.shortsGetHr, 3)}/h` : `Shorts pay ${F.eth(-r.shortsGetHr, 3)}/h and longs receive ${F.eth(-r.longsPayHr, 3)}/h`;
+      if (Math.abs(r.fundHr) < 1e-9) rows.push({ lv: 'ok', t: 'Funding', d: 'Mark equals the oracle or traders are balanced: no imbalance for the fund.' });
+      else if (r.fundHr > 0) rows.push({ lv: 'ok', t: 'Funding', d: `${pay}. The fund keeps the ${F.eth(r.fundHr, 3)}/h difference.` });
+      else rows.push({ lv: -r.fundDay > 0.25 * st.fund ? 'crit' : 'warn', t: 'Fund pays funding', d: `${pay}. The skew sits on the receiving side, so the fund pays ${F.eth(-r.fundDay)} a day, ${F.pct(-r.fundDay / st.fund, 0)} of its balance.` });
+      if (!r.trigger) rows.push({ lv: 'ok', t: 'Repeg cost', ref: 'Repeg budget', d: 'No forced repeg pending.' });
+      else if (r.repegCost <= 0) rows.push({ lv: 'ok', t: 'Repeg earns the fund money', ref: 'Repeg budget', d: `Moving the vAMM to ${r.target.toFixed(2)} ETH hurts the side traders sit on, so the fund gains ${F.eth(-r.repegCost)}.` });
+      else if (r.repegCost <= r.budget) rows.push({ lv: 'warn', t: 'Repeg costs the fund', ref: 'Repeg budget', d: `Moving the vAMM to ${r.target.toFixed(2)} ETH costs ${F.eth(r.repegCost)}, inside the ${F.eth(r.budget)} budget.` });
+      else rows.push({ lv: 'crit', t: 'Repeg is over budget', ref: 'Repeg budget', d: `Moving the vAMM to ${r.target.toFixed(2)} ETH costs ${F.eth(r.repegCost)}, over the ${F.eth(r.budget)} budget. The fallback cuts k by 1% once: the cost becomes ${F.eth(r.kCutCost)}, ${r.kCutCost > r.budget ? 'still over budget' : 'now inside the budget'}.` });
+      if (r.trigger) rows.push({ lv: 'warn', t: 'Risk-free trade around the repeg', ref: 'Same-block MEV', d: `Open a ${r.mark > r.index ? 'short' : 'long'}, call payFunding() to trigger the repeg, and close in one transaction: about ${F.pct(r.mevPct, 1)} before leverage, paid by other traders and the fund.` });
+      if (c.bad <= 1e-9) rows.push({ lv: 'ok', t: 'Flash crash vs the fund', ref: 'Crash vs fund', d: `A ${F.pct(st.crash, 0)} ${st.mode === 'gap' ? 'gap' : 'gradual drop'} liquidates ${c.liquidated} of ${c.N} traders with no bad debt. The fund collects ${F.eth(c.toFund)} from liquidations.` });
+      else rows.push({ lv: c.bad > st.fund ? 'crit' : 'warn', t: 'Flash crash vs the fund', ref: 'Crash vs fund', d: `A ${F.pct(st.crash, 0)} gap leaves ${c.underwater} traders underwater: ${F.eth(c.bad)} of bad debt against a ${F.eth(st.fund)} fund${c.bad > st.fund ? '. The fund is wiped out.' : ` (${F.pct(c.bad / st.fund, 0)} of it).`}` });
+      const kNote = st.kScale === 1 ? `k unchanged. Buying 1 contract moves the price ${F.pct(r.slip1, 2)}.` : `Scaling k ×${st.kScale.toFixed(2)} ${r.kCost >= 0 ? 'costs' : 'earns'} the fund ${F.eth(Math.abs(r.kCost), 3)}. Buying 1 contract now moves the price ${F.pct(r.slip1k, 2)} instead of ${F.pct(r.slip1, 2)}.`;
+      rows.push({ lv: r.kCost > r.budget ? 'warn' : 'ok', t: 'vAMM depth (k)', d: kNote });
+      const sweep = [];
+      for (let x = 0; x <= 0.8001; x += 0.02) sweep.push([x, Sim.perpCrash({ price0: 70, crash: x, oi, longShare: st.longShare, avgLev: st.avgLev, mm: 0.0625, liqFee: 0.0125, mode: 'gap' }).bad]);
+      const ym = niceMax(Math.max(st.fund * 1.2, ...sweep.map(p => p[1])));
+      const charts = [{ id: 'c-perp', spec: { x: { min: 0, max: 0.8, fmt: pctFmt0, label: 'Floor price gap' }, y: { min: 0, max: ym, fmt: v => v + ' ETH' },
+        series: [{ pts: sweep, color: '--crit', fill: true }], hlines: [{ y: st.fund, color: '--accent', dash: true }], vlines: [{ x: st.crash, color: '--muted', dash: true, label: 'now ' + F.pct(st.crash, 0) }] } }];
+      const html = monitor(rows) + metrics([
+        { l: 'vAMM (mark) price', v: r.mark.toFixed(2) + ' ETH', s: `net ${n >= 0 ? '+' : MINUS}${Math.abs(n)} contracts, depth ${st.depth}` },
+        { l: 'Oracle price', v: r.index.toFixed(2) + ' ETH', s: 'gap ' + F.spct(sp) },
+        { l: r.longsPayHr >= 0 ? 'Longs pay per hour' : 'Longs receive per hour', v: F.eth(Math.abs(r.longsPayHr), 3), s: `${F.eth(Math.abs(r.premium / 24), 3)} per contract` },
+        { l: 'Fund per day from funding', v: F.seth(r.fundDay), cls: r.fundDay < 0 ? 'bad' : '' },
+        { l: 'Repeg cost', v: r.trigger ? F.seth(-r.repegCost) : 'Not triggered', s: r.trigger ? `to ${r.target.toFixed(2)} ETH · budget ${F.eth(r.budget, 1)}` : 'trigger at a 10% gap', cls: r.trigger && r.repegCost > r.budget ? 'bad' : '' },
+        { l: 'k change, fund impact', v: F.seth(-r.kCost, 3), s: '×' + st.kScale.toFixed(2) },
+        { l: 'Crash: traders liquidated', v: `${c.liquidated} of ${c.N}`, s: `${c.underwater} underwater` },
+        { l: 'Crash: bad debt', v: F.eth(c.bad), s: 'fund ' + F.eth(st.fund, 0), cls: c.bad > 0 ? 'bad' : 'good' },
+        { l: 'Blocks for vAMM to follow', v: isFinite(c.blocks) ? Math.ceil(c.blocks) + ' blocks' : '—', s: 'at the 2% per-block limit' }
+      ]) + chartPanel('c-perp', 'Bad debt if the price gaps down', 'same traders, every gap from 0 to 80%', [{ label: 'Bad debt', color: '--crit' }, { label: 'Insurance fund', color: '--accent', dash: true }]) + notes([
+        'vAMM: x · y = k with no real tokens behind it. Mark price = quote reserve ÷ base reserve; the net trader position has already shifted the reserves.',
+        'Funding (Perpetual Protocol v1 Amm.settleFunding): each hour longs pay (mark − oracle) ÷ 24 per contract to shorts. The fund keeps or pays the imbalance on the net position (ClearingHouse.payFunding).',
+        'Repeg: a k-preserving move to oracle × 1.05 or × 0.95, triggered past a 10% gap. Cost = the change in what net traders could close for.',
+        'Fallback: when the cost exceeds the budget, both reserves are set to 99% of the repegged values once.',
+        'Crash: 200 traders opened at 70 ETH with leverage spread around the average, 6.25% maintenance margin, and a 1.25% liquidation fee split half to the liquidator. In a gap, losses past a trader’s margin are bad debt.',
+        'Left out: funding during the crash, partial liquidations, and the 2% per-block fluctuation limit (shown only as the number of blocks needed).'
+      ]);
+      return { html, charts, level: worst(rows), model: { r, c } };
+    },
+    renderUsers(st, m) { return usersView(this, Roles.perps(st, m, st)); }
+  });
+
+  // ===== Liquid staking =====
+  LABS.push({
+    key: 'lst', name: 'Liquid staking',
+    title: 'Liquid staking tokens as collateral',
+    blurb: 'An LST like haSUI or afSUI grows against SUI as staking rewards accrue. Use it as collateral for a SUI loan, loop it, then let it trade below its redemption value.',
+    you: [
+      { id: 'yAmount', label: 'Your amount', type: 'log', min: 1, max: 1e6, value: 1000, fmt: v => v.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' SUI' }
+    ],
+    youNotes: [
+      'Amounts are in SUI. Debt and collateral are both SUI, so the SUI/USD price cancels out.',
+      'The looper is shown at market value today. Liquidation follows this lab’s oracle choice, with a 50% close factor.',
+      'The liquidator repays your amount of SUI debt and sells the seized LST at market price minus slippage.'
+    ],
+    controls: [
+      { grp: 'Liquid staking token' },
+      { id: 'apr', label: 'Staking APR', min: 0, max: 8, step: 0.1, value: 2.5, scale: 0.01, fmt: v => v.toFixed(1) + '%' },
+      { id: 'days', label: 'Days since launch', min: 0, max: 1460, step: 5, value: 365, fmt: v => v + ' days' },
+      { id: 'discount', label: 'Market discount to redemption value', min: 0, max: 25, step: 0.1, value: 0.3, scale: 0.01, fmt: v => v.toFixed(1) + '%' },
+      { id: 'wait', label: 'Time to redeem for SUI', min: 1, max: 120, step: 1, value: 1, fmt: v => v + (v === 1 ? ' day' : ' days') },
+      { grp: 'Lending market (debt in SUI)' },
+      { id: 'oracle', label: 'Collateral is priced at', type: 'seg', options: [['redemption', 'Redemption rate'], ['market', 'Market price']], value: 'redemption' },
+      { id: 'ltv', label: 'Loan LTV', min: 10, max: 90, step: 1, value: 70, scale: 0.01, fmt: v => v + '%' },
+      { id: 'lt', label: 'Liquidation threshold', min: 50, max: 97, step: 1, value: 85, scale: 0.01, fmt: v => v + '%' },
+      { id: 'bonus', label: 'Liquidation bonus', min: 1, max: 15, step: 0.5, value: 5, scale: 0.01, fmt: v => v + '%' },
+      { id: 'dexSlip', label: 'Slippage selling seized LST', min: 0, max: 10, step: 0.1, value: 1, scale: 0.01, fmt: v => v.toFixed(1) + '%' },
+      { grp: 'Looping' },
+      { id: 'loops', label: 'Loops (borrow SUI, stake, redeposit)', min: 0, max: 10, step: 1, value: 3, fmt: v => String(v) },
+      { id: 'borrowApr', label: 'SUI borrow APR', min: 0, max: 15, step: 0.1, value: 2, scale: 0.01, fmt: v => v.toFixed(1) + '%' }
+    ],
+    presets: [
+      { name: 'Normal', note: '<b>Start here.</b> The LST trades within 0.3% of its redemption value and redeems in a day. Three loops at 70% LTV earn more than plain staking.', set: {} },
+      { name: 'stETH, June 2022', note: 'Withdrawals weren’t open yet, so stETH traded near 0.94 ETH for weeks. With a redemption-rate oracle, loans stay “healthy” while seized collateral is worth 6% less on the market.', set: { discount: 6, wait: 120 } },
+      { name: 'Depeg, market oracle', note: 'Price collateral at the market and a 12% depeg pushes loopers under. Their liquidations sell more LST and deepen the discount: a cascade.', set: { discount: 12, oracle: 'market' } },
+      { name: 'Negative carry', note: 'Borrowing SUI costs 4% while staking pays 2.5%. Every extra loop loses money and adds liquidation risk.', set: { loops: 8, borrowApr: 4 } }
+    ],
+    render(st) {
+      const r = Sim.lst({ apr: st.apr, days: st.days, discount: st.discount, wait: st.wait, collUnits: 1000, ltv: st.ltv, lt: st.lt, bonus: st.bonus, oracle: st.oracle, dexSlip: st.dexSlip, loops: st.loops, borrowApr: st.borrowApr });
+      const mk = st.oracle === 'market';
+      const hf = mk ? r.hfMarket : r.hfRedeem, loopHf = mk ? r.loopHfMarket : r.loopHfRedeem;
+      const rows = [];
+      if (st.discount <= 0.005) rows.push({ lv: 'ok', t: 'Peg', d: `Trades within ${F.pct(st.discount, 1)} of its redemption value.` });
+      else rows.push({ lv: r.arbAnnual >= 0.25 ? 'ok' : 'warn', t: r.arbAnnual >= 0.25 ? 'Depeg is arbitrageable' : 'Depeg can persist', d: `Buying at ${F.pct(st.discount, 1)} off and redeeming in ${st.wait} day${st.wait > 1 ? 's' : ''} earns ${F.pct(r.arbAnnual, 0)} a year.${r.arbAnnual >= 0.25 ? ' Arbitrage capital should close the gap.' : ' That is too little to pull in arbitrage capital, so the discount can last.'}` });
+      if (st.discount > 0.005) rows.push(mk
+        ? { lv: 'warn', t: 'Oracle passes the depeg into health factors', d: `Every borrower’s collateral is marked down ${F.pct(st.discount, 1)} at once. Loopers liquidate together, and their sales push the discount deeper.` }
+        : { lv: 'warn', t: 'Oracle ignores the depeg', d: `Loans look healthy, but any collateral a liquidator seizes is worth ${F.pct(st.discount, 1)} less on the market than the oracle says.` });
+      rows.push(r.liqProfit >= 0
+        ? { lv: 'ok', t: 'Liquidations pay', d: `A liquidator seizing LST and selling it makes ${F.pct(r.liqProfit, 2)} per liquidation.` }
+        : { lv: 'crit', t: 'Liquidations lose money', d: `A liquidator loses ${F.pct(-r.liqProfit, 2)} per liquidation: the ${F.pct(st.bonus, 1)} bonus can’t cover ${mk ? '' : `the ${F.pct(st.discount, 1)} discount and `}${F.pct(st.dexSlip, 1)} slippage. Unhealthy loans would sit unliquidated unless liquidators wait ${st.wait} day${st.wait > 1 ? 's' : ''} to redeem.` });
+      if (st.loops === 0) rows.push({ lv: 'ok', t: 'Looped position', d: 'No loops: this position carries no SUI debt, so it cannot be liquidated.' });
+      else rows.push({ lv: loopHf >= 1.1 ? 'ok' : loopHf >= 1 ? 'warn' : 'crit', t: `Looped position (${r.lev.toFixed(2)}×)`, d: `Health factor ${loopHf.toFixed(3)} under the ${mk ? 'market-price' : 'redemption-rate'} oracle.${mk ? ` It is liquidated once the discount passes ${F.pct(r.loopLiqDiscount, 1)}.` : ` Under a market-price oracle it would be liquidated past a ${F.pct(r.loopLiqDiscount, 1)} discount.`}` });
+      if (st.loops > 0) rows.push({ lv: r.netApr < 0 ? 'crit' : r.netApr < st.apr ? 'warn' : 'ok', t: 'Loop carry', d: `Looping ${r.lev.toFixed(2)}× earns ${F.pct(r.netApr, 2)} vs ${F.pct(st.apr, 2)} for plain staking${r.netApr < st.apr ? `, because borrowing SUI costs ${F.pct(st.borrowApr, 1)}` : ''}.` });
+      const hfR = [], hfM = [];
+      for (let d = 0; d <= 0.3001; d += 0.005) { hfM.push([d, ((1 - d) * st.lt) / r.leff]); hfR.push([d, st.lt / r.leff]); }
+      const ymax = Math.max(2, Math.ceil((st.lt / r.leff) * 1.15 * 4) / 4);
+      const charts = [{ id: 'c-lst', spec: { x: { min: 0, max: 0.3, fmt: pctFmt0, label: 'Market discount' }, y: { min: 0, max: isFinite(ymax) ? ymax : 3, fmt: v => v.toFixed(1) },
+        series: [{ pts: hfR, color: '--accent' }, { pts: hfM, color: '--warm' }], hlines: [{ y: 1, color: '--crit', dash: true }], vlines: [{ x: st.discount, color: '--muted', dash: true, label: 'now ' + F.pct(st.discount, 1) }],
+        points: [{ x: st.discount, y: loopHf, color: mk ? '--warm' : '--accent' }] } }];
+      const html = monitor(rows) + metrics([
+        { l: 'Exchange rate', v: r.rate.toFixed(4), s: 'SUI per LST at redemption' },
+        { l: 'Market price', v: r.marketRate.toFixed(4), s: 'SUI per LST on the market' },
+        { l: 'Arbitrage yield', v: F.pct(r.arbAnnual, 0), s: 'per year, buy and redeem' },
+        { l: 'Single loan health factor', v: hf.toFixed(3), s: `at ${F.pct(st.ltv, 0)} LTV`, cls: hf < 1 ? 'bad' : '' },
+        { l: 'Liquidator P/L', v: F.spct(r.liqProfit, 2), s: 'if a liquidation happened now', cls: r.liqProfit < 0 ? 'bad' : '' },
+        { l: 'Loop leverage', v: r.lev.toFixed(2) + '×', s: `${st.loops} loop${st.loops === 1 ? '' : 's'}` },
+        { l: 'Loop net APR', v: F.pct(r.netApr, 2), s: 'plain staking ' + F.pct(st.apr, 2), cls: r.netApr < st.apr ? 'bad' : '' },
+        { l: 'Loop liquidated at a discount of', v: F.pct(r.loopLiqDiscount, 1), s: 'under a market-price oracle' }
+      ]) + chartPanel('c-lst', 'Looped position: health factor vs depeg', 'liquidatable below 1', [{ label: 'Redemption-rate oracle', color: '--accent' }, { label: 'Market-price oracle', color: '--warm' }, { label: 'Health factor 1', color: '--crit', dash: true }]) + notes([
+        'The exchange rate compounds daily at the staking APR. Redeeming takes the chosen wait; on Sui, unstaking completes at the end of an epoch (about a day).',
+        'Debt and collateral are both in SUI, so the SUI/USD price cancels out. Only the LST/SUI ratio moves health factors.',
+        'Looping: deposit, borrow SUI at the loan LTV, stake it, redeposit. Leverage = (1 − LTV^(loops + 1)) ÷ (1 − LTV).',
+        'Liquidator P/L = (1 + bonus) × (market price ÷ oracle price) × (1 − slippage) − 1. Redeeming instead avoids the discount but locks capital for the wait.',
+        'Left out: validator slashing, redemption queues that grow in a panic, and the liquidation cascade’s own effect on the discount.'
+      ]);
+      return { html, charts, level: worst(rows), model: { r } };
+    },
+    renderUsers(st, m) { return usersView(this, Roles.lst(st, m, st)); }
+  });
+
+  // ===== Oracles =====
+  LABS.push({
+    key: 'oracle', name: 'Oracles',
+    title: 'Oracles: staleness, confidence, TWAP, manipulation',
+    blurb: 'Four hours of SUI price with a crash in the middle. Tune how the feed updates and what the protocol accepts, then see when liquidations actually fire. Below it: a flash-loan attack on a market priced from a DEX.',
+    you: [
+      { id: 'yAmount', label: 'Your amount', type: 'log', min: 100, max: 10e6, value: 10000, fmt: F.usd },
+      { id: 'yPool', label: 'Deposits in the attacked market', type: 'log', min: 1e6, max: 500e6, value: 20e6, fmt: F.usd }
+    ],
+    youNotes: [
+      'Lender: shares the attacker’s hole (what was borrowed minus the abandoned collateral) in proportion to deposits.',
+      'Borrower: posts your amount of SUI with debt set so the health factor hits 1 at the liquidation trigger (threshold 80%, bonus 5%, close factor 50%). Liquidated when the protocol first accepts a price below the trigger.',
+      'Liquidator: repays your amount of that debt and is paid in SUI valued at the protocol’s price, then values it at the real market price.'
+    ],
+    controls: [
+      { grp: 'Market (SUI starts at $2.00)' },
+      { id: 'vol', label: 'Volatility per minute', min: 0.05, max: 1, step: 0.05, value: 0.2, scale: 0.01, fmt: v => v.toFixed(2) + '%' },
+      { id: 'crash', label: 'Crash size', min: 0, max: 50, step: 1, value: 20, scale: 0.01, fmt: v => v + '%' },
+      { id: 'crashAt', label: 'Crash starts at minute', min: 20, max: 200, step: 5, value: 120, fmt: v => String(v) },
+      { id: 'crashLen', label: 'Crash lasts', min: 1, max: 30, step: 1, value: 6, fmt: v => v + ' min' },
+      { grp: 'Oracle feed' },
+      { id: 'deviation', label: 'Update when the price moves', min: 0.1, max: 5, step: 0.1, value: 0.5, scale: 0.01, fmt: v => v.toFixed(1) + '%' },
+      { id: 'heartbeat', label: 'Heartbeat (longest gap between updates)', min: 1, max: 120, step: 1, value: 60, fmt: v => v + ' min' },
+      { id: 'outageAt', label: 'Outage starts at minute', min: 0, max: 230, step: 5, value: 110, fmt: v => String(v) },
+      { id: 'outageLen', label: 'Outage length', min: 0, max: 120, step: 5, value: 0, fmt: v => (v === 0 ? 'None' : v + ' min') },
+      { grp: 'Protocol checks' },
+      { id: 'source', label: 'Protocol prices loans with', type: 'seg', options: [['oracle', 'Oracle price'], ['twap', 'TWAP']], value: 'oracle' },
+      { id: 'twap', label: 'TWAP window', min: 1, max: 60, step: 1, value: 30, fmt: v => v + ' min' },
+      { id: 'maxAge', label: 'Reject prices older than', min: 1, max: 120, step: 1, value: 60, fmt: v => v + ' min' },
+      { id: 'maxConf', label: 'Reject confidence wider than', min: 0.5, max: 20, step: 0.5, value: 10, scale: 0.01, fmt: v => v.toFixed(1) + '%' },
+      { id: 'trigger', label: 'Liquidations start after a drop of', min: 1, max: 40, step: 1, value: 10, scale: 0.01, fmt: v => v + '%' },
+      { id: 'seed', type: 'button', label: 'New random price path', value: 3 },
+      { grp: 'Flash-loan attack on a DEX-priced market' },
+      { id: 'aSource', label: 'The lending market reads', type: 'seg', options: [['spot', 'DEX spot'], ['twap', 'DEX TWAP']], value: 'spot' },
+      { id: 'aDepth', label: 'Pool depth (USDC side)', type: 'log', min: 0.1e6, max: 100e6, value: 1e6, fmt: F.usd },
+      { id: 'aLoan', label: 'Flash loan', type: 'log', min: 0.05e6, max: 100e6, value: 1e6, fmt: F.usd },
+      { id: 'aColl', label: 'Attacker’s collateral (that token)', type: 'log', min: 0.05e6, max: 20e6, value: 2e6, fmt: F.usd },
+      { id: 'aLtv', label: 'Market LTV for the token', min: 10, max: 90, step: 1, value: 70, scale: 0.01, fmt: v => v + '%' },
+      { id: 'aHold', label: 'Pumped price held for', type: 'log', min: 1, max: 3600, value: 1, fmt: v => (v < 60 ? Math.round(v) + ' s' : (v / 60).toFixed(1) + ' min') }
+    ],
+    presets: [
+      { name: 'Healthy feed', note: '<b>Start here.</b> A 20% crash over 6 minutes. The feed keeps up and liquidations fire close to when the market crosses the trigger. Watch the confidence band widen during the drop.', set: {} },
+      { name: 'Outage in the crash', note: 'The feed goes silent 10 minutes before the crash. A 60-minute age limit still accepts the old $2.00 price, so the protocol keeps valuing collateral at pre-crash prices.', set: { outageLen: 40 } },
+      { name: 'TWAP lag', note: 'A 60-minute TWAP resists manipulation but trails a real crash. Liquidations start long after the market moves.', set: { source: 'twap', twap: 60 } },
+      { name: 'Confidence pause', note: 'A strict 1% confidence limit. It protects against bad prints, but it rejects prices in exactly the minutes when liquidations are needed.', set: { maxConf: 1 } },
+      { name: 'Age check too strict', note: 'Rejecting prices older than 5 minutes with a 60-minute heartbeat: a quiet market looks stale and the protocol pauses for no reason.', set: { maxAge: 5 } },
+      { name: 'Spot-price exploit', note: 'The bZx pattern (February 2020): a flash loan pumps a thin pool, the lending market reads that pool’s price, and the attacker borrows against the inflated collateral and walks away. Mango Markets (2022) worked the same way without a flash loan: about $10M of the attacker’s own USDC pumped thin markets and the oracle followed.', set: { aSource: 'spot' } },
+      { name: 'TWAP defense', note: 'The same attack against a 30-minute TWAP: a pump held for one second barely moves the average.', set: { aSource: 'twap' } }
+    ],
+    render(st) {
+      const o = Sim.oracle({ price0: 2, vol: st.vol, crash: st.crash, crashAt: st.crashAt, crashLen: st.crashLen, deviation: st.deviation, heartbeat: st.heartbeat, outageAt: st.outageAt, outageLen: st.outageLen, twap: st.twap, maxAge: st.maxAge, maxConf: st.maxConf, source: st.source, trigger: st.trigger, seed: st.seed });
+      const fa = Sim.flashAttack({ depth: st.aDepth, loan: st.aLoan, coll: st.aColl, ltv: st.aLtv, fee: 0.003, loanFee: 0.0009, hold: st.aHold, twapWin: st.twap });
+      const srcName = st.source === 'twap' ? 'TWAP' : 'oracle price';
+      const cw0 = st.crashAt, cw1 = st.crashAt + st.crashLen + 10;
+      let staleInCrash = false, pausedInCrash = 0;
+      for (let t = cw0; t <= Math.min(o.T, cw1); t++) { if (o.age[t] > st.maxAge) staleInCrash = true; if (!o.accepted[t]) pausedInCrash++; }
+      const rows = [];
+      if (o.staleMin === 0) rows.push({ lv: 'ok', t: 'Freshness', d: `Every price was under ${st.maxAge} minutes old when the protocol read it.` });
+      else rows.push({ lv: staleInCrash ? 'crit' : 'warn', t: 'Stale prices', d: `Prices were older than ${st.maxAge} minutes for ${o.staleMin} minutes${staleInCrash ? ', including during the crash' : ''}. The protocol couldn’t act on them.` });
+      if (st.maxAge < st.heartbeat) rows.push({ lv: 'warn', t: 'Age limit shorter than the heartbeat', d: `The feed only has to update every ${st.heartbeat} minutes in a calm market, but the protocol rejects anything older than ${st.maxAge}. Quiet markets look stale.` });
+      if (st.outageLen > 0 && st.maxAge >= st.outageLen) rows.push({ lv: 'crit', t: 'Outage hidden by a loose age limit', ref: 'Stale feed', d: `The feed was silent for ${st.outageLen} minutes, but a ${st.maxAge}-minute limit still accepts its last price. A feed that can sit a day stale is a real risk.` });
+      if (o.confMin === 0) rows.push({ lv: 'ok', t: 'Confidence', d: `The confidence interval stayed under ${F.pct(st.maxConf, 1)}.` });
+      else rows.push({ lv: pausedInCrash > 0 ? 'warn' : 'ok', t: 'Confidence too wide', d: `For ${o.confMin} minutes, mostly around the crash, the confidence interval was wider than ${F.pct(st.maxConf, 1)}. Rejecting those prices is safe, but it pauses liquidations exactly when they’re needed.` });
+      rows.push({ lv: o.maxDev < 0.02 ? 'ok' : o.maxDev < 0.08 ? 'warn' : 'crit', t: 'Price error', d: `The ${srcName} was off from the market by up to ${F.pct(o.maxDev, 1)}, at minute ${o.maxDevT}.` });
+      if (o.tTrue < 0) rows.push({ lv: 'ok', t: 'Liquidation timing', d: `The market never fell ${F.pct(st.trigger, 0)} in these four hours.` });
+      else if (o.tProt < 0) rows.push({ lv: 'crit', t: 'Liquidations never fire', d: `The market crossed the ${MINUS}${F.pct(st.trigger, 0)} trigger at minute ${o.tTrue}, but the protocol never saw an accepted price below it.` });
+      else { const dl = o.tProt - o.tTrue; rows.push({ lv: dl <= 2 ? 'ok' : dl <= 10 ? 'warn' : 'crit', t: 'Liquidation timing', d: dl <= 0 ? `Liquidations fire at minute ${o.tProt}, as soon as the market crosses the trigger.` : `The market crossed the trigger at minute ${o.tTrue}; the protocol acts at minute ${o.tProt}, ${dl} minute${dl > 1 ? 's' : ''} late.` }); }
+      const spot = st.aSource === 'spot';
+      const prof = spot ? fa.spotProfit : fa.twapProfit, mult = spot ? fa.m : fa.twapM;
+      rows.push(prof > 0
+        ? { lv: 'crit', t: 'Flash-loan attack is profitable', ref: 'bZx 2020', d: `Borrow ${F.usd(st.aLoan)} in a flash loan, push the pool price ×${mult.toFixed(2)}, borrow ${F.usd(spot ? fa.spotBorrow : fa.twapBorrow)} against ${F.usd(st.aColl)} of collateral, repay the loan, and keep ${F.usd(prof)}.` }
+        : { lv: 'ok', t: 'Flash-loan attack fails', ref: 'bZx 2020', d: `The ${spot ? 'spot price' : 'TWAP'} only moves ×${mult.toFixed(spot ? 2 : 4)}, so borrowing against the pumped price is worth less than the collateral left behind.${spot ? ` Break-even needs a loan of about ${F.usd(fa.loanNeeded)}.` : ''}` });
+      // chart
+      const pts = k => o[k].map((v, t) => [t, v]);
+      const bands = [];
+      let s0 = -1;
+      for (let t = 0; t <= o.T + 1; t++) {
+        const bad = t <= o.T && !o.accepted[t];
+        if (bad && s0 < 0) s0 = t;
+        if (!bad && s0 >= 0) { bands.push({ x0: s0, x1: t, color: '--crit-soft' }); s0 = -1; }
+      }
+      const all = o.truth.concat(o.reported, o.twap);
+      const lo = Math.min(...all, o.level), hi = Math.max(...all);
+      const vl = [];
+      if (o.tTrue >= 0) vl.push({ x: o.tTrue, color: '--ink', dash: true, label: 'market hits trigger', row: 0 });
+      if (o.tProt >= 0 && o.tProt !== o.tTrue) vl.push({ x: o.tProt, color: '--accent', dash: true, label: 'protocol acts', row: 1 });
+      const charts = [{ id: 'c-orc', spec: { x: { min: 0, max: o.T, fmt: v => v + 'm', label: 'Minutes' }, y: { min: Math.floor(lo * 0.97 * 20) / 20, max: Math.ceil(hi * 1.02 * 20) / 20, fmt: v => '$' + v.toFixed(2) },
+        bands, series: [{ pts: pts('truth'), color: '--faint', width: 1.5 }, { pts: pts('reported'), color: '--accent', step: true }, { pts: pts('twap'), color: '--warm', dash: true }],
+        hlines: [{ y: o.level, color: '--muted', dash: true }], vlines: vl } }];
+      const tb = Math.min(o.T, st.crashAt + st.crashLen);
+      const lag = (o.twap[tb] - o.truth[tb]) / o.truth[tb];
+      const html = monitor(rows) + metrics([
+        { l: 'Minutes paused', v: String(o.pausedMin), s: `${o.staleMin} stale · ${o.confMin} wide confidence` },
+        { l: 'Largest price error', v: F.pct(o.maxDev, 1), s: srcName + ' vs market', cls: o.maxDev >= 0.08 ? 'bad' : '' },
+        { l: 'Liquidation delay', v: o.tTrue < 0 ? 'No trigger' : o.tProt < 0 ? 'Never' : Math.max(0, o.tProt - o.tTrue) + ' min', cls: o.tTrue >= 0 && (o.tProt < 0 || o.tProt - o.tTrue > 10) ? 'bad' : '' },
+        { l: 'TWAP lag at the bottom', v: F.spct(lag, 1), s: `${st.twap}-minute window, minute ${tb}` },
+        { l: 'Pumped spot price', v: '×' + fa.m.toFixed(2), s: 'after the flash-loan buy' },
+        { l: 'TWAP moves', v: '×' + fa.twapM.toFixed(4), s: `held ${st.aHold < 60 ? Math.round(st.aHold) + ' s' : (st.aHold / 60).toFixed(1) + ' min'} of ${st.twap} min` },
+        { l: 'Attacker’s profit', v: F.usd(Math.max(0, prof)), s: spot ? 'market reads spot' : 'market reads TWAP', cls: prof > 0 ? 'bad' : 'good' }
+      ]) + chartPanel('c-orc', 'Four hours of SUI price', 'shaded minutes: the protocol rejected the price', [{ label: 'Market', color: '--faint' }, { label: 'Oracle reported', color: '--accent' }, { label: `TWAP (${st.twap} min)`, color: '--warm', dash: true }, { label: 'Liquidation trigger', color: '--muted', dash: true }, { label: 'Rejected', color: '--crit-soft', band: true }]) + notes([
+        'Market price: a random walk with the chosen per-minute volatility, plus a crash spread evenly over its duration. The path is seeded so runs repeat; the button draws a new one.',
+        'Feed: pushes a new price when the market moves more than the deviation threshold or the heartbeat runs out, and nothing during an outage. Confidence widens with recent volatility, like a Pyth confidence interval.',
+        'Protocol: rejects prices older than the age limit or with confidence wider than the limit. A rejected minute means no liquidations that minute.',
+        'TWAP: the average of the reported price over the window. Feeding an oracle that is itself a TWAP into another TWAP slows it twice.',
+        'Flash-loan attack: buying with the loan multiplies a constant-product pool’s spot price by (1 + loan ÷ depth)². A TWAP moves by that jump × (time held ÷ window). Costs: the swap fee both ways plus a 0.09% flash-loan fee. The attacker abandons the collateral and keeps the borrowed funds.'
+      ]);
+      return { html, charts, level: worst(rows), model: { o, fa } };
+    },
+    renderUsers(st, m) { return usersView(this, Roles.oracle(st, m, st)); }
+  });
+
+  // ===== Vault =====
+  LABS.push({
+    key: 'vault', name: 'Vault shares',
+    title: 'Vault share accounting (ERC-4626)',
+    blurb: 'A USDC vault that mints shares on deposit, with exact integer math as on-chain. Run the first-depositor inflation attack, turn on a defense, or flip the rounding direction.',
+    you: [
+      { id: 'yAmount', label: 'Your deposit', type: 'log', min: 1, max: 10e6, value: 10000, fmt: v => F.usdc(v) }
+    ],
+    youNotes: [
+      'Your deposit replaces the victim’s deposit; everything else follows the scenario.',
+      'Earlier depositors appear when the vault already held assets and shares before the attack.'
+    ],
+    controls: [
+      { grp: 'Vault before the attack (USDC, 6 decimals)' },
+      { id: 'A0', label: 'USDC already deposited', type: 'log', zero: true, min: 1, max: 10e6, value: 0, fmt: v => (v === 0 ? 'Empty' : F.usdc(v)) },
+      { id: 'S0', label: 'Shares already minted (raw units)', type: 'log', zero: true, min: 1, max: 1e13, value: 0, fmt: v => (v === 0 ? 'None' : F.int(v)) },
+      { grp: 'Attack' },
+      { id: 'att', label: 'Attacker’s first deposit (raw units)', type: 'log', min: 1, max: 1e9, value: 1, fmt: v => F.int(v) + ' = ' + F.usdc(Math.round(v) / 1e6) },
+      { id: 'donation', label: 'Attacker sends directly to the vault', type: 'log', zero: true, min: 1, max: 10e6, value: 10000, fmt: v => (v === 0 ? 'Nothing' : F.usdc(v)) },
+      { id: 'victim', label: 'Victim deposits', type: 'log', zero: true, min: 1, max: 10e6, value: 10000, fmt: v => (v === 0 ? 'Nothing' : F.usdc(v)) },
+      { grp: 'Vault code' },
+      { id: 'defense', label: 'Share math', type: 'seg', options: [['none', 'Naive'], ['offset', 'Virtual offset']], value: 'none' },
+      { id: 'offset', label: 'Virtual offset (extra share decimals)', min: 0, max: 9, step: 1, value: 3, fmt: v => String(v) },
+      { id: 'round', label: 'Deposit rounds shares', type: 'seg', options: [['down', 'Down (correct)'], ['up', 'Up (bug)']], value: 'down' }
+    ],
+    presets: [
+      { name: 'Inflation attack', note: '<b>Start here.</b> An empty vault. The attacker deposits 1 raw unit, sends 10,000 USDC straight to the vault, and the victim’s 10,000 USDC deposit rounds down to 0 shares.', set: {} },
+      { name: 'OpenZeppelin defense', note: 'Virtual shares and assets with offset 3. The same attack now costs the attacker about half the donation, and the victim loses dust.', set: { defense: 'offset', offset: 3 } },
+      { name: 'Offset 0', note: 'Offset 0 already makes the attack unprofitable, but the victim still loses a third. The attack turns into pure griefing.', set: { defense: 'offset', offset: 0 } },
+      { name: 'Rounding-up bug', note: 'A busy vault where one share is worth 1,000 USDC. Rounding up on deposit mints a whole share for 1 raw unit. This is what the Sui Prover spec catches.', set: { A0: 1e6, S0: 1000, att: 1, donation: 0, victim: 0, round: 'up' } }
+    ],
+    render(st) {
+      const u = x => BigInt(Math.round(x * 1e6));
+      const r = Sim.vault({ A0: u(st.A0), S0: BigInt(Math.round(st.S0)), attDeposit: BigInt(Math.max(1, Math.round(st.att))), donation: u(st.donation), victim: u(st.victim), defense: st.defense, offset: st.offset, roundUp: st.round === 'up' });
+      const victimU = u(st.victim);
+      const rows = [];
+      if (victimU > 0n) {
+        rows.push(r.victimShares === 0n
+          ? { lv: 'crit', t: 'Victim got zero shares', d: `Their ${F.units(victimU)} deposit × shares ÷ assets rounded down to 0. The money is now owned by the attacker’s share.` }
+          : { lv: 'ok', t: 'Victim got shares', d: `Their deposit minted ${r.victimShares.toLocaleString('en-US')} raw shares.` });
+        const lossPct = Number(r.victimLoss) / Number(victimU);
+        rows.push({ lv: lossPct <= 0.0001 ? 'ok' : lossPct <= 0.01 ? 'warn' : 'crit', t: 'Victim’s loss', d: `They put in ${F.units(victimU)} and got back ${F.units(r.a5)}: ${F.units(r.victimLoss)} lost (${(lossPct * 100).toFixed(lossPct < 0.001 ? 4 : 2)}%).` });
+      }
+      rows.push(r.attProfit > 0n
+        ? { lv: 'crit', t: 'Attacker profits', d: `Spent ${F.units(BigInt(Math.round(st.att)) + u(st.donation))}, redeemed ${F.units(r.a4)}: ${F.units(r.attProfit)} profit.` }
+        : { lv: 'ok', t: 'Attack doesn’t pay', d: `The attacker spent ${F.units(BigInt(Math.round(st.att)) + u(st.donation))} and redeemed ${F.units(r.a4)}: a ${F.units(-r.attProfit)} loss.` });
+      const failed = r.log.filter(x => x.check === 'fail');
+      rows.push(failed.length
+        ? { lv: 'crit', t: 'Share price fell', ref: 'Sui Prover spec', d: `Step ${failed.map(x => x.step).join(', ')} lowered the value of a share. The spec <code>new_shares × old_assets ≤ old_shares × new_assets</code> rejects this code.` }
+        : { lv: 'ok', t: 'Share price never fell', ref: 'Sui Prover spec', d: 'Every deposit and redeem kept <code>new_shares × old_assets ≤ old_shares × new_assets</code>.' });
+      if (r.leftover > 0n) rows.push({ lv: 'ok', t: 'Left in the vault', d: `${F.units(r.leftover)} stays behind after everyone redeems${st.defense === 'offset' ? ', owned by the virtual shares' : ''}.` });
+      const price = x => { if (x.vsh === 0n) return '—'; const v = Number(x.vas) / Number(x.vsh); return v >= 1e4 ? v.toExponential(3) : v.toPrecision(5); };
+      const table = `<section class="panel"><h3>Step by step <small>raw integer state after each step</small></h3><div class="tbl-wrap"><table class="log"><thead><tr><th>Step</th><th>Action</th><th class="n">Total assets</th><th class="n">Total shares (raw)</th><th class="n">Assets per share (raw)</th><th>Price check</th></tr></thead><tbody>${r.log.map(x =>
+        `<tr><td>${x.step}</td><td>${x.action}</td><td class="n">${F.units(x.A)}</td><td class="n">${x.S.toLocaleString('en-US')}</td><td class="n">${price(x)}</td><td>${x.check === 'pass' ? '<span class="tag pass">Pass</span>' : x.check === 'fail' ? '<span class="tag fail">Fail</span>' : ''}</td></tr>`).join('')}</tbody></table></div></section>`;
+      const html = monitor(rows) + metrics([
+        { l: 'Attacker’s shares', v: r.s1.toLocaleString('en-US'), s: 'from the first deposit' },
+        { l: 'Victim’s shares', v: r.s3.toLocaleString('en-US'), s: 'for ' + F.usdc(st.victim), cls: victimU > 0n && r.s3 === 0n ? 'bad' : '' },
+        { l: 'Victim gets back', v: F.units(r.a5), cls: r.victimLoss > 0n && victimU > 0n && Number(r.victimLoss) / Number(victimU) > 0.01 ? 'bad' : '' },
+        { l: 'Attacker P/L', v: (r.attProfit > 0n ? '+' : '') + F.units(r.attProfit), cls: r.attProfit > 0n ? 'bad' : 'good' }
+      ]) + table + notes([
+        'USDC has 6 decimals. Amounts are integers in base units and every division truncates, as it does on-chain.',
+        'Naive math: the first deposit mints shares 1:1; after that, shares = assets × total shares ÷ total assets.',
+        'Virtual offset (OpenZeppelin ERC-4626): shares = assets × (total shares + 10^offset) ÷ (total assets + 1), and the reverse for redeeming.',
+        'A direct transfer (the “donation”) raises total assets without minting shares, which is what inflates the share price.',
+        'The price check is the spec from the Sui Prover README, cross-multiplied to avoid division: after a deposit or redeem, new_shares × old_assets ≤ old_shares × new_assets.'
+      ]);
+      return { html, charts: [], level: worst(rows), model: { r } };
+    },
+    renderUsers(st, m) { return usersView(this, Roles.vault(st, m, st)); }
+  });
+
+
+  // ---------- Users view ----------
+  function usersView(lab, roles) {
+    let sel = roles.find(x => x.key === lab.role) || roles[0];
+    lab.role = sel.key;
+    const M = Roles.money;
+    const sm = (u, v) => (v > 1e-12 ? '+' : '') + M(u, Math.abs(v) < 1e-12 ? 0 : v);
+    const cls = v => (v > 1e-9 ? 'gain' : v < -1e-9 ? 'loss' : '');
+    const plp = x => (x.start > 0 ? (x.end - x.start) / x.start : null);
+    const p = sel.end - sel.start, pp = plp(sel);
+    const ledger = `<table class="ledger"><tbody><tr class="base"><td>Puts in</td><td class="n">${M(sel.unit, sel.start)}</td></tr>${sel.steps.map(st =>
+      st[2] === 'info' ? `<tr class="info"><td>${st[0]}</td><td class="n">${M(sel.unit, st[1])}</td></tr>` : `<tr><td>${st[0]}</td><td class="n ${cls(st[1])}">${sm(sel.unit, st[1])}</td></tr>`).join('')}<tr class="total"><td>Ends with</td><td class="n">${M(sel.unit, sel.end)}</td></tr></tbody></table>`;
+    const you = `<section class="panel"><h3>Your money <small>pick who you are</small></h3><div class="roles">${roles.map(x =>
+      `<button type="button" class="chip" data-role="${x.key}" aria-pressed="${x === sel}">${x.name}</button>`).join('')}</div><div class="story"><p class="who">${sel.who}</p><div class="result ${cls(p)}"><span class="big">${sm(sel.unit, p)}</span>${pp !== null ? `<span class="pp">${F.spct(pp, 1)}</span>` : ''}</div>${ledger}<p class="verdict">${sel.verdict}</p></div></section>`;
+    const maxAbs = Math.max(0.05, ...roles.map(plp).filter(v => v !== null).map(Math.abs));
+    const everyone = `<section class="panel"><h3>Everyone in this scenario <small>same amount for every role</small></h3><div class="tbl-wrap"><table class="log everyone"><thead><tr><th>Role</th><th class="n">Puts in</th><th class="n">Ends with</th><th class="n">Profit or loss</th><th>Return</th></tr></thead><tbody>${roles.map(x => {
+      const v = plp(x), d = x.end - x.start, w = v === null ? 0 : (Math.min(Math.abs(v), maxAbs) / maxAbs) * 50;
+      return `<tr${x === sel ? ' class="sel"' : ''}><td><button type="button" class="rolebtn" data-role="${x.key}">${x.name}</button></td><td class="n">${M(x.unit, x.start)}</td><td class="n">${M(x.unit, x.end)}</td><td class="n ${cls(d)}">${sm(x.unit, d)}</td><td class="ret"><span class="bar"><i class="${v !== null && v < 0 ? 'neg' : 'pos'}" style="width:${w.toFixed(1)}%"></i></span><span class="n ${cls(d)}">${v === null ? '—' : F.spct(v, 1)}</span></td></tr>`;
+    }).join('')}</tbody></table></div></section>`;
+    return you + everyone + notes(lab.youNotes);
+  }
+
+  // ---------- control plumbing ----------
+  function logPos(c, v) {
+    if (c.zero && v <= 0) return 0;
+    const f = Math.log(v / c.min) / Math.log(c.max / c.min);
+    return c.zero ? Math.round(1 + f * 999) : Math.round(f * 1000);
+  }
+  function logVal(c, p) {
+    if (c.zero && p <= 0) return 0;
+    const f = c.zero ? (p - 1) / 999 : p / 1000;
+    const v = c.min * Math.pow(c.max / c.min, f);
+    const e = Math.pow(10, Math.floor(Math.log10(v)) - 2);
+    return Math.round(v / e) * e;
+  }
+  function ctlHTML(lab, c) {
+    if (c.grp) return `<h3 class="grp">${c.grp}</h3>`;
+    const id = lab.key + '-' + c.id;
+    if (c.type === 'seg') return `<div class="ctl"><div class="ctl-top"><span class="lbl" id="${id}-l">${c.label}</span></div><div class="seg" role="group" aria-labelledby="${id}-l">${c.options.map((o, i) => `<button type="button" id="${id}-${i}" data-ctl="${c.id}" data-i="${i}">${o[1]}</button>`).join('')}</div></div>`;
+    if (c.type === 'button') return `<div class="ctl"><button type="button" class="btn" id="${id}" data-ctl="${c.id}">${c.label}</button></div>`;
+    if (c.type === 'log') return `<div class="ctl"><div class="ctl-top"><label for="${id}">${c.label}</label><output id="${id}-o" for="${id}"></output></div><input type="range" id="${id}" data-ctl="${c.id}" min="0" max="1000" step="1"></div>`;
+    return `<div class="ctl"><div class="ctl-top"><label for="${id}">${c.label}</label><output id="${id}-o" for="${id}"></output></div><input type="range" id="${id}" data-ctl="${c.id}" min="${c.min}" max="${c.max}" step="${c.step}"></div>`;
+  }
+  function allCtl(lab) { return lab.you.concat(lab.controls); }
+  function defaults(lab) {
+    const d = {};
+    allCtl(lab).forEach(c => { if (c.grp) return; d[c.id] = c.value; });
+    return d;
+  }
+  function toState(lab) {
+    const st = {};
+    allCtl(lab).forEach(c => { if (c.grp) return; const v = lab.raw[c.id]; st[c.id] = (c.type || 'range') === 'range' ? v * (c.scale || 1) : v; });
+    return st;
+  }
+  function syncControls(lab) {
+    allCtl(lab).forEach(c => {
+      if (c.grp || c.type === 'button') return;
+      const id = lab.key + '-' + c.id, v = lab.raw[c.id];
+      if (c.type === 'seg') { c.options.forEach((o, i) => { const b = document.getElementById(id + '-' + i); if (b) b.setAttribute('aria-pressed', String(o[0] === v)); }); return; }
+      const inp = document.getElementById(id), out = document.getElementById(id + '-o');
+      if (c.type === 'log') { inp.value = logPos(c, v); out.textContent = c.fmt(v); }
+      else { inp.value = v; out.textContent = c.fmt(v); }
+    });
+  }
+  function drawLabCharts(lab) {
+    (lab.charts || []).forEach(ch => { const cv = document.getElementById(ch.id); if (cv) drawChart(cv, ch.spec); });
+  }
+  let view = 'eng';
+  try { if (localStorage.getItem('defi-lab-view') === 'users') view = 'users'; } catch (e) {}
+  function update(lab) {
+    const st = toState(lab);
+    const res = lab.render(st);
+    if (view === 'users') { lab.out.innerHTML = lab.renderUsers(st, res.model); lab.charts = []; }
+    else { lab.out.innerHTML = res.html; lab.charts = res.charts || []; drawLabCharts(lab); }
+    const dot = document.getElementById('dot-' + lab.key);
+    if (dot) { dot.className = 'dot ' + res.level; dot.title = LV[res.level]; }
+    const tabLabel = document.getElementById('tab-' + lab.key);
+    if (tabLabel) tabLabel.setAttribute('aria-label', lab.name + ', ' + LV[res.level]);
+  }
+  let rafs = {};
+  function schedule(lab) {
+    if (rafs[lab.key]) return;
+    rafs[lab.key] = requestAnimationFrame(() => { rafs[lab.key] = 0; update(lab); });
+  }
+  function applyPreset(lab, i) {
+    const p = lab.presets[i];
+    const keep = {};
+    if (lab.raw) lab.you.forEach(c => { keep[c.id] = lab.raw[c.id]; });
+    lab.raw = Object.assign(defaults(lab), keep, p.set);
+    lab.preset = i;
+    syncControls(lab);
+    lab.root.querySelectorAll('.presets .chip').forEach((b, j) => b.setAttribute('aria-pressed', String(j === i)));
+    lab.root.querySelector('.preset-note').innerHTML = p.note;
+    update(lab);
+  }
+  function clearPreset(lab) {
+    if (lab.preset === -1) return;
+    lab.preset = -1;
+    lab.root.querySelectorAll('.presets .chip').forEach(b => b.setAttribute('aria-pressed', 'false'));
+    lab.root.querySelector('.preset-note').innerHTML = '<b>Custom settings.</b> Pick a scenario above to reset this lab.';
+  }
+
+  // ---------- view switch ----------
+  function setView(v, rerender) {
+    view = v;
+    document.body.classList.toggle('view-users', v === 'users');
+    document.getElementById('view-eng').setAttribute('aria-pressed', String(v === 'eng'));
+    document.getElementById('view-users').setAttribute('aria-pressed', String(v === 'users'));
+    try { localStorage.setItem('defi-lab-view', v); } catch (e) {}
+    if (rerender) LABS.forEach(update);
+  }
+  document.getElementById('view-eng').addEventListener('click', () => setView('eng', true));
+  document.getElementById('view-users').addEventListener('click', () => setView('users', true));
+  setView(view, false);
+
+  // ---------- build page ----------
+  const tabs = document.getElementById('tabs'), host = document.getElementById('labs');
+  LABS.forEach(lab => {
+    const b = document.createElement('button');
+    b.className = 'tab'; b.type = 'button'; b.setAttribute('role', 'tab'); b.id = 'tab-' + lab.key; b.setAttribute('aria-controls', 'lab-' + lab.key);
+    b.innerHTML = `<span class="dot" id="dot-${lab.key}"></span>${lab.name}`;
+    b.addEventListener('click', () => show(lab.key, true));
+    tabs.appendChild(b);
+    const sec = document.createElement('section');
+    sec.id = 'lab-' + lab.key; sec.setAttribute('role', 'tabpanel'); sec.setAttribute('aria-labelledby', 'tab-' + lab.key); sec.hidden = true;
+    sec.innerHTML = `<div class="lab-head"><h2>${lab.title}</h2><p>${lab.blurb}</p><div class="presets"><span class="lbl">Scenarios</span>${lab.presets.map((p, i) => `<button type="button" class="chip" data-p="${i}" id="${lab.key}-preset-${i}">${p.name}</button>`).join('')}</div><div class="preset-note"></div></div>
+      <div class="lab-grid"><aside class="params" aria-label="${lab.name} parameters"><div class="you-only you-box"><h3 class="grp">You</h3>${lab.you.map(c => ctlHTML(lab, c)).join('')}</div>${lab.controls.map(c => ctlHTML(lab, c)).join('')}</aside><div class="outputs" id="out-${lab.key}"></div></div>`;
+    host.appendChild(sec);
+    lab.root = sec; lab.out = sec.querySelector('.outputs');
+    sec.querySelectorAll('.presets .chip').forEach(ch => ch.addEventListener('click', () => applyPreset(lab, +ch.dataset.p)));
+    lab.out.addEventListener('click', e => { const b = e.target.closest('[data-role]'); if (!b) return; lab.role = b.dataset.role; update(lab); });
+    sec.querySelector('.params').addEventListener('input', e => {
+      const id = e.target.dataset && e.target.dataset.ctl; if (!id) return;
+      const c = allCtl(lab).find(x => x.id === id);
+      const v = c.type === 'log' ? logVal(c, +e.target.value) : +e.target.value;
+      lab.raw[id] = v;
+      document.getElementById(lab.key + '-' + id + '-o').textContent = c.fmt(v);
+      if (!lab.you.includes(c)) clearPreset(lab);
+      schedule(lab);
+    });
+    sec.querySelector('.params').addEventListener('click', e => {
+      const t = e.target.closest('button[data-ctl]'); if (!t) return;
+      const c = allCtl(lab).find(x => x.id === t.dataset.ctl);
+      if (c.type === 'seg') { lab.raw[c.id] = c.options[+t.dataset.i][0]; syncControls(lab); }
+      else if (c.type === 'button') { lab.raw[c.id] = (lab.raw[c.id] * 48271 + 11) % 2147483647; }
+      clearPreset(lab); schedule(lab);
+    });
+    applyPreset(lab, 0);
+  });
+
+  function show(key, remember) {
+    LABS.forEach(l => {
+      const on = l.key === key;
+      l.root.hidden = !on;
+      document.getElementById('tab-' + l.key).setAttribute('aria-selected', String(on));
+    });
+    const lab = LABS.find(l => l.key === key);
+    drawLabCharts(lab);
+    if (remember) {
+      try { localStorage.setItem('defi-lab-tab', key); } catch (e) {}
+      try { history.replaceState(null, '', '#' + key); } catch (e) {}
+    }
+  }
+  let start = 'lending';
+  const h = (location.hash || '').slice(1);
+  if (LABS.some(l => l.key === h)) start = h;
+  else { try { const s = localStorage.getItem('defi-lab-tab'); if (LABS.some(l => l.key === s)) start = s; } catch (e) {} }
+  show(start, false);
+  window.addEventListener('hashchange', () => { const k = location.hash.slice(1); if (LABS.some(l => l.key === k)) show(k, false); });
+  tabs.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const i = LABS.findIndex(l => !l.root.hidden);
+    const j = (i + (e.key === 'ArrowRight' ? 1 : LABS.length - 1)) % LABS.length;
+    show(LABS[j].key, true); document.getElementById('tab-' + LABS[j].key).focus();
+  });
+  const redraw = () => { const lab = LABS.find(l => !l.root.hidden); if (lab) drawLabCharts(lab); };
+  let rt = 0;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(redraw, 120); });
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw); } catch (e) {}
+  new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(redraw);
+})();
+
+</script>
+
+</html>

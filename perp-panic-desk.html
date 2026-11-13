@@ -1,0 +1,1294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Perp Panic Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>/* Layout: a trading desk. A sticky bar carries the clock, controls, SUI price and net worth; below it the moves rail on the left and the board (price, headlines, positions, net worth, your log) on the right. */
+:root {
+  --bg: #EDF1EF; --surface: #FFFFFF; --sunk: #F4F7F5; --ink: #122420; --muted: #56665F; --faint: #85948E; --line: #D2DCD8;
+  --accent: #0A6C8A; --accent-ink: #FFFFFF; --accent-soft: #DCEEF3;
+  --warm: #C2541A; --violet: #6552B0;
+  --ok: #1F7346; --ok-soft: #E0F1E6; --warn: #8F5B00; --warn-soft: #FAEDD2; --crit: #B42318; --crit-soft: #FBE3DF;
+  --font-display: 'IBM Plex Sans Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0C1311; --surface: #141D1A; --sunk: #101815; --ink: #E0E9E5; --muted: #9AA9A3; --faint: #6F7E78; --line: #27342F;
+  --accent: #5CB8D6; --accent-ink: #06222B; --accent-soft: #12313B;
+  --warm: #F08A4B; --violet: #AC9EEC;
+  --ok: #5CC48A; --ok-soft: #12291D; --warn: #E6AE4A; --warn-soft: #2D2310; --crit: #F2867B; --crit-soft: #351714;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0C1311; --surface: #141D1A; --sunk: #101815; --ink: #E0E9E5; --muted: #9AA9A3; --faint: #6F7E78; --line: #27342F;
+  --accent: #5CB8D6; --accent-ink: #06222B; --accent-soft: #12313B;
+  --warm: #F08A4B; --violet: #AC9EEC;
+  --ok: #5CC48A; --ok-soft: #12291D; --warn: #E6AE4A; --warn-soft: #2D2310; --crit: #F2867B; --crit-soft: #351714;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--surface); border-bottom: 1px solid var(--line); transition: box-shadow 0.3s; }
+body.danger .topbar { box-shadow: inset 0 -3px 0 var(--crit); }
+.bar-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; padding-block: 10px; }
+.brand { display: grid; line-height: 1.15; }
+.brand b { font-family: var(--font-display); font-weight: 600; font-size: 20px; }
+.mk { font-size: 12px; color: var(--faint); font-family: var(--font-mono); }
+.clockbox { min-width: 150px; display: grid; gap: 5px; }
+.clk { font-family: var(--font-mono); font-size: 15px; display: flex; gap: 6px; align-items: baseline; }
+.clk .of { color: var(--faint); font-size: 12px; }
+.prog { height: 4px; background: var(--sunk); border-radius: 2px; overflow: hidden; }
+.prog i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.3s linear; }
+.ctrls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ticker { display: flex; gap: 22px; margin-left: auto; flex-wrap: wrap; }
+.tk { display: grid; line-height: 1.1; }
+.tk .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--faint); }
+.bigv { font-family: var(--font-mono); font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.chg { font-family: var(--font-mono); font-size: 12.5px; }
+.chg.up { color: var(--ok); } .chg.down { color: var(--crit); }
+@media (prefers-reduced-motion: no-preference) {
+  .flash-up { animation: fu 0.6s ease-out; } .flash-down { animation: fd 0.6s ease-out; }
+  @keyframes fu { from { color: var(--ok); } to { color: var(--ink); } }
+  @keyframes fd { from { color: var(--crit); } to { color: var(--ink); } }
+}
+.btn { appearance: none; border: 1px solid var(--line); background: var(--sunk); color: var(--ink); font: 500 13.5px/1 var(--font-body); padding: 9px 13px; border-radius: 8px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); min-width: 84px; }
+.btn:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { appearance: none; border: 0; background: var(--sunk); color: var(--muted); font: 500 13px/1 var(--font-body); padding: 9px 10px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg.mini { margin: 4px 0 8px; } .seg.mini button { padding: 7px 12px; }
+.main { padding-block: 16px 40px; display: grid; gap: 16px; }
+.alerts { display: grid; gap: 8px; }
+.alerts:empty { display: none; }
+.al { padding: 10px 14px; border-radius: 8px; font-weight: 500; font-size: 14.5px; }
+.al.warn { background: var(--warn-soft); color: var(--warn); }
+.al.crit { background: var(--crit-soft); color: var(--crit); border: 1px solid var(--crit); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.panel h3 { font-family: var(--font-display); font-weight: 600; font-size: 16px; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: space-between; }
+.panel h3 small { font-family: var(--font-body); font-weight: 400; font-size: 12.5px; color: var(--muted); }
+.setup { border-color: var(--accent); background: var(--accent-soft); }
+.setup h2 { font-family: var(--font-display); font-weight: 600; font-size: 24px; margin: 0 0 6px; text-wrap: balance; }
+.setup p { margin: 0 0 12px; max-width: 75ch; }
+.db-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.desk { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+@media (min-width: 1040px) { .desk { grid-template-columns: 340px minmax(0, 1fr); } .moves { position: sticky; top: 92px; max-height: calc(100vh - 108px); overflow-y: auto; } }
+.board { display: grid; gap: 16px; min-width: 0; }
+.row2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 1240px) { .row2 { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); } }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.tabs button { appearance: none; border: 1px solid var(--line); background: var(--sunk); color: var(--muted); font: 500 13px/1 var(--font-body); padding: 8px 10px; border-radius: 999px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.act { padding: 10px 0 12px; border-top: 1px solid var(--line); }
+.act:first-child { border-top: 0; }
+.act-h { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.act-h span:first-child { font-weight: 600; font-size: 14px; }
+.hint { font-size: 12px; color: var(--faint); }
+.amt { display: flex; gap: 4px; margin-top: 6px; }
+.amt input { flex: 1; min-width: 0; font: 500 15px/1 var(--font-mono); padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--sunk); color: var(--ink); }
+.fill { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 500 12px/1 var(--font-body); padding: 0 8px; border-radius: 6px; cursor: pointer; }
+.fill:hover { color: var(--ink); border-color: var(--accent); }
+.pv { margin: 6px 0; font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); min-height: 1.5em; overflow-wrap: anywhere; }
+.btn.go { width: 100%; background: var(--surface); }
+.btn.go:hover { background: var(--accent-soft); }
+.err { margin: 6px 0 0; font-size: 13px; color: var(--crit); }
+.err:empty { display: none; }
+canvas.chart { width: 100%; height: 250px; display: block; }
+canvas.chart.short { height: 170px; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend span[hidden] { display: none; }
+.sw { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.sw.dash { background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px) !important; height: 2px; }
+.feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; max-height: 292px; overflow-y: auto; }
+.feed li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; padding: 7px 4px; border-top: 1px solid var(--line); font-size: 13.5px; }
+.feed li:first-child { border-top: 0; }
+.feed .nt { font-family: var(--font-mono); font-size: 12px; color: var(--faint); padding-top: 1px; }
+.feed li.you { background: var(--crit-soft); color: var(--crit); border-radius: 6px; font-weight: 500; }
+.feed li.good span:last-child { color: var(--ok); }
+.feed li.fail span:last-child { color: var(--crit); }
+.feed li.empty { color: var(--faint); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.card.warn { border-color: var(--warn); } .card.crit { border-color: var(--crit); background: var(--crit-soft); }
+.card.ok .card-v { color: var(--ok); } .card.warn .card-v { color: var(--warn); } .card.crit .card-v { color: var(--crit); }
+.card-h { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--faint); }
+.card-v { font-family: var(--font-mono); font-size: 21px; font-weight: 500; margin: 2px 0 8px; font-variant-numeric: tabular-nums; }
+.card dl { margin: 0; display: grid; gap: 3px; }
+.card dl div { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+.card dt { color: var(--muted); } .card dd { margin: 0; font-family: var(--font-mono); text-align: right; overflow-wrap: anywhere; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; max-width: min(560px, calc(100vw - 32px)); background: var(--ink); color: var(--surface); padding: 10px 14px; border-radius: 8px; font-size: 14px; }
+.debrief { display: grid; gap: 16px; }
+.reveal { border-color: var(--accent); }
+.eyebrow { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-weight: 600; }
+.reveal h2 { font-family: var(--font-display); font-weight: 600; font-size: 30px; margin: 2px 0 6px; text-wrap: balance; }
+.reveal p { margin: 0; max-width: 78ch; }
+.db-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 900px) { .db-grid { grid-template-columns: 1fr 1fr; } }
+.result { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.result .big { font-family: var(--font-mono); font-size: 32px; font-weight: 500; }
+.result .pp { font-family: var(--font-mono); font-size: 16px; }
+.gain { color: var(--ok); } .loss { color: var(--crit); }
+table.cmp, table.log { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.cmp td, table.log td, table.log th { padding: 8px 6px; border-top: 1px solid var(--line); text-align: left; }
+table.log th { border-top: 0; font-weight: 500; color: var(--muted); font-size: 12px; }
+td.n, th.n { text-align: right !important; font-family: var(--font-mono); white-space: nowrap; }
+table.cmp tr.you td { font-weight: 600; border-top: 2px solid var(--ink); }
+.tbl-wrap { overflow-x: auto; }
+table.imp { min-width: 560px; }
+.barc { width: 32%; }
+.bar { position: relative; height: 10px; background: var(--sunk); border-radius: 2px; display: block; min-width: 100px; }
+.bar::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
+.bar i { position: absolute; top: 0; bottom: 0; }
+.bar i.pos { left: 50%; background: var(--ok); } .bar i.neg { right: 50%; background: var(--crit); }
+.facts { margin: 0; display: grid; gap: 8px; }
+.facts div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; font-size: 14px; }
+.facts dt { color: var(--muted); } .facts dd { margin: 0; }
+.linked { font-size: 12px; color: var(--faint); margin-top: 2px; }
+.lessons { margin: 0; padding-left: 18px; display: grid; gap: 8px; max-width: 85ch; }
+.reveal-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; }
+.reveal-list li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.reveal-list li:first-child { border-top: 0; }
+.reveal-list .nt { font-family: var(--font-mono); font-size: 12px; color: var(--faint); }
+.tag { font: 600 11px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 6px; border-radius: 4px; }
+.tag.pass { background: var(--ok-soft); color: var(--ok); } .tag.fail { background: var(--crit-soft); color: var(--crit); }
+.d { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+details.rules summary { cursor: pointer; font-weight: 500; }
+details.rules ul { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; color: var(--muted); max-width: 90ch; }
+@media (max-width: 640px) { .bar-in { gap: 6px 10px; padding-block: 8px; } .brand { display: none; } .clockbox { min-width: 0; flex: 1 1 100%; } .bigv { font-size: 18px; } .ticker { margin-left: 0; width: 100%; justify-content: space-between; } .ctrls { gap: 6px; } .ctrls .btn, .seg button { padding: 7px 8px; font-size: 12.5px; } .btn.primary { min-width: 70px; } .tk .lbl { font-size: 10px; } .facts div { grid-template-columns: 1fr; gap: 0; } }
+
+/* Scenario chooser and open play */
+[hidden] { display: none !important; }
+.chooser h2 { font-family: var(--font-display); font-weight: 600; font-size: 24px; margin: 0 0 6px; text-wrap: balance; }
+.chooser p { margin: 0 0 8px; max-width: 75ch; }
+.sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-top: 12px; }
+.sc { appearance: none; text-align: left; display: grid; gap: 6px; align-content: start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.sc:hover { border-color: var(--accent); background: var(--accent-soft); }
+.sc b { font-family: var(--font-display); font-weight: 600; font-size: 17px; line-height: 1.2; }
+.sc .bl { font-size: 13.5px; color: var(--muted); }
+.sc .st { font-size: 12px; font-family: var(--font-mono); color: var(--faint); }
+.sc .st.done { color: var(--ok); }
+.sc.hide { border-style: dashed; background: var(--sunk); }
+.tone { display: inline-block; justify-self: start; font: 600 11px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 6px; border-radius: 4px; }
+.tone.good { background: var(--ok-soft); color: var(--ok); }
+.tone.mixed { background: var(--warn-soft); color: var(--warn); }
+.tone.bad { background: var(--crit-soft); color: var(--crit); }
+.tone.hidden { background: var(--surface); color: var(--muted); border: 1px solid var(--line); }
+.setup .eyebrow { margin-bottom: 6px; }
+.setup .sub { margin: 0 0 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.tries { margin: 0 0 12px; padding-left: 20px; max-width: 75ch; }
+.tries li { margin: 3px 0; }
+.planbar { font-size: 13.5px; color: var(--muted); padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.planbar b { color: var(--ink); }
+.htag { font: normal 600 10.5px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 5px; border-radius: 4px; margin-left: 4px; vertical-align: 1px; white-space: nowrap; }
+.htag.real { background: var(--ok-soft); color: var(--ok); }
+.htag.false { background: var(--crit-soft); color: var(--crit); }
+.htag.noise { background: var(--sunk); color: var(--muted); border: 1px solid var(--line); }
+body.choosing #play, body.choosing #endnow { opacity: 0.45; pointer-events: none; }
+
+.setup .tbl-wrap { margin: 0 0 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+table.outc { width: 100%; }
+table.outc td { vertical-align: top; font-size: 13.5px; }
+table.outc td:first-child { font-weight: 500; min-width: 180px; }
+table.outc td.n { white-space: nowrap; font-family: var(--font-mono); }
+table.outc td.n small { display: block; font-size: 11.5px; }
+.sub .sub-n { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--faint); margin-left: 6px; }
+.setup .tbl-wrap + .d { margin: 0 0 12px; }
+
+/* Perps additions */
+.seg.mini.lev { margin-top: 0; }
+.seg.mini.lev button { padding: 7px 10px; }
+.act .seg.mini + .seg.mini { margin-left: 6px; }
+.chg { color: var(--muted); }
+@media (max-width: 640px) { .ticker { gap: 10px; } .ticker .tk { min-width: 0; } .act .seg.mini + .seg.mini { margin-left: 0; } }
+</style>
+<header class="topbar"><div class="wrap bar-in">
+  <div class="brand"><b>Perp Panic Desk</b><span class="mk">Market <span id="seed"></span></span></div>
+  <div class="clockbox"><div class="clk"><span id="clock">0:00</span><span class="of">of 24:00</span></div><div class="prog" aria-hidden="true"><i id="prog"></i></div></div>
+  <div class="ctrls"><button type="button" id="play" class="btn primary" aria-pressed="false">Start</button><div class="seg" id="speed" role="group" aria-label="Speed"><button type="button" data-s="0.5">½×</button><button type="button" data-s="1">1×</button><button type="button" data-s="2">2×</button><button type="button" data-s="4">4×</button></div><button type="button" id="sound" class="btn">Sound on</button><button type="button" id="endnow" class="btn">End now</button></div>
+  <div class="ticker"><div class="tk"><span class="lbl">SUI oracle</span><span id="px" class="bigv">$2.000</span><span id="pxch" class="chg"></span></div><div class="tk"><span class="lbl">vAMM price</span><span id="mk" class="bigv">$2.000</span><span id="mkch" class="chg"></span></div><div class="tk"><span class="lbl">Your net worth</span><span id="nw" class="bigv">$10,000.00</span><span id="nwch" class="chg"></span></div></div>
+</div></header>
+<main class="wrap main">
+  <div id="alert" class="alerts" aria-live="polite"></div>
+  <section id="chooser" class="panel chooser" hidden></section>
+  <section id="setup" class="panel setup"></section>
+  <div id="planbar" class="planbar" hidden></div>
+  <div id="desk" class="desk">
+    <aside class="moves panel" aria-label="Your moves"><h3>Your moves</h3><div class="tabs" id="tabs" role="tablist"><button type="button" role="tab" data-tab="trade" aria-selected="true">Trade</button><button type="button" role="tab" data-tab="pos" aria-selected="false">Your position</button><button type="button" role="tab" data-tab="fund" aria-selected="false">Insurance fund</button><button type="button" role="tab" data-tab="keeper" aria-selected="false">Keeper</button></div><div class="pane" id="pane-trade" role="tabpanel"><div class="act"><div class="act-h"><span>Open a position</span><span class="hint">0.1% fee · up to 10×</span></div><div class="seg mini" role="group" aria-label="Side"><button type="button" data-side="long" aria-pressed="true">Long</button><button type="button" data-side="short" aria-pressed="false">Short</button></div><div class="seg mini lev" role="group" aria-label="Leverage"><button type="button" data-lev="1" aria-pressed="false">1×</button><button type="button" data-lev="2" aria-pressed="false">2×</button><button type="button" data-lev="3" aria-pressed="false">3×</button><button type="button" data-lev="5" aria-pressed="true">5×</button><button type="button" data-lev="10" aria-pressed="false">10×</button></div>
+<div class="amt"><input id="a-open" type="number" inputmode="decimal" min="0" step="any" placeholder="margin in USDC" aria-label="Open a position amount in margin in USDC"><button type="button" class="fill" data-fill="open:a-open:0.25">25%</button><button type="button" class="fill" data-fill="open:a-open:0.5">50%</button><button type="button" class="fill" data-fill="open:a-open:1">Max</button></div>
+<p class="pv" id="p-open"></p><button type="button" class="btn go" id="openbtn" data-act="open:a-open">Open long</button><p class="err" id="a-open-e" role="alert"></p></div></div><div class="pane" id="pane-pos" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Close</span><span class="hint">percent of your position</span></div>
+<div class="amt"><input id="a-close" type="number" inputmode="decimal" min="0" step="any" placeholder="%" aria-label="Close amount in %"><button type="button" class="fill" data-fill="close:a-close:0.25">25%</button><button type="button" class="fill" data-fill="close:a-close:0.5">50%</button><button type="button" class="fill" data-fill="close:a-close:1">All</button></div>
+<p class="pv" id="p-close"></p><button type="button" class="btn go" data-act="close:a-close">Close</button><p class="err" id="a-close-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Add margin</span><span class="hint">lowers your leverage</span></div>
+<div class="amt"><input id="a-add" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Add margin amount in USDC"><button type="button" class="fill" data-fill="add:a-add:0.25">25%</button><button type="button" class="fill" data-fill="add:a-add:0.5">50%</button><button type="button" class="fill" data-fill="add:a-add:1">Max</button></div>
+<p class="pv" id="p-add"></p><button type="button" class="btn go" data-act="addMargin:a-add">Add margin</button><p class="err" id="a-add-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Remove margin</span><span class="hint">margin ratio must stay ≥ 10%</span></div>
+<div class="amt"><input id="a-remove" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Remove margin amount in USDC"><button type="button" class="fill" data-fill="remove:a-remove:0.25">25%</button><button type="button" class="fill" data-fill="remove:a-remove:0.5">50%</button><button type="button" class="fill" data-fill="remove:a-remove:1">Max</button></div>
+<p class="pv" id="p-remove"></p><button type="button" class="btn go" data-act="removeMargin:a-remove">Remove margin</button><p class="err" id="a-remove-e" role="alert"></p></div></div><div class="pane" id="pane-fund" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Stake USDC</span><span class="hint">earn fees, absorb bad debt</span></div>
+<div class="amt"><input id="a-stake" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Stake USDC amount in USDC"><button type="button" class="fill" data-fill="stake:a-stake:0.25">25%</button><button type="button" class="fill" data-fill="stake:a-stake:0.5">50%</button><button type="button" class="fill" data-fill="stake:a-stake:1">Max</button></div>
+<p class="pv" id="p-stake"></p><button type="button" class="btn go" data-act="stake:a-stake">Stake USDC</button><p class="err" id="a-stake-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Unstake</span><span class="hint">percent of your stake</span></div>
+<div class="amt"><input id="a-unstake" type="number" inputmode="decimal" min="0" step="any" placeholder="%" aria-label="Unstake amount in %"><button type="button" class="fill" data-fill="unstake:a-unstake:0.25">25%</button><button type="button" class="fill" data-fill="unstake:a-unstake:0.5">50%</button><button type="button" class="fill" data-fill="unstake:a-unstake:1">All</button></div>
+<p class="pv" id="p-unstake"></p><button type="button" class="btn go" data-act="unstake:a-unstake">Unstake</button><p class="err" id="a-unstake-e" role="alert"></p></div></div><div class="pane" id="pane-keeper" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Liquidate positions</span><span class="hint">no capital needed</span></div><p class="pv" id="p-liq"></p><button type="button" class="btn go" data-act="liquidate">Liquidate everything I can</button><p class="err" id="a-liq-e" role="alert"></p></div></div></aside>
+    <div class="board">
+      <div class="row2">
+        <section class="panel"><h3>SUI price <small>the oracle, the vAMM, and your liquidation price</small></h3><canvas class="chart" id="c-price" role="img" aria-label="SUI price chart"></canvas>
+          <div class="chart-legend"><span><i class="sw" style="background:var(--accent)"></i>Oracle (index)</span><span><i class="sw" style="background:var(--warm)"></i>vAMM (mark)</span><span id="lg-real" hidden><i class="sw" style="background:var(--faint)"></i>Exchanges</span><span id="liqline" hidden><i class="sw dash" style="background:var(--crit);color:var(--crit)"></i>Your liquidation price</span></div></section>
+        <section class="panel newsp"><h3>Headlines</h3><ul class="feed" id="news"></ul></section>
+      </div>
+      <div id="cards" class="cards"></div>
+      <div class="row2">
+        <section class="panel"><h3>Your net worth</h3><canvas class="chart short" id="c-nw" role="img" aria-label="Net worth chart"></canvas></section>
+        <section class="panel"><h3>Your moves so far</h3><ul class="feed" id="log"></ul></section>
+      </div>
+    </div>
+  </div>
+  <div id="debrief" class="debrief" hidden></div>
+  <details class="panel rules"><summary>How this market works</summary><ul>
+    <li>One SUI perpetual for 24 hours, in 15-minute steps. Funding is paid every hour. It follows the public Perpetual Protocol v1 design, plus an automatic repeg rule.</li>
+    <li>The vAMM is x·y = k with $60M of virtual USDC. It holds no real money: its price moves only when someone trades. The oracle is the index price; in most scenarios it equals the exchange price.</li>
+    <li>Margin: up to 10× (10% initial margin). A position is liquidatable below a 6.25% margin ratio, measured on the vAMM price. When the vAMM and oracle are more than 10% apart, Perp v1 also checks the oracle and uses whichever is better for the trader.</li>
+    <li>Liquidation: above a 1.25% margin ratio a keeper closes 25% of the position; below that, all of it. The penalty is 1.25% of what is closed, half to the keeper and half to the insurance fund. On a full liquidation, leftover margin goes to the insurance fund.</li>
+    <li>Funding: every hour, (average vAMM price − average oracle price over the hour) ÷ 24, per vSUI. When longs and shorts don’t cancel, the insurance fund keeps or pays the difference.</li>
+    <li>Fees: 0.1% of the position on every open and close, paid to the insurance fund.</li>
+    <li>Payouts: winners are paid from the vault, which holds everyone’s margin. The insurance fund covers bad debt and shortfalls; once it is empty, the vault holds less than traders are owed.</li>
+    <li>Repeg: after three funding hours in a row with the vAMM more than 10% from the oracle, the protocol moves it to the oracle ± 5%, keeping k. The insurance fund pays or collects the cost. If that costs more than the fund holds, k is cut by 1% instead.</li>
+    <li>Keeper bots look every 15 minutes, so a position below 6.25% is liquidated on their next pass. Real keepers race each other; here you can beat them.</li>
+    <li>An arbitrage desk trades the vAMM toward the oracle each step; how hard it trades depends on the scenario.</li>
+    <li>Staking in the insurance fund isn’t part of Perp v1, whose fund belonged to the protocol. It is here to show who absorbs bad debt. Real staking usually has a withdrawal cooldown.</li>
+  </ul></details>
+</main>
+<div id="toast" class="toast" hidden role="status"></div>
+<script>
+// Panic Desk: Perps. One SUI perpetual on a vAMM in the style of Perpetual Protocol v1, with an automatic repeg.
+// Cash lives in: your wallet, other traders (net), the arbitrage desk (net), the vault, the insurance fund, keeper bots.
+const PG = (() => {
+  const T = 96, TPH = 4, MIN = 15, P0 = 2, W0 = 10000;
+  const R = { imr: 0.10, mmr: 0.0625, liqFee: 0.0125, partial: 0.25, spread: 0.001, spreadLimit: 0.10, repegGap: 0.05, minFlags: 3, Q0: 60e6 };
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function gauss(r) { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+  const ri = (r, a, b) => Math.round(a + r() * (b - a));
+  const hm = t => { const m = t * MIN; return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'); };
+  const P = v => Math.round(v * 100) + '%';
+
+  // ---------- scenarios ----------
+  // Each tick is 15 minutes; the session is 24 hours (96 ticks); funding is paid every hour.
+  const NOISE = ['A whale moved 1.2M SUI between wallets.', 'Social media: “SUI is going to zero.”', 'An analyst calls SUI “oversold”.', 'A large holder bridges 800K USDC onto Sui.', 'Gas prices on Sui tick up as activity rises.', 'A new SUI perp market launches on another exchange.'];
+  const KINDS = [
+    { key: 'quiet', tone: 'good', title: 'A quiet day',
+      blurb: 'SUI drifts around $2 all day. Only fees, slippage on the vAMM and small funding payments move your money.',
+      tries: ['Open a 10× long and close it straight away: the round trip shows what fees and vAMM slippage cost at leverage.', 'Hold a 10× position all day and add up the funding you pay or receive.'],
+      make: r => ({ vol: 0.0025, revert: 0.04, lev: [2, 5], plan: 'SUI drifts randomly around $2 for 24 hours. Other traders open small longs and shorts in equal amounts, and the arbitrage desk keeps the vAMM close to the oracle.',
+        story: 'Nothing happened. SUI drifted around $2, so anything you gained or lost came from fees, vAMM slippage, funding and timing.' }) },
+    { key: 'rally', tone: 'good', title: 'A rally with crowded longs',
+      blurb: 'SUI climbs about 20% over eight hours. Late longs pile in, the vAMM runs above the oracle, and longs pay funding to shorts.',
+      tries: ['Open a long early and compare your profit with the funding you paid.', 'Open a 10× short and see when it gets liquidated, and how the liquidation buys back into the vAMM.'],
+      make: r => { const rise = 0.18 + 0.06 * r(), at = ri(r, 10, 20), len = ri(r, 28, 36); return { rise, riseAt: at, riseLen: len, longShare: 0.45, lev: [3, 10], arb: 0.25,
+        flows: [{ a: at + 4, b: at + len + 8, usd: 140e3 }],
+        plan: `SUI rises ${P(rise)} between ${hm(at)} and ${hm(at + len)}, then holds. From ${hm(at + 4)} other traders keep opening longs every 15 minutes until ${hm(at + len + 8)}, so the vAMM trades above the oracle and longs pay funding.`,
+        script: [{ t: at + 2, text: 'A large fund announces it is buying SUI.' }, { t: at + 14, text: 'Retail longs on SUI perps hit a record.' }],
+        story: `SUI rose ${P(rise)} between ${hm(at)} and ${hm(at + len)}. Longs gained, but the crowd of late longs kept the vAMM above the oracle, so every hour longs paid funding to shorts.` }; } },
+    { key: 'funding', tone: 'mixed', title: 'Crowded longs, flat price',
+      blurb: 'SUI goes nowhere, but traders keep buying the perp. The vAMM stays above the oracle all day, and longs bleed funding every hour.',
+      tries: ['Open a long and hold it all day: the price doesn’t move, so you see funding on its own.', 'Open a short: you’re paid to hold it, as long as the price doesn’t rise.'],
+      make: r => ({ longShare: 0.6, lev: [3, 10], arb: 0.1, vol: 0.0025, revert: 0.03,
+        push: { a: 2, b: 94, gap: 0.05 },
+        plan: 'SUI stays around $2 all day. Other traders keep buying the perp and the arbitrage desk is slow, so the vAMM sits about 5% above the oracle and longs pay shorts every hour.',
+        script: [{ t: 20, text: 'Traders say SUI “has to” break out soon.', fake: true }, { t: 60, text: 'Funding on SUI perps is the highest this month.' }],
+        story: 'The price went nowhere, but the crowd kept buying the perp, so the vAMM stayed above the oracle all day. Longs paid funding every hour without any price move to pay for it; shorts were paid to wait.' }) },
+    { key: 'shortsq', tone: 'mixed', title: 'A short squeeze',
+      blurb: 'Most traders are short with high leverage. SUI jumps about 12% in two hours, short liquidations buy into the vAMM, and the mark overshoots the oracle.',
+      tries: ['Open a 10× short and watch the liquidation cascade take it.', 'Open a long before the jump, and close it while the mark is above the oracle.'],
+      make: r => { const at = ri(r, 30, 50), rise = 0.11 + 0.03 * r(); return { rise, riseAt: at, riseLen: 8, recover: 0, drop: 0.06, crashAt: at + 12, crashLen: 24, longShare: 0.25, lev: [4, 10], oi: 10e6, arb: 0.35,
+        plan: `SUI jumps ${P(rise)} between ${hm(at)} and ${hm(at + 8)}, then gives back about 6% over the next six hours. Three quarters of other traders are short, at 4–10×.`,
+        script: [{ t: at + 1, text: 'SUI breaks above a level many traders shorted.' }, { t: at + 5, text: 'Shorts are being liquidated across SUI perp markets.' }],
+        story: `SUI jumped ${P(rise)} in two hours from ${hm(at)}. Liquidated shorts had to buy back on the vAMM, pushing the mark above the oracle and liquidating more shorts.` }; } },
+    { key: 'longsq', tone: 'bad', title: 'A long squeeze',
+      blurb: 'Most traders are long with high leverage. SUI drops 12% in an hour, long liquidations sell into the vAMM, and the mark falls further than the oracle.',
+      tries: ['Open a 10× long and see where liquidation catches you: by the mark, not the oracle.', 'Open nothing and act as a keeper: liquidate positions before the bots do and collect the fee.'],
+      make: r => { const at = ri(r, 30, 50), drop = 0.11 + 0.02 * r(); return { drop, crashAt: at, crashLen: 4, recover: 0.5, recoverLen: 24, longShare: 0.78, lev: [4, 10], oi: 10e6, arb: 0.3,
+        plan: `SUI falls ${P(drop)} between ${hm(at)} and ${hm(at + 4)}, then wins back half of the fall over six hours. Three quarters of other traders are long, at 4–10×.`,
+        script: [{ t: at - 2, text: 'Large SUI sell orders appear on major exchanges.' }, { t: at + 2, text: 'Long liquidations spike on SUI perps.' }],
+        story: `SUI fell ${P(drop)} in an hour at ${hm(at)}. Each liquidated long sold into the vAMM, so the mark fell further than the oracle and liquidated more longs, until the arbitrage desk pulled it back.` }; } },
+    { key: 'lag', tone: 'bad', title: 'A slow oracle in a crash',
+      blurb: 'SUI falls 18% over three hours, but the oracle reports a three-hour average. Traders short the vAMM ahead of it, so shorts pay funding even though they’re right.',
+      tries: ['Open a short as the crash starts and look at the funding you pay while the oracle catches up.', 'Open a long: you’re liquidated by the mark while the oracle still shows a small drop.'],
+      make: r => { const at = ri(r, 24, 40), drop = 0.16 + 0.04 * r(); return { drop, crashAt: at, crashLen: 12, lag: 12, longShare: 0.6, lev: [4, 10], arb: 0.12,
+        flows: [{ a: at, b: at + 16, usd: -160e3 }],
+        plan: `SUI falls ${P(drop)} between ${hm(at)} and ${hm(at + 12)}. The oracle reports the average of the last three hours, so it reaches the new price only around ${hm(at + 24)}. From ${hm(at)} other traders short the vAMM as the price falls.`,
+        script: [{ t: at + 1, text: 'SUI is falling fast on spot exchanges.' }, { t: at + 6, text: 'Traders note the perp oracle is far behind spot.' }],
+        story: `SUI fell ${P(drop)} over three hours from ${hm(at)}, but the oracle averaged the last three hours. Traders shorted the vAMM ahead of it, so the mark was below the oracle and shorts paid funding to longs for being right. Longs were liquidated by the mark while the oracle still showed a small drop.` }; } },
+    { key: 'gap', tone: 'bad', title: 'A gap crash and bad debt',
+      blurb: 'SUI drops 25% in 15 minutes and keeper bots fall behind. Positions sink past zero, bad debt drains the insurance fund, and the vault can’t cover every winner.',
+      tries: ['Stake in the insurance fund before the crash and see who pays for bad debt.', 'Open a 10× short and check whether the vault can still pay your profit.'],
+      make: r => { const at = ri(r, 30, 50), drop = 0.23 + 0.05 * r(); return { drop, crashAt: at, crashLen: 1, recover: 0.4, recoverLen: 24, longShare: 0.75, lev: [7, 10], arb: 0.55, keeperCap: { a: at, b: at + 8, usd: 150e3 },
+        plan: `SUI falls ${P(drop)} between ${hm(at)} and ${hm(at + 1)}, then wins back 40% of the fall over six hours. For two hours after the drop, keeper bots can only liquidate $150K of positions every 15 minutes. Three quarters of other traders are long, at 7–10×.`,
+        script: [{ t: at + 1, text: 'SUI crashes on every exchange at once.' }, { t: at + 3, text: 'Sui is congested; keeper transactions are failing.' }],
+        story: `SUI fell ${P(drop)} in 15 minutes at ${hm(at)}. 10× longs were wiped out before keepers could close them, so their losses went past their margin. The insurance fund paid that bad debt until it ran out.` }; } },
+    { key: 'repeg', tone: 'bad', title: 'Arbitrage dries up and the protocol repegs',
+      blurb: 'Arbitrage traders leave, buyers push the vAMM 12% above the oracle, and after three hours the protocol rewrites the vAMM price. Longs lose in one step without any trade.',
+      tries: ['Open a long when the gap is wide and see what the repeg does to it.', 'Open a short: you collect high funding until the repeg.'],
+      make: r => ({ longShare: 0.5, lev: [2, 8], arb: 0.02, vol: 0.0025, revert: 0.03,
+        push: { a: 4, b: 80, gap: 0.13, untilRepeg: true },
+        plan: 'SUI stays around $2. The arbitrage desk barely trades, and from 1:00 other traders keep buying the perp until the vAMM is about 13% above the oracle. After three funding hours in a row above 10%, the protocol repegs: it moves the vAMM price to the oracle plus 5%, and the buyers stop.',
+        script: [{ t: 10, text: 'Arbitrage desks say SUI perp funding isn’t worth the risk.', fake: true }, { t: 30, text: 'The SUI perp trades far above spot.' }],
+        story: 'Arbitrage dried up, buyers pushed the vAMM more than 10% above the oracle, and longs paid heavy funding. After three funding hours over the limit, the protocol rewrote the vAMM reserves to the oracle plus 5%: longs lost the gap in one step, and some were liquidated without any trade.' }) }
+  ];
+  function scenario(r, key) {
+    let k = KINDS.find(kk => kk.key === key);
+    if (!k) k = KINDS[Math.floor(r() * KINDS.length)];
+    const base = { revert: 0, drop: 0, crashAt: 999, crashLen: 4, recover: 0, recoverLen: 24, rise: 0, riseAt: 0, riseLen: 30, vol: 0.004, lag: 0, longShare: 0.5, lev: [2, 10], oi: 12e6, arb: 0.35, flows: [], push: null, keeperCap: null, if0: 400e3, script: [] };
+    const sc = Object.assign(base, k.make(r));
+    sc.key = k.key; sc.title = k.title; sc.tone = k.tone; sc.blurb = k.blurb; sc.tries = k.tries;
+    const n1 = ri(r, 6, 40), n2 = ri(r, 50, 90);
+    sc.script.push({ t: n1, text: NOISE[ri(r, 0, NOISE.length - 1)], fake: true, noise: true }, { t: n2, text: NOISE[ri(r, 0, NOISE.length - 1)], fake: true, noise: true });
+    return sc;
+  }
+
+  function market(seed, key) {
+    const r = rng(seed);
+    const sc = scenario(r, key);
+    const real = [P0];
+    let p = P0;
+    const cEnd = sc.crashAt + sc.crashLen;
+    for (let t = 1; t <= T; t++) {
+      let ret = sc.vol * gauss(r) - sc.revert * Math.log(p / P0);
+      if (sc.rise > 0 && t > sc.riseAt && t <= sc.riseAt + sc.riseLen) ret += Math.log(1 + sc.rise) / sc.riseLen;
+      if (t > sc.crashAt && t <= cEnd) ret += Math.log(1 - sc.drop) / sc.crashLen;
+      if (sc.recover > 0 && t > cEnd && t <= cEnd + sc.recoverLen) ret += Math.log(1 + (sc.recover * sc.drop) / (1 - sc.drop)) / sc.recoverLen;
+      p *= Math.exp(ret); real.push(p);
+    }
+    const orc = real.map((x, t) => { if (!sc.lag) return x; const w = real.slice(Math.max(0, t - sc.lag + 1), t + 1); while (w.length < sc.lag) w.unshift(P0); return w.reduce((a, b) => a + b, 0) / w.length; });
+    // the crowd at the start
+    const rc = rng(seed ^ 0x9e3779b9), n = 140, sizes = [];
+    for (let i = 0; i < n; i++) sizes.push(Math.pow(rc(), -0.5));
+    const sum = sizes.reduce((a, b) => a + b, 0);
+    const crowd = [];
+    for (let i = 0; i < n; i++) {
+      const long = rc() < sc.longShare, lev = Math.round((sc.lev[0] + rc() * (sc.lev[1] - sc.lev[0])) * 10) / 10;
+      const notional = (sc.oi * sizes[i]) / sum, entry = P0 * (1 + 0.006 * gauss(rc));
+      crowd.push({ side: long ? 'long' : 'short', size: (long ? 1 : -1) * notional / entry, open: notional, margin: notional / lev });
+    }
+    // other traders arriving during the day: scripted flows plus balanced retail noise
+    const flowAt = [];
+    for (let t = 0; t <= T; t++) {
+      const list = [];
+      for (const f of sc.flows) if (t >= f.a && t < f.b) list.push({ side: f.usd > 0 ? 'long' : 'short', notional: Math.abs(f.usd) * (0.6 + 0.8 * rc()), lev: Math.round((5 + 5 * rc()) * 10) / 10 });
+      if (t > 0 && rc() < 0.6) list.push({ side: rc() < 0.5 ? 'long' : 'short', notional: 20e3 + 50e3 * rc(), lev: Math.round((2 + 8 * rc()) * 10) / 10 });
+      flowAt.push(list);
+    }
+    const pushLev = []; for (let t = 0; t <= T; t++) pushLev.push(Math.round((3 + 5 * rc()) * 10) / 10);
+    return { seed, key: key || null, open: !!key, sc, real, orc, crowd, flowAt, pushLev };
+  }
+
+  // ---------- state ----------
+  function init(M) {
+    const Q = R.Q0, B = Q / P0;
+    const S = { t: 0, M, over: false, Q, B, k: Q * B, IF: M.sc.if0, ifShares: M.sc.if0, myShares: 0, vault: 0, npcCash: 0, arbCash: 0, botKeeper: 0, uncovered: 0, flags: 0, nid: 0,
+      book: [], me: { wallet: W0, fees: 0, fundPaid: 0, keeperFees: 0, staked: 0, unpaid: 0, liq: [], repegHit: 0 },
+      actions: [], news: [], nf: {}, repegs: [], liqLog: [],
+      hist: { real: [M.real[0]], orc: [M.orc[0]], mark: [P0], nw: [W0], mr: [Infinity], mrPre: [Infinity], IF: [M.sc.if0], oiL: [0], oiS: [0], liq: [0], short: [0], fund: [0] },
+      stats: { liqLong: 0, liqShort: 0, badDebt: 0, botFees: 0 } };
+    for (const c of M.crowd) { S.book.push(Object.assign({ id: ++S.nid, who: 'npc', funding: 0, flagT: -1 }, c)); S.vault += c.margin; S.npcCash -= c.margin; }
+    S.arb = { id: ++S.nid, who: 'arb', side: 'flat', size: 0, open: 0, margin: 6e6, funding: 0, flagT: -1 };
+    S.book.push(S.arb); S.vault += S.arb.margin; S.arbCash -= S.arb.margin;
+    S.total0 = cashTotal(S);
+    const oi = openInterest(S); S.hist.oiL[0] = oi.long; S.hist.oiS[0] = oi.short;
+    return S;
+  }
+  const cashTotal = S => S.me.wallet + S.npcCash + S.arbCash + S.vault + S.IF + S.botKeeper;
+  const mark = S => S.Q / S.B;
+  const myPos = S => S.book.find(p => p.who === 'me') || null;
+  function exitNotional(S, size) { return size > 0 ? S.Q - S.k / (S.B + size) : S.k / (S.B + size) - S.Q; }
+  function pnl(S, p) { const n = exitNotional(S, p.size); return p.size > 0 ? n - p.open : p.open - n; }
+  const remain = (S, p) => p.margin - p.funding + pnl(S, p);
+  // Margin ratio on the vAMM price. Past the 10% spread limit, Perp v1 also checks the oracle and uses whichever is better for the trader.
+  function mr(S, p) {
+    const n = exitNotional(S, p.size), spot = remain(S, p) / n;
+    const o = S.M.orc[S.t];
+    if (Math.abs(mark(S) / o - 1) <= R.spreadLimit) return spot;
+    const on = Math.abs(p.size) * o, opnl = p.size > 0 ? on - p.open : p.open - on;
+    return Math.max(spot, (p.margin - p.funding + opnl) / on);
+  }
+  const netSize = S => S.book.reduce((a, p) => a + p.size, 0);
+  function openInterest(S) { let long = 0, short = 0; const m = mark(S); for (const p of S.book) { if (p.size > 0) long += p.size * m; else short -= p.size * m; } return { long, short }; }
+  function liqMark(S, p) {
+    if (!p) return 0;
+    const a = Math.abs(p.size);
+    return p.size > 0 ? (p.open - p.margin + p.funding) / (a * (1 - R.mmr)) : (p.margin - p.funding + p.open) / (a * (1 + R.mmr));
+  }
+
+  // ---------- vAMM ----------
+  function swapLong(S, n) { const B2 = S.k / (S.Q + n), size = S.B - B2; S.Q += n; S.B = B2; return size; }
+  function swapShort(S, n) { const Q2 = S.Q - n, B2 = S.k / Q2, size = -(B2 - S.B); S.Q = Q2; S.B = B2; return size; }
+  function swapClose(S, size) {
+    if (size > 0) { const B2 = S.B + size, Q2 = S.k / B2, out = S.Q - Q2; S.Q = Q2; S.B = B2; return out; }
+    const B2 = S.B + size, Q2 = S.k / B2, cost = Q2 - S.Q; S.Q = Q2; S.B = B2; return cost;
+  }
+  // Close a fraction of a position on the vAMM. Returns the quote amount and the realized PnL of that part.
+  function reduce(S, p, frac) {
+    const part = p.size * frac, partOpen = p.open * frac, exitN = swapClose(S, part);
+    const realized = p.size > 0 ? exitN - partOpen : partOpen - exitN;
+    p.size -= part; p.open -= partOpen;
+    return { exitN, realized };
+  }
+  function addTo(S, p, side, n) { const size = side === 'long' ? swapLong(S, n) : swapShort(S, n); p.size += size; p.open += n; p.side = side; }
+  // Pay a trader from the vault; the insurance fund covers any shortage, and anything left is unpaid.
+  function payOut(S, amt) {
+    const v = Math.min(amt, Math.max(0, S.vault)); S.vault -= v;
+    let rest = amt - v; const f = Math.min(rest, S.IF); S.IF -= f; rest -= f;
+    return amt - rest;
+  }
+  function coverBad(S, amt) { const c = Math.min(amt, S.IF); S.IF -= c; S.vault += c; S.uncovered += amt - c; S.stats.badDebt += amt; return c; }
+  const drop = (S, p) => { S.book = S.book.filter(x => x !== p); };
+
+  // ---------- liquidation (ClearingHouse.liquidate) ----------
+  // keeper: 'me' or 'bot'. Returns the exit notional closed.
+  function liquidate(S, p, keeper) {
+    const m = mr(S, p), mk0 = mark(S);
+    if (m >= R.mmr) return 0;
+    const side = p.size > 0 ? 'long' : 'short';
+    const payKeeper = amt => { if (keeper === 'me') { S.me.wallet += amt; S.me.keeperFees += amt; } else { S.botKeeper += amt; S.stats.botFees += amt; } };
+    if (m > R.liqFee) {
+      const { exitN, realized } = reduce(S, p, R.partial);
+      const pen = exitN * R.liqFee, toK = pen / 2;
+      p.margin += realized - pen;
+      S.vault -= pen; payKeeper(toK); S.IF += pen - toK;
+      if (side === 'long') S.stats.liqLong += exitN; else S.stats.liqShort += exitN;
+      S.liqLog.push({ t: S.t, who: p.who, kind: 'partial', exitN, keeper });
+      if (p.who === 'me') S.me.liq.push({ t: S.t, side, kind: 'partial', mark: mk0, orc: S.M.orc[S.t], real: S.M.real[S.t], mr: m, pen });
+      return exitN;
+    }
+    const pl = pnl(S, p), rem0 = p.margin - p.funding + pl;
+    const exitN = swapClose(S, p.size);
+    const toK = (exitN * R.liqFee) / 2;
+    let rem = rem0, bad = 0;
+    if (rem < 0) { bad = -rem; rem = 0; }
+    if (toK > rem) { bad += toK - rem; rem = 0; } else rem -= toK;
+    if (bad > 0) coverBad(S, bad);
+    S.vault -= toK; payKeeper(toK);
+    if (rem > 0) { S.vault -= rem; S.IF += rem; }
+    if (side === 'long') S.stats.liqLong += exitN; else S.stats.liqShort += exitN;
+    S.liqLog.push({ t: S.t, who: p.who, kind: 'full', exitN, keeper, bad });
+    if (p.who === 'me') S.me.liq.push({ t: S.t, side, kind: 'full', mark: mk0, orc: S.M.orc[S.t], real: S.M.real[S.t], mr: m, lost: Math.max(0, rem0), bad });
+    drop(S, p);
+    return exitN;
+  }
+
+  // ---------- your moves ----------
+  const fmt = v => '$' + Math.round(v).toLocaleString('en-US');
+  const fmt2 = v => '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function act(S, a, record = true) {
+    const res = doAct(S, a);
+    if (record) S.actions.push({ t: S.t, type: a.type, amt: a.amt, lev: a.lev, ok: res.ok, msg: res.msg });
+    if (!res.ok) S.news.push({ t: S.t, text: res.msg, tone: 'you' });
+    return res;
+  }
+  function doAct(S, a) {
+    const m = S.me, amt = +a.amt;
+    if (S.over) return { ok: false, msg: 'The session is over.' };
+    if (a.type !== 'liquidate' && !(amt > 0)) return { ok: false, msg: 'Enter an amount above zero.' };
+    const p = myPos(S);
+    switch (a.type) {
+      case 'long': case 'short': {
+        const lev = +a.lev;
+        if (!(lev >= 1 && lev <= 1 / R.imr + 1e-9)) return { ok: false, msg: 'Leverage must be between 1× and 10×.' };
+        if (p && p.side !== a.type) return { ok: false, msg: `You have a ${p.side}. Close it before opening a ${a.type}.` };
+        const n = amt * lev, fee = n * R.spread;
+        if (amt + fee > m.wallet + 1e-6) return { ok: false, msg: `You need ${fmt2(amt + fee)} (margin plus the 0.1% fee) and have ${fmt2(m.wallet)}.` };
+        if (p && (p.open + n) / (p.margin + amt) > 1 / R.imr + 1e-9) return { ok: false, msg: 'That would take the whole position past 10× leverage.' };
+        const p0 = mark(S);
+        const pos = p || { id: ++S.nid, who: 'me', side: a.type, size: 0, open: 0, margin: 0, funding: 0, flagT: -1 };
+        addTo(S, pos, a.type, n);
+        pos.margin += amt; m.wallet -= amt + fee; S.vault += amt; S.IF += fee; m.fees += fee;
+        if (!p) S.book.push(pos);
+        return { ok: true, msg: `${p ? 'Added to your' : 'Opened a'} ${lev}× ${a.type}: ${fmt2(amt)} margin, ${fmt(n)} position. The vAMM moved from $${p0.toFixed(4)} to $${mark(S).toFixed(4)}; fee ${fmt2(fee)}.` };
+      }
+      case 'close': {
+        if (!p) return { ok: false, msg: 'You have no position to close.' };
+        const f = Math.min(1, amt / 100);
+        const fund = p.funding * f, marg = p.margin * f;
+        const { exitN, realized } = reduce(S, p, f);
+        const fee = exitN * R.spread, owed = marg - fund + realized - fee;
+        p.margin -= marg; p.funding -= fund;
+        m.fees += fee; m.fundPaid += fund;
+        let got = 0, msg;
+        if (owed >= 0) {
+          S.vault -= fee; S.IF += fee;
+          got = payOut(S, owed); m.wallet += got;
+          if (got + 0.005 < owed) m.unpaid += owed - got;
+          msg = `Closed ${Math.round(f * 100)}% of your ${p.side}: ${realized >= 0 ? 'profit' : 'loss'} ${fmt2(realized)}${Math.abs(fund) > 0.005 ? `, funding ${fund > 0 ? 'paid' : 'received'} ${fmt2(fund)}` : ''}, fee ${fmt2(fee)}. You received ${fmt2(got)}.` + (got + 0.005 < owed ? ` The vault and insurance fund were ${fmt2(owed - got)} short.` : '');
+        } else {
+          S.vault -= fee; S.IF += fee; coverBad(S, -owed);
+          msg = `Closed ${Math.round(f * 100)}% of your ${p.side}: the loss was ${fmt2(-owed)} more than that part’s margin. You received nothing; the insurance fund pays the difference.`;
+        }
+        if (f >= 0.9999 || Math.abs(p.size) < 1e-9) drop(S, p);
+        return { ok: true, msg };
+      }
+      case 'addMargin': {
+        if (!p) return { ok: false, msg: 'You have no position.' };
+        if (amt > m.wallet + 1e-6) return { ok: false, msg: 'Not enough USDC in your wallet.' };
+        m.wallet -= amt; S.vault += amt; p.margin += amt;
+        return { ok: true, msg: `Added ${fmt2(amt)} margin. Margin ratio now ${(mr(S, p) * 100).toFixed(2)}%.` };
+      }
+      case 'removeMargin': {
+        if (!p) return { ok: false, msg: 'You have no position.' };
+        const after = (remain(S, p) - amt) / exitNotional(S, p.size);
+        if (amt > p.margin - Math.max(0, p.funding) + 1e-6 || after < R.imr) return { ok: false, msg: `You can only remove margin while the margin ratio stays at 10% or more. It would be ${(after * 100).toFixed(2)}%.` };
+        const got = payOut(S, amt); p.margin -= amt; m.wallet += got;
+        return { ok: true, msg: `Removed ${fmt2(got)} margin. Margin ratio now ${(mr(S, p) * 100).toFixed(2)}%.` };
+      }
+      case 'stake': {
+        if (amt > m.wallet + 1e-6) return { ok: false, msg: 'Not enough USDC in your wallet.' };
+        const sh = S.IF > 1 ? (amt * S.ifShares) / S.IF : amt;
+        m.wallet -= amt; S.IF += amt; S.ifShares += sh; S.myShares += sh; m.staked += amt;
+        return { ok: true, msg: `Staked ${fmt2(amt)} in the insurance fund: ${((S.myShares / S.ifShares) * 100).toFixed(2)}% of it.` };
+      }
+      case 'unstake': {
+        if (S.myShares <= 0) return { ok: false, msg: 'You have nothing staked.' };
+        const f = Math.min(1, amt / 100), sh = S.myShares * f, out = (sh / S.ifShares) * S.IF;
+        S.myShares -= sh; S.ifShares -= sh; S.IF -= out; m.wallet += out; m.staked *= 1 - f;
+        return { ok: true, msg: `Withdrew ${Math.round(f * 100)}% of your stake: ${fmt2(out)}.` };
+      }
+      case 'liquidate': {
+        const kc = S.M.sc.keeperCap, cap = kc && S.t >= kc.a && S.t < kc.b ? kc.usd : Infinity;
+        S.capMe = S.capMe || {};
+        let total = 0, count = 0, lost = 0, fee0 = m.keeperFees, used = S.capMe[S.t] || 0, capped = false;
+        const list = S.book.filter(x => x.who === 'npc' && mr(S, x) < R.mmr).sort((x, y) => mr(S, x) - mr(S, y));
+        if (!list.length) return { ok: false, msg: 'No positions are liquidatable right now.' };
+        for (const x of list) {
+          if (used >= cap) { capped = true; break; }
+          if (mr(S, x) >= R.mmr) continue;
+          // other keepers are racing you; you win one race in four
+          const win = ((Math.imul(x.id, 2654435761) + S.t * 40503) >>> 0) % 4 === 0;
+          const e = liquidate(S, x, win ? 'me' : 'bot'); used += e;
+          if (win) { total += e; count++; } else lost++;
+        }
+        S.capMe[S.t] = used;
+        if (!count && capped && !lost) return { ok: false, msg: `Sui is congested: only ${fmt(cap)} of liquidations get through every 15 minutes, and that’s used up. Try again after the next tick.` };
+        return { ok: true, msg: (count ? `You liquidated ${count} position${count > 1 ? 's' : ''} (${fmt(total)} closed) and earned ${fmt2(m.keeperFees - fee0)} in keeper fees, with no capital: the positions close against the vAMM.` : 'You lost every race this time.') + (lost ? ` Other keepers beat you to ${lost}.` : '') + (capped ? ` Congestion stopped everyone at ${fmt(cap)} this time.` : '') };
+      }
+    }
+    return { ok: false, msg: 'Unknown action.' };
+  }
+
+  // ---------- 15 minutes of market ----------
+  function news(S, text, tone, key, cooldown) {
+    if (key) { const last = S.nf['n_' + key]; if (last !== undefined && (cooldown === undefined || S.t - last < cooldown)) return; S.nf['n_' + key] = S.t; }
+    S.news.push({ t: S.t, text, tone: tone || 'market' });
+  }
+  function npcOpen(S, f) {
+    const p = { id: ++S.nid, who: 'npc', side: f.side, size: 0, open: 0, margin: f.notional / f.lev, funding: 0, flagT: -1 };
+    addTo(S, p, f.side, f.notional);
+    S.vault += p.margin; S.npcCash -= p.margin + f.notional * R.spread; S.IF += f.notional * R.spread;
+    S.book.push(p);
+  }
+  function arbTrade(S, target) {
+    const A = S.arb, Qt = Math.sqrt(S.k * target);
+    let n = Math.abs(Qt - S.Q);
+    if (n < 1) return;
+    const dir = Qt > S.Q ? 'long' : 'short';
+    S.arbCash -= n * R.spread; S.IF += n * R.spread;
+    if (A.size === 0 || (A.size > 0) === (dir === 'long')) { addTo(S, A, dir, n); return; }
+    const full = exitNotional(S, A.size);
+    if (n <= full) {
+      const x = A.size > 0 ? S.k / (S.Q - n) - S.B : S.B - S.k / (S.Q + n);
+      const { realized } = reduce(S, A, Math.min(1, Math.abs(x / A.size)));
+      A.margin += realized;
+    } else {
+      const { realized } = reduce(S, A, 1); A.margin += realized; A.size = 0; A.open = 0;
+      n -= full; if (n > 1) addTo(S, A, dir, n);
+    }
+  }
+  function costOfReserves(S, Q2, B2) {
+    const n = netSize(S), k2 = Q2 * B2;
+    const v = (Q, B, k) => Q - k / (B + n);
+    return v(Q2, B2, k2) - v(S.Q, S.B, S.k);
+  }
+  function funding(S) {
+    const H = S.hist, n = TPH;
+    const mk = H.mark.slice(-n).reduce((a, b) => a + b, 0) / n, ix = H.orc.slice(-n).reduce((a, b) => a + b, 0) / n;
+    const prem = mk - ix, frac = prem / 24;
+    for (const p of S.book) { const pay = p.size * frac; p.funding += pay; }
+    const me = myPos(S);
+    const amm = frac * netSize(S);
+    if (amm > 0) { S.vault -= amm; S.IF += amm; }
+    else if (amm < 0) { const c = Math.min(-amm, S.IF); S.IF -= c; S.vault += c; S.uncovered += -amm - c; }
+    S.lastFund = { t: S.t, rate: frac / ix, prem, mine: me ? me.size * frac : 0 };
+    H.fund[H.fund.length - 1] = frac / ix;
+    const ratePct = Math.abs(frac / ix) * 100;
+    if (ratePct >= 0.05) news(S, `Funding: ${prem > 0 ? 'longs pay shorts' : 'shorts pay longs'} ${ratePct.toFixed(3)}% of their position this hour (the vAMM averaged ${((mk / ix - 1) * 100).toFixed(1)}% ${prem > 0 ? 'above' : 'below'} the oracle).`, 'market', 'fund', 8);
+    if (me && Math.abs(me.size * frac) >= 0.001 * Math.abs(me.open)) news(S, `You ${me.size * frac > 0 ? 'paid' : 'received'} ${fmt2(me.size * frac)} of funding this hour (${(Math.abs(me.size * frac) / me.margin * 100).toFixed(1)}% of your margin).`, me.size * frac > 0 ? 'market' : 'good', 'myfund', 8);
+    repeg(S);
+  }
+  // Repeg: if the vAMM is more than 10% from the oracle for 3 funding hours in a row, move it to oracle ± 5%.
+  function repeg(S) {
+    const mk = mark(S), o = S.M.orc[S.t], gap = mk / o - 1, over = Math.abs(gap) > R.spreadLimit;
+    S.flags = over ? S.flags + 1 : 0;
+    if (over && S.flags < R.minFlags) news(S, `The vAMM is ${Math.abs(gap * 100).toFixed(1)}% ${gap > 0 ? 'above' : 'below'} the oracle, over the 10% limit for ${S.flags} of ${R.minFlags} hours. At ${R.minFlags} the protocol repegs.`, 'market');
+    if (S.flags < R.minFlags) return;
+    const target = o > mk ? o * (1 - R.repegGap) : o * (1 + R.repegGap);
+    const Q2 = S.B * Math.sqrt(mk * target), B2 = S.B * Math.sqrt(mk / target), cost = costOfReserves(S, Q2, B2);
+    const me = myPos(S), before = me ? remain(S, me) : 0;
+    if (cost > 0 && cost > S.IF) {
+      const q = S.Q * 0.99, b = S.B * 0.99, c2 = costOfReserves(S, q, b);
+      S.Q = q; S.B = b; S.k = q * b;
+      if (c2 > 0) { const c = Math.min(c2, S.IF); S.IF -= c; S.vault += c; } else { S.vault += c2; S.IF -= c2; }
+      S.flags = 0;
+      S.repegs.push({ t: S.t, kind: 'kcut', from: mk, to: mark(S), cost: c2 });
+      news(S, `Repeg too expensive: the protocol would need ${fmt(cost)} but the insurance fund has ${fmt(S.IF)}. It shrinks the vAMM by 1% instead; the price stays $${mark(S).toFixed(4)}.`, 'market');
+      return;
+    }
+    S.Q = Q2; S.B = B2; S.k = Q2 * B2;
+    if (cost > 0) { const c = Math.min(cost, S.IF); S.IF -= c; S.vault += c; } else if (cost < 0) { S.vault += cost; S.IF -= cost; }
+    S.flags = 0;
+    const hit = me ? remain(S, me) - before : 0;
+    if (me) S.me.repegHit += hit;
+    S.repegs.push({ t: S.t, kind: 'repeg', from: mk, to: mark(S), cost, hit });
+    news(S, `Repeg: the protocol moved the vAMM from $${mk.toFixed(4)} to $${mark(S).toFixed(4)} (oracle $${o.toFixed(4)} ${o > mk ? '− 5%' : '+ 5%'}) without any trade. The insurance fund ${cost >= 0 ? 'paid' : 'collected'} ${fmt(Math.abs(cost))}.`, 'market');
+    if (me && Math.abs(hit) > 1) news(S, `The repeg changed your position’s value by ${hit >= 0 ? '+' : '−'}${fmt2(hit)} in one step.`, hit >= 0 ? 'good' : 'you');
+  }
+
+  function step(S) {
+    if (S.over) return;
+    const M = S.M, sc = M.sc;
+    S.t += 1;
+    const t = S.t, o = M.orc[t];
+    // traders arrive
+    for (const f of M.flowAt[t]) npcOpen(S, f);
+    // buyers who keep pushing the perp toward a premium over the oracle
+    const pu = sc.push;
+    if (pu && t >= pu.a && t < pu.b && !(pu.untilRepeg && S.repegs.length)) {
+      const mk = mark(S), target = o * (1 + pu.gap);
+      if (mk < target) { const want = mk * Math.pow(target / mk, 0.5), n = Math.sqrt(S.k * want) - S.Q; if (n > 1000) npcOpen(S, { side: 'long', notional: n, lev: M.pushLev[t] }); }
+    }
+    // keeper bots liquidate positions that were already liquidatable last time they looked
+    const mrPre = (() => { const p = myPos(S); return p ? mr(S, p) : Infinity; })();
+    const cap = sc.keeperCap && t >= sc.keeperCap.a && t < sc.keeperCap.b ? sc.keeperCap.usd : Infinity;
+    let done = 0;
+    const liqL0 = S.stats.liqLong, liqS0 = S.stats.liqShort, meWas = !!myPos(S);
+    // one pass per check: each flagged position is liquidated at most once every 15 minutes
+    const list = S.book.filter(p => p.who !== 'arb' && p.flagT >= 0 && p.flagT < t && mr(S, p) < R.mmr).sort((a, b) => mr(S, a) - mr(S, b));
+    for (const p of list) { if (done >= cap) break; if (mr(S, p) >= R.mmr) continue; done += liquidate(S, p, 'bot'); }
+    const liqNow = S.stats.liqLong - liqL0 + S.stats.liqShort - liqS0;
+    // the arbitrage desk trades the vAMM part of the way to the oracle
+    if (sc.arb > 0) { const mk = mark(S), gap = Math.log(o / mk); if (Math.abs(gap) > 0.002) arbTrade(S, mk * Math.exp(gap * sc.arb)); }
+    // funding every hour
+    S.hist.fund.push(0);
+    S.hist.mark.push(mark(S)); S.hist.orc.push(o); S.hist.real.push(M.real[t]);
+    if (t % TPH === 0) { funding(S); S.hist.mark[S.hist.mark.length - 1] = mark(S); }
+    // flag what is liquidatable now
+    for (const p of S.book) { if (p.who === 'arb') continue; const bad = mr(S, p) < R.mmr; if (bad && p.flagT < 0) p.flagT = t; else if (!bad) p.flagT = -1; }
+    // history
+    const H = S.hist, me = myPos(S), oi = openInterest(S);
+    H.nw.push(value(S).total); H.mr.push(me ? mr(S, me) : Infinity); H.mrPre.push(mrPre); H.IF.push(S.IF); H.oiL.push(oi.long); H.oiS.push(oi.short); H.liq.push(liqNow); H.short.push(shortfall(S));
+    // headlines
+    for (const s of sc.script) if (s.t === t) S.news.push({ t, text: s.text, tone: 'market', src: s.fake ? (s.noise ? 'noise' : 'false') : 'real' });
+    const e = M.real[t], ch = t >= 4 ? e / M.real[t - 4] - 1 : 0;
+    if (ch <= -0.04) news(S, `SUI is down ${Math.abs(ch * 100).toFixed(1)}% in an hour, at $${e.toFixed(3)} on exchanges.`, 'market', 'drop', 4);
+    if (ch >= 0.04) news(S, `SUI is up ${(ch * 100).toFixed(1)}% in an hour, at $${e.toFixed(3)} on exchanges.`, 'good', 'rise', 4);
+    if (sc.lag && Math.abs(o / e - 1) > 0.04) news(S, `The oracle shows $${o.toFixed(3)}, ${Math.abs((o / e - 1) * 100).toFixed(1)}% ${o > e ? 'above' : 'below'} exchanges: it averages the last three hours.`, 'market', 'lag', 8);
+    const gap = mark(S) / o - 1;
+    if (Math.abs(gap) >= 0.03) news(S, `The vAMM is ${Math.abs(gap * 100).toFixed(1)}% ${gap > 0 ? 'above' : 'below'} the oracle ($${mark(S).toFixed(3)} vs $${o.toFixed(3)}).`, 'market', 'gap', 8);
+    if (liqNow > 300e3) news(S, `${fmt(liqNow)} of positions liquidated in the last 15 minutes.`, 'market', 'liq', 2);
+    const waiting = S.book.filter(p => p.who === 'npc' && mr(S, p) < R.mmr).reduce((a, p) => a + Math.abs(p.size) * mark(S), 0);
+    if (cap < Infinity && waiting > 300e3) news(S, `Keepers are backed up: ${fmt(waiting)} of positions are liquidatable but not yet closed.`, 'market', 'backlog', 4);
+    if (S.IF < sc.if0 * 0.5 && !S.nf.if50) { S.nf.if50 = 1; news(S, `The insurance fund is down to ${fmt(S.IF)}, from ${fmt(sc.if0)}.`, 'market'); }
+    if (S.IF < 1 && !S.nf.if0) { S.nf.if0 = 1; news(S, 'The insurance fund is empty. Further bad debt is not covered: the vault now holds less than traders are owed.', 'market'); }
+    // personal alerts
+    if (meWas && !me && S.me.liq.length && S.me.liq[S.me.liq.length - 1].t === t) { const L = S.me.liq[S.me.liq.length - 1]; news(S, `You were fully liquidated at a mark of $${L.mark.toFixed(3)} (oracle $${L.orc.toFixed(3)}). ${L.lost > 0.5 ? `Your remaining ${fmt2(L.lost)} of margin went to the insurance fund and the keeper.` : 'Nothing was left of your margin.'}`, 'you'); }
+    else if (me && S.me.liq.length && S.me.liq[S.me.liq.length - 1].t === t) news(S, `You were partly liquidated: a keeper closed 25% of your position and charged ${fmt2(S.me.liq[S.me.liq.length - 1].pen)}.`, 'you');
+    if (me) {
+      const m = mr(S, me), lvl = m < R.mmr ? 3 : m < 0.08 ? 2 : m < 0.12 ? 1 : 0, prev = S.nf.mrLvl || 0;
+      if (lvl > prev) {
+        if (lvl === 3) news(S, `Your margin ratio is ${(m * 100).toFixed(2)}%, below 6.25%. Keepers will liquidate you next time they look unless you add margin.`, 'you');
+        else news(S, `Your margin ratio fell to ${(m * 100).toFixed(2)}%. Liquidation starts at 6.25% (mark ≈ $${liqMark(S, me).toFixed(3)}).`, 'you');
+        S.nf.mrLvl = lvl;
+      } else if (lvl < prev && m > [0, 0.12, 0.08, R.mmr][prev] + 0.01) S.nf.mrLvl = lvl;
+    } else S.nf.mrLvl = 0;
+    if (t >= T) S.over = true;
+  }
+  // What the vault and insurance fund are short if every trader closed at today’s vAMM prices (each priced as if first to close).
+  function shortfall(S) { const owed = S.book.reduce((a, p) => a + Math.max(0, remain(S, p)), 0); return Math.max(0, owed - S.vault - S.IF); }
+  function value(S) {
+    const p = myPos(S), pos = p ? Math.max(0, remain(S, p) - exitNotional(S, p.size) * R.spread) : 0;
+    const stake = S.ifShares > 0 ? (S.myShares / S.ifShares) * S.IF : 0;
+    return { wallet: S.me.wallet, pos, stake, total: S.me.wallet + pos + stake };
+  }
+  function replay(M, actions, until) {
+    const S = init(M), end = until === undefined ? T : until;
+    let i = 0;
+    const list = actions.slice().sort((a, b) => a.t - b.t);
+    while (S.t < end) { while (i < list.length && list[i].t === S.t) { act(S, list[i]); i++; } step(S); }
+    return S;
+  }
+  // a preview of opening a position without changing state
+  function quoteOpen(S, side, n) { const Q = S.Q, B = S.B; const size = side === 'long' ? S.B - S.k / (S.Q + n) : S.k / (S.Q - n) - S.B; const after = side === 'long' ? (Q + n) * (Q + n) / S.k : (Q - n) * (Q - n) / S.k; return { size: Math.abs(size), avg: n / Math.abs(size), after }; }
+  function liquidatable(S) { const l = S.book.filter(x => x.who === 'npc' && mr(S, x) < R.mmr); return { n: l.length, usd: l.reduce((a, x) => a + exitNotional(S, x.size), 0) }; }
+  return { liquidatable, T, TPH, MIN, P0, W0, R, KINDS, hm, market, init, act, step, value, replay, mark, myPos, mr, remain, pnl, exitNotional, liqMark, openInterest, netSize, shortfall, cashTotal, quoteOpen };
+})();
+if (typeof module !== 'undefined') module.exports = PG;
+
+</script>
+<script>
+(() => {
+  const MINUS = '−';
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const F = {
+    usd(v) {
+      const a = Math.abs(v), s = v < 0 ? MINUS : '';
+      if (a >= 1e9) return s + '$' + (a / 1e9).toFixed(2) + 'B';
+      if (a >= 1e6) return s + '$' + (a / 1e6).toFixed(2) + 'M';
+      if (a >= 1e3) return s + '$' + (a / 1e3).toFixed(1) + 'K';
+      return s + '$' + a.toFixed(a < 10 ? 2 : 0);
+    },
+    pct(v, d = 1) { return (v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%'; },
+    spct(v, d = 1) { return (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%'; },
+    eth(v, d = 2) { return (v < 0 ? MINUS : '') + Math.abs(v).toFixed(d) + ' ETH'; },
+    seth(v, d = 2) { return (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v).toFixed(d) + ' ETH'; },
+    int(v) { return Math.round(v).toLocaleString('en-US'); },
+    usdc(v) { return v.toLocaleString('en-US', { maximumFractionDigits: v < 1 ? 6 : 2 }) + ' USDC'; },
+    units(u) {
+      const neg = u < 0n, a = neg ? -u : u;
+      const whole = a / 1000000n, frac = (a % 1000000n).toString().padStart(6, '0').replace(/0+$/, '');
+      return (neg ? MINUS : '') + whole.toLocaleString('en-US') + (frac ? '.' + frac : '') + ' USDC';
+    }
+  };
+
+  // ---------- charts ----------
+  function niceStep(range, n) {
+    const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+  }
+  function niceMax(v) { if (!(v > 0)) return 1; const s = niceStep(v, 4); return Math.ceil((v * 1.08) / s) * s; }
+  function ticks(min, max, n) {
+    const s = niceStep(max - min, n), out = [];
+    for (let v = Math.ceil(min / s - 1e-9) * s; v <= max + s * 1e-9; v += s) out.push(+v.toFixed(12));
+    return out;
+  }
+  function cssv(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'; }
+  function drawChart(cv, spec) {
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const mono = cssv('--font-mono');
+    g.font = '11px ' + mono;
+    const X = spec.x, Y = spec.y;
+    const yt = ticks(Y.min, Y.max, 4);
+    const yLabels = yt.map(Y.fmt);
+    const lw = Math.max(...yLabels.map(s => g.measureText(s).width));
+    const pad = { l: Math.ceil(lw) + 12, r: 12, t: 14, b: X.label ? 44 : 30 };
+    const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+    const xv = v => (X.log ? Math.log10(v) : v);
+    const x0 = xv(X.min), x1 = xv(X.max);
+    const px = v => pad.l + ((xv(v) - x0) / (x1 - x0)) * pw;
+    const py = v => pad.t + (1 - (v - Y.min) / (Y.max - Y.min)) * ph;
+    const line = cssv('--line'), muted = cssv('--muted');
+    // bands
+    for (const b of spec.bands || []) {
+      g.fillStyle = cssv(b.color);
+      g.fillRect(px(b.x0), pad.t, Math.max(1, px(b.x1) - px(b.x0)), ph);
+    }
+    // grid + y labels
+    g.strokeStyle = line; g.lineWidth = 1; g.fillStyle = muted; g.textBaseline = 'middle'; g.textAlign = 'right';
+    yt.forEach((v, i) => {
+      const y = Math.round(py(v)) + 0.5;
+      g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+      g.fillText(yLabels[i], pad.l - 6, y);
+    });
+    // x ticks
+    let xt;
+    if (X.log) { xt = []; for (let e = Math.ceil(x0 - 1e-9); e <= x1 + 1e-9; e++) xt.push(Math.pow(10, e)); }
+    else xt = ticks(X.min, X.max, Math.max(3, Math.min(8, Math.floor(pw / 70))));
+    g.textAlign = 'center'; g.textBaseline = 'top';
+    xt.forEach(v => { const x = px(v); g.fillText(X.fmt(v), x, pad.t + ph + 7); g.beginPath(); g.moveTo(Math.round(x) + 0.5, pad.t + ph); g.lineTo(Math.round(x) + 0.5, pad.t + ph + 4); g.stroke(); });
+    if (X.label) { g.font = '12px ' + cssv('--font-body'); g.textAlign = 'right'; g.fillText(X.label, w - pad.r, pad.t + ph + 26); g.font = '11px ' + mono; }
+    g.save();
+    g.beginPath(); g.rect(pad.l, pad.t - 2, pw, ph + 4); g.clip();
+    for (const hl of spec.hlines || []) {
+      g.strokeStyle = cssv(hl.color); g.lineWidth = 1.5; g.setLineDash(hl.dash ? [5, 4] : []);
+      const y = py(hl.y); g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+    }
+    for (const s of spec.series) {
+      const pts = s.pts.filter(p => isFinite(p[0]) && isFinite(p[1]));
+      if (!pts.length) continue;
+      const c = cssv(s.color);
+      g.setLineDash(s.dash ? [6, 4] : []);
+      g.lineWidth = s.width || 2; g.strokeStyle = c; g.lineJoin = 'round';
+      g.beginPath();
+      pts.forEach((p, i) => {
+        const x = px(p[0]), y = py(clamp(p[1], Y.min - (Y.max - Y.min), Y.max * 2));
+        if (i === 0) g.moveTo(x, y);
+        else if (s.step) { g.lineTo(x, py(pts[i - 1][1])); g.lineTo(x, y); }
+        else g.lineTo(x, y);
+      });
+      g.stroke();
+      if (s.fill) {
+        g.lineTo(px(pts[pts.length - 1][0]), py(Math.max(Y.min, 0))); g.lineTo(px(pts[0][0]), py(Math.max(Y.min, 0))); g.closePath();
+        g.globalAlpha = 0.14; g.fillStyle = c; g.fill(); g.globalAlpha = 1;
+      }
+    }
+    g.setLineDash([]);
+    g.restore();
+    for (const vl of spec.vlines || []) {
+      if (vl.x < X.min || vl.x > X.max) continue;
+      const x = Math.round(px(vl.x)) + 0.5;
+      g.strokeStyle = cssv(vl.color); g.lineWidth = 1.5; g.setLineDash(vl.dash ? [4, 3] : []);
+      g.beginPath(); g.moveTo(x, pad.t); g.lineTo(x, pad.t + ph); g.stroke(); g.setLineDash([]);
+      if (vl.label) {
+        g.fillStyle = cssv(vl.color); g.textBaseline = 'top';
+        const tw = g.measureText(vl.label).width;
+        const right = x + 5 + tw < w - pad.r;
+        g.textAlign = right ? 'left' : 'right';
+        g.fillText(vl.label, right ? x + 5 : x - 5, pad.t + (vl.row || 0) * 14);
+      }
+    }
+    for (const p of spec.points || []) {
+      if (!isFinite(p.y)) continue;
+      g.fillStyle = cssv(p.color); g.strokeStyle = cssv('--surface'); g.lineWidth = 2;
+      g.beginPath(); g.arc(px(p.x), py(clamp(p.y, Y.min, Y.max)), 4.5, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+  }
+
+
+  const $ = id => document.getElementById(id);
+  const usd = v => (v < 0 ? MINUS : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const usd0 = v => (v < 0 ? MINUS : '') + '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
+  const usdK = v => { const a = Math.abs(v), s = v < 0 ? MINUS : ''; return a >= 1e6 ? s + '$' + (a / 1e6).toFixed(2) + 'M' : a >= 1e4 ? s + '$' + Math.round(a / 1e3) + 'K' : s + '$' + Math.round(a).toLocaleString('en-US'); };
+  const sgn = v => (v > 0.005 ? '+' : v < -0.005 ? MINUS : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const num = (v, d = 2) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const pct = (v, d = 1) => (v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%';
+  const spct = (v, d = 1) => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%';
+  const T = PG.T, W0 = PG.W0, RU = PG.R, hm = PG.hm;
+
+  let M, S, timer = 0, speed = 1, running = false, sound = true, audio = null, seenNews = 0, lastPx = 2, started = false, chosenKey = null, side = 'long', lev = 5;
+  try { const sp = localStorage.getItem('perp-panic-speed'); if (sp) speed = +sp; const so = localStorage.getItem('perp-panic-sound'); if (so) sound = so === '1'; } catch (e) {}
+
+  function beep(kind) {
+    if (!sound || !audio) return;
+    try {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.connect(g); g.connect(audio.destination);
+      const now = audio.currentTime;
+      if (kind === 'alarm') { o.type = 'square'; o.frequency.setValueAtTime(880, now); o.frequency.setValueAtTime(660, now + 0.12); o.frequency.setValueAtTime(880, now + 0.24); g.gain.setValueAtTime(0.06, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.4); o.start(now); o.stop(now + 0.42); }
+      else { o.type = 'sine'; o.frequency.setValueAtTime(520, now); g.gain.setValueAtTime(0.035, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.12); o.start(now); o.stop(now + 0.13); }
+    } catch (e) {}
+  }
+
+  // ---------- scenarios ----------
+  const TONE = { good: 'Good day', mixed: 'Mixed day', bad: 'Bad day' };
+  const TAG = { real: 'Real', false: 'False', noise: 'Noise' };
+  let playedMem = {};
+  try { playedMem = JSON.parse(localStorage.getItem('perp-panic-played') || '{}') || {}; } catch (e) {}
+  function savePlayed(key, fin) {
+    if (!key) return;
+    const r = playedMem[key] || { n: 0, best: null };
+    r.n += 1; r.best = r.best == null ? fin : Math.max(r.best, fin); r.last = fin; playedMem[key] = r;
+    try { localStorage.setItem('perp-panic-played', JSON.stringify(playedMem)); } catch (e) {}
+  }
+  function nextKey(cur) {
+    const ks = PG.KINDS.map(k => k.key), i = ks.indexOf(cur);
+    for (let j = 1; j <= ks.length; j++) { const k = ks[(i + j) % ks.length]; if (!playedMem[k]) return k; }
+    return ks[(i + 1) % ks.length];
+  }
+  const kindOf = key => PG.KINDS.find(k => k.key === key);
+  function showChooser() {
+    stop();
+    const done = PG.KINDS.filter(k => playedMem[k.key]).length;
+    const cardOf = k => { const p = playedMem[k.key]; return `<button type="button" class="sc" data-pick="${k.key}"><span class="tone ${k.tone}">${TONE[k.tone]}</span><b>${k.title}</b><span class="bl">${k.blurb}</span><span class="st${p ? ' done' : ''}">${p ? `Played ${p.n}× · best ${usd0(p.best)} · last ${usd0(p.last)}` : 'Not played yet'}</span></button>`; };
+    $('chooser').innerHTML = `<h2>Pick a market to play</h2>
+      <p>Each market is 24 hours of one SUI perpetual, run on a vAMM in the style of Perpetual Protocol v1, with an automatic repeg. You start with $10,000. You see what’s coming before you start, so you can test a position against it and watch the mechanics. Headlines are labeled real, false or noise.</p>
+      <p class="d">${done} of ${PG.KINDS.length} played.</p>
+      <div class="sc-grid">${PG.KINDS.map(cardOf).join('')}<button type="button" class="sc hide" data-pick=""><span class="tone hidden">Hidden</span><b>Surprise me</b><span class="bl">A random scenario you only learn at the end. Headlines aren’t labeled. Play this once the open ones make sense.</span><span class="st">Tests your instincts</span></button></div>`;
+    $('chooser').querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => { chosenKey = b.dataset.pick || null; newGame(randomSeed()); window.scrollTo({ top: 0 }); }));
+    $('chooser').hidden = false; $('setup').hidden = true; $('desk').hidden = true; $('debrief').hidden = true; $('planbar').hidden = true;
+    document.body.classList.add('choosing');
+    $('seed').textContent = 'not chosen yet';
+  }
+
+  // Run simple strategies on this exact market (set up at 0:00 and held to 24:00) to show what can go wrong.
+  const allIn = l => W0 / (1 + l * RU.spread) - 0.01;
+  function posNote(S) {
+    const L = S.me.liq, H = S.hist, p = PG.myPos(S);
+    const fund = S.me.fundPaid + (p ? p.funding : 0);
+    let note = '';
+    if (L.length) {
+      const full = L.find(x => x.kind === 'full'), parts = L.filter(x => x.kind === 'partial').length, first = L[0];
+      const flagT = H.mr.findIndex(m => m < RU.mmr);
+      note = full ? `Liquidated at ${hm(full.t)}${parts ? ` after ${parts} partial liquidation${parts > 1 ? 's' : ''} from ${hm(first.t)}` : ''}` : `Partly liquidated ${parts} time${parts > 1 ? 's' : ''} from ${hm(first.t)}, each pass closing 25% of what was left${PG.value(S).total < 1000 ? ', until almost nothing remained' : ''}`;
+
+      const g = first.mark / first.orc - 1, adverse = first.side === 'long' ? g <= -0.015 : g >= 0.015;
+      note += adverse ? `. The vAMM was at $${first.mark.toFixed(3)} while the oracle said $${first.orc.toFixed(3)} (${spct(g)}): liquidation follows the vAMM, and it had overshot.` : ` (vAMM $${first.mark.toFixed(3)}, oracle $${first.orc.toFixed(3)}).`;
+      if (flagT >= 0 && flagT < first.t) note += ` It was liquidatable from ${hm(flagT)}; keepers ${first.t - flagT === 1 ? 'acted 15 minutes later' : `only got to it at ${hm(first.t)}`}.`;
+      if (full && full.bad > 0.5) note += ` Its loss ran ${usd0(full.bad)} past its margin: bad debt for the insurance fund.`;
+    } else {
+      let mn = Infinity, mt = 0; H.mr.forEach((m, i) => { if (m < mn) { mn = m; mt = i; } });
+      note = `Never liquidated; the margin ratio bottomed at ${pct(mn, 1)} at ${hm(mt)}.`;
+    }
+    if (Math.abs(fund) >= 1) note += ` Funding ${fund > 0 ? 'paid' : 'received'}: ${usd0(Math.abs(fund))}.`;
+    if (Math.abs(S.me.repegHit) >= 1) note += ` The repeg changed it by ${(S.me.repegHit < 0 ? MINUS : '+') + usd0(Math.abs(S.me.repegHit))} in one step.`;
+    return note;
+  }
+  function outcomes(M) {
+    const run = (setup, each) => { const S = PG.init(M); setup(S); while (!S.over) { if (each) each(S); PG.step(S); } return S; };
+    const tot = S => PG.value(S).total;
+    const rows = [], R = M.real;
+    let lowT = 0, highT = 0; R.forEach((p, i) => { if (p < R[lowT]) lowT = i; if (p > R[highT]) highT = i; });
+    const close = R[T], path = [];
+    if (R[highT] > 2.04 && R[highT] > close * 1.03) path.push(`peaks at $${R[highT].toFixed(3)} (${hm(highT)})`);
+    if (R[lowT] < 1.96 && R[lowT] < close * 0.99) path.push(`bottoms at $${R[lowT].toFixed(3)} (${hm(lowT)})`);
+    path.push(`closes at $${close.toFixed(3)}`);
+    rows.push(['Buy SUI on an exchange and hold (for comparison)', (W0 * close) / 2, `SUI ${path.join(', ')}. No leverage, no funding, no liquidation.`]);
+    for (const [sd, l] of [['long', 2], ['long', 10], ['short', 2], ['short', 10]]) {
+      const S = run(S => PG.act(S, { type: sd, amt: allIn(l), lev: l }, false));
+      rows.push([`Open a ${l}× ${sd} with all $10,000`, tot(S), posNote(S)]);
+    }
+    const F = run(S => PG.act(S, { type: 'stake', amt: W0 }, false));
+    const ifLow = Math.min(...F.hist.IF);
+    rows.push(['Stake $10,000 in the insurance fund', tot(F), (F.stats.badDebt > 1 ? `The fund paid ${usdK(F.stats.badDebt - F.uncovered)} of bad debt${F.uncovered > 1 ? ` and ran out: ${usdK(F.uncovered)} more was left uncovered` : ''}; its low was ${usdK(ifLow)}.` : 'No bad debt today.') + ` It earns spread fees, funding imbalances${F.repegs.some(r => r.cost < 0) ? ', repeg gains' : ''} and the margin left over from full liquidations.`]);
+    const K = run(() => {}, S => { if (PG.liquidatable(S).n) PG.act(S, { type: 'liquidate' }, false); });
+    const kn = K.liqLog.filter(l => l.keeper === 'me').length;
+    rows.push(['Run a keeper: try to liquidate every 15 minutes', tot(K), kn ? `You won ${kn} liquidation${kn > 1 ? 's' : ''} and earned ${usd0(K.me.keeperFees)} in fees, with no capital at risk: liquidations close against the vAMM. Other keepers race you and win three races in four.` : 'Nothing became liquidatable, so there was nothing to earn.']);
+    // market facts from the plain run
+    const B = run(() => {}), facts = [];
+    let gMax = 0, gMin = 0; B.hist.mark.forEach((m, i) => { const g = m / B.hist.orc[i] - 1; gMax = Math.max(gMax, g); gMin = Math.min(gMin, g); });
+    if (gMax >= 0.03) facts.push(`the vAMM trades up to ${pct(gMax)} above the oracle`);
+    if (gMin <= -0.03) facts.push(`the vAMM trades up to ${pct(-gMin)} below the oracle`);
+    const fMax = Math.max(...B.hist.fund), fMin = Math.min(...B.hist.fund);
+    if (fMax >= 0.0008) facts.push(`longs pay up to ${pct(fMax, 2)} of their position in one hour of funding`);
+    if (fMin <= -0.0008) facts.push(`shorts pay up to ${pct(-fMin, 2)} in one hour`);
+    if (B.stats.liqLong + B.stats.liqShort > 100e3) facts.push('keepers close ' + [B.stats.liqLong > 1000 ? `${usdK(B.stats.liqLong)} of longs` : '', B.stats.liqShort > 1000 ? `${usdK(B.stats.liqShort)} of shorts` : ''].filter(Boolean).join(' and '));
+    if (B.stats.badDebt > 1000) facts.push(`bad debt reaches ${usdK(B.stats.badDebt)}${B.uncovered > 1000 ? `, and ${usdK(B.uncovered)} of it is more than the insurance fund can pay` : ''}`);
+    if (B.repegs.length) facts.push(B.repegs.map(r => r.kind === 'repeg' ? `the protocol repegs at ${hm(r.t)}, moving the vAMM from $${r.from.toFixed(3)} to $${r.to.toFixed(3)}` : `a repeg at ${hm(r.t)} is too expensive, so the protocol cuts k by 1%`).join('; '));
+    if (M.sc.lag) facts.push('the oracle reports a three-hour average');
+    return { rows, facts };
+  }
+  function renderSetup() {
+    const sc = M.sc;
+    $('setup').innerHTML = M.open ? `
+      <p class="eyebrow"><span class="tone ${sc.tone}">${TONE[sc.tone]}</span></p>
+      <h2>${sc.title}</h2>
+      <p><b>What will happen:</b> ${sc.plan}</p>
+      ${(() => { const o = outcomes(M); return `<p class="sub">What can go wrong <span class="sub-n">each position opened at 0:00 and held to 24:00, starting from $10,000</span></p>
+      <div class="tbl-wrap"><table class="log outc"><thead><tr><th>If you…</th><th class="n">You end with</th><th>What happens</th></tr></thead><tbody>${o.rows.map(r => `<tr><td>${r[0]}</td><td class="n ${r[1] >= W0 ? 'gain' : 'loss'}">${usd0(r[1])}<small>${spct(r[1] / W0 - 1, 1)}</small></td><td>${r[2]}</td></tr>`).join('')}</tbody></table></div>
+      ${o.facts.length ? `<p class="d">Across the market, ${o.facts.join('; ')}.</p>` : ''}`; })()}
+      <p class="sub">Things to try</p><ul class="tries">${sc.tries.map(x => `<li>${x}</li>`).join('')}</ul>
+      <p class="d">Open a position before you start if you like. The market runs 15 minutes per second, and you can pause any time (space bar works too).</p>
+      <div class="db-actions"><button type="button" class="btn primary" id="startbtn">Start the market</button><button type="button" class="btn" id="newtiming">Same scenario, new timing</button><button type="button" class="btn" id="pickother">Pick another scenario</button></div>` : `
+      <h2>You have $10,000. The market is frozen until you start.</h2>
+      <p>Open a position first if you like. When you start, 24 hours run at 15 minutes per second, and you can pause any time (space bar works too). Something may happen today, or nothing. Headlines will arrive, and not all of them are true.</p>
+      <div class="db-actions"><button type="button" class="btn primary" id="startbtn">Start the market</button><button type="button" class="btn" id="newtiming">Draw a different hidden market</button><button type="button" class="btn" id="pickother">Pick a scenario instead</button></div>`;
+    $('startbtn').addEventListener('click', start);
+    $('newtiming').addEventListener('click', () => newGame(randomSeed()));
+    $('pickother').addEventListener('click', showChooser);
+    $('planbar').innerHTML = M.open ? `<b>${sc.title}.</b> ${sc.plan}` : '';
+  }
+
+  // ---------- game flow ----------
+  function newGame(seed) {
+    stop();
+    M = PG.market(seed, chosenKey || undefined); S = PG.init(M); seenNews = 0; lastPx = 2; started = false;
+    $('seed').textContent = '#' + seed + ' · ' + (M.open ? M.sc.title : 'hidden');
+    $('chooser').hidden = true; document.body.classList.remove('choosing');
+    $('debrief').hidden = true; $('desk').hidden = false; $('setup').hidden = false; $('planbar').hidden = true;
+    document.querySelectorAll('.err').forEach(e => (e.textContent = ''));
+    renderSetup();
+    renderLive();
+  }
+  function start() {
+    if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (audio && audio.state === 'suspended') audio.resume();
+    started = true; $('setup').hidden = true; $('planbar').hidden = !M.open; play();
+  }
+  function play() {
+    if (S.over || document.body.classList.contains('choosing')) return;
+    if (!started) { start(); return; }
+    running = true; $('play').textContent = 'Pause'; $('play').setAttribute('aria-pressed', 'true');
+    clearInterval(timer); timer = setInterval(tick, 1000 / speed);
+  }
+  function stop() {
+    running = false; clearInterval(timer); timer = 0;
+    const b = $('play'); if (b) { b.textContent = S && S.over ? 'Ended' : S && S.t > 0 ? 'Resume' : 'Start'; b.setAttribute('aria-pressed', 'false'); }
+  }
+  function tick() { PG.step(S); renderLive(); if (S.over) { stop(); debrief(); } }
+  function endNow() {
+    if (document.body.classList.contains('choosing') || S.over) return;
+    stop(); started = true; $('setup').hidden = true; $('planbar').hidden = !M.open;
+    while (!S.over) PG.step(S);
+    renderLive(); debrief();
+  }
+  function doAction(type, inputId) {
+    let v = 0;
+    if (inputId) {
+      const inp = $(inputId), err = $(inputId + '-e');
+      v = parseFloat(inp.value);
+      if (!(v > 0)) { err.textContent = 'Enter an amount above zero.'; inp.focus(); return; }
+      err.textContent = '';
+    }
+    const a = { type, amt: v };
+    if (type === 'open') { a.type = side; a.lev = lev; }
+    const r = PG.act(S, a);
+    const errEl = $((inputId || 'a-liq') + '-e');
+    if (!r.ok) { errEl.textContent = r.msg; beep('tick'); }
+    else { if (inputId) $(inputId).value = ''; errEl.textContent = ''; toast(r.msg); }
+    renderLive();
+  }
+  let toastT = 0;
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 4500); }
+
+  // ---------- live render ----------
+  function removable() { const p = PG.myPos(S); if (!p) return 0; return Math.max(0, Math.min(p.margin - Math.max(0, p.funding), PG.remain(S, p) - RU.imr * PG.exitNotional(S, p.size))); }
+  function maxFor(key) {
+    switch (key) {
+      case 'open': return Math.max(0, S.me.wallet / (1 + lev * RU.spread) - 0.01);
+      case 'add': case 'stake': return S.me.wallet;
+      case 'remove': return removable();
+      case 'close': case 'unstake': return 100;
+    }
+    return 0;
+  }
+  function liqFor(size, open, margin, funding) { const a = Math.abs(size); return size > 0 ? (open - margin + funding) / (a * (1 - RU.mmr)) : (margin - funding + open) / (a * (1 + RU.mmr)); }
+  function previews() {
+    const val = id => parseFloat($(id).value) || 0;
+    const set = (id, txt) => { const el = $(id); if (el) el.textContent = txt; };
+    const p = PG.myPos(S), mk = PG.mark(S), o = M.orc[S.t];
+    const om = val('a-open');
+    if (om > 0) {
+      const n = om * lev, q = PG.quoteOpen(S, side, n), sz = side === 'long' ? q.size : -q.size;
+      const same = p && p.side === side;
+      const liq = liqFor((same ? p.size : 0) + sz, (same ? p.open : 0) + n, (same ? p.margin : 0) + om, same ? p.funding : 0);
+      set('p-open', `${usd0(n)} position: ≈ ${num(q.size, 0)} vSUI at $${q.avg.toFixed(4)} (${spct(q.avg / mk - 1, 2)} slippage). Fee ${usd(n * RU.spread)}. Liquidated if the vAMM ${side === 'long' ? 'falls' : 'rises'} to ≈ $${liq.toFixed(3)} (${spct(liq / q.after - 1)}).`);
+    } else set('p-open', `vAMM $${mk.toFixed(4)} · oracle $${o.toFixed(4)} · ${lev}× max position ${usd0(maxFor('open') * lev)}`);
+    if (p) {
+      const cv = val('a-close'), f = Math.min(1, cv / 100);
+      if (cv > 0) { const part = p.size * f, ex = PG.exitNotional(S, part), real = p.size > 0 ? ex - p.open * f : p.open * f - ex; set('p-close', `≈ you receive ${usd(Math.max(0, f * (p.margin - p.funding) + real - ex * RU.spread))}: ${f * 100 < 100 ? Math.round(f * 100) + '% of ' : ''}margin ${usd(f * p.margin)}, ${real >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(real))}, funding ${sgn(-f * p.funding)}, fee ${usd(ex * RU.spread)}.`); }
+      else set('p-close', `Your ${p.side} is worth ${usd(PG.value(S).pos)} if closed now.`);
+      const ad = val('a-add'); set('p-add', ad > 0 ? `Margin ratio after: ${pct((PG.remain(S, p) + ad) / PG.exitNotional(S, p.size), 2)} · liquidation ≈ $${liqFor(p.size, p.open, p.margin + ad, p.funding).toFixed(3)}` : `Margin ratio ${pct(PG.mr(S, p), 2)}, liquidation at 6.25%`);
+      const rm = val('a-remove'); set('p-remove', rm > 0 ? `Margin ratio after: ${pct((PG.remain(S, p) - rm) / PG.exitNotional(S, p.size), 2)} (must stay at 10% or more)` : `You can remove up to ${usd(removable())}`);
+    } else { set('p-close', 'You have no position.'); set('p-add', 'You have no position.'); set('p-remove', 'You have no position.'); }
+    const st = val('a-stake'); set('p-stake', st > 0 ? `Your share after: ${pct((S.myShares + (st * S.ifShares) / Math.max(1, S.IF)) / (S.ifShares + (st * S.ifShares) / Math.max(1, S.IF)), 2)} of a ${usd0(S.IF + st)} fund` : `The fund holds ${usd0(S.IF)}. Stakers absorb bad debt first.`);
+    set('p-unstake', S.myShares > 0 ? `Your stake is worth ${usd(PG.value(S).stake)}` : 'You have nothing staked.');
+    const lq = PG.liquidatable(S);
+    set('p-liq', lq.n ? `${lq.n} position${lq.n > 1 ? 's' : ''} (${usd0(lq.usd)}) can be liquidated now. You earn 0.625% of what you close: half the 1.25% penalty.` : 'Nothing is liquidatable right now. Positions qualify below a 6.25% margin ratio.');
+  }
+  function mrClass(m) { return m === Infinity || m >= 0.15 ? 'ok' : m >= 0.08 ? 'warn' : 'crit'; }
+
+  function renderLive() {
+    const t = S.t, o = M.orc[t], mk = PG.mark(S), v = PG.value(S), p = PG.myPos(S), m = S.me;
+    $('clock').textContent = hm(t);
+    $('prog').style.width = (t / T) * 100 + '%';
+    const pxEl = $('px'); pxEl.textContent = '$' + o.toFixed(3);
+    const ch = o / 2 - 1; $('pxch').textContent = spct(ch, 1) + ' today'; $('pxch').className = 'chg ' + (ch >= 0 ? 'up' : 'down');
+    if (o !== lastPx) { pxEl.classList.remove('flash-up', 'flash-down'); void pxEl.offsetWidth; pxEl.classList.add(o > lastPx ? 'flash-up' : 'flash-down'); lastPx = o; }
+    $('mk').textContent = '$' + mk.toFixed(3);
+    const g = mk / o - 1; $('mkch').textContent = spct(g, 1) + ' vs oracle'; $('mkch').className = 'chg ' + (Math.abs(g) < 0.02 ? '' : g > 0 ? 'up' : 'down');
+    $('nw').textContent = usd(v.total);
+    const pl = v.total - W0; $('nwch').textContent = sgn(pl) + ' (' + spct(pl / W0, 2) + ')'; $('nwch').className = 'chg ' + (pl >= 0 ? 'up' : 'down');
+    if (!started) $('play').textContent = 'Start';
+    // alerts
+    const al = [];
+    if (p) {
+      const r = PG.mr(S, p);
+      if (r < RU.mmr) al.push({ c: 'crit', t: `Your margin ratio is ${pct(r, 2)}, below 6.25%. Keepers liquidate you on their next pass unless you add margin or close.` });
+      else if (r < 0.08) al.push({ c: 'crit', t: `Margin ratio ${pct(r, 2)}. Liquidation at 6.25%: a vAMM price of ≈ $${PG.liqMark(S, p).toFixed(3)}.` });
+      else if (r < 0.12) al.push({ c: 'warn', t: `Margin ratio ${pct(r, 2)}. Liquidation at a vAMM price of ≈ $${PG.liqMark(S, p).toFixed(3)}.` });
+      if ((g > 0.03 && p.size > 0) || (g < -0.03 && p.size < 0)) al.push({ c: 'warn', t: `The vAMM is ${pct(Math.abs(g))} ${g > 0 ? 'above' : 'below'} the oracle, so ${p.side}s like you pay about ${pct(Math.abs(g) / 24, 2)} of the position every hour in funding.` });
+    }
+    if (S.myShares > 0 && S.IF < M.sc.if0 * 0.5) al.push({ c: 'crit', t: `The insurance fund is down to ${usd0(S.IF)}. Your stake is worth ${usd(v.stake)}.` });
+    $('alert').innerHTML = al.map(a => `<div class="al ${a.c}" role="status">${a.t}</div>`).join('');
+    document.body.classList.toggle('danger', al.some(a => a.c === 'crit'));
+    // cards
+    const H = S.hist, oi = PG.openInterest(S), fundSoFar = m.fundPaid + (p ? p.funding : 0);
+    const levNow = p ? PG.exitNotional(S, p.size) / Math.max(1e-9, PG.remain(S, p)) : 0;
+    const liqToday = H.liq.reduce((a, b) => a + b, 0), fNext = g / 24;
+    $('cards').innerHTML = [
+      card('Your position', p ? `${p.side === 'long' ? 'Long' : 'Short'} ${levNow > 0 && levNow < 100 ? levNow.toFixed(1) + '×' : ''}` : 'None', p ? [['Worth if closed', usd(v.pos)], ['Size', `${num(Math.abs(p.size), 0)} vSUI · ${usd0(PG.exitNotional(S, p.size))}`], ['Entry (average)', '$' + (p.open / Math.abs(p.size)).toFixed(4)], ['Margin ratio', pct(PG.mr(S, p), 2)], ['Liquidation at', '≈ $' + PG.liqMark(S, p).toFixed(3)]] : [['Wallet', usd(m.wallet)], ['Max 10×', usd0(maxFor('open') * 10) + ' position']], p ? mrClass(PG.mr(S, p)) : ''),
+      card('Funding', Math.abs(fNext) < 0.00005 ? 'About zero' : `${fNext > 0 ? 'Longs' : 'Shorts'} pay ${pct(Math.abs(fNext), 3)}/h`, [['Last hour', S.lastFund ? (S.lastFund.rate >= 0 ? 'longs paid ' : 'shorts paid ') + pct(Math.abs(S.lastFund.rate), 3) : '—'], ['You, so far', Math.abs(fundSoFar) < 0.005 ? '—' : (fundSoFar > 0 ? 'paid ' : 'received ') + usd(Math.abs(fundSoFar))], ['Over the 10% limit', S.flags ? `${S.flags} of ${RU.minFlags} hours` : 'no']], Math.abs(g) >= 0.05 ? 'warn' : ''),
+      card('Insurance fund', usd0(S.IF), [['Started at', usd0(M.sc.if0)], ['Your stake', S.myShares > 0 ? usd(v.stake) : '—'], ['Bad debt today', usd0(S.stats.badDebt)], ['Not covered', usd0(S.uncovered)]], S.uncovered > 1 ? 'crit' : S.IF < M.sc.if0 * 0.7 ? 'warn' : ''),
+      card('Market', `${spct(g, 1)} gap`, [['Longs open', usdK(oi.long)], ['Shorts open', usdK(oi.short)], ['Liquidated today', usdK(liqToday)], ['Vault short by', '≈ ' + usdK(PG.shortfall(S))]], Math.abs(g) >= 0.05 ? 'warn' : '')
+    ].join('');
+    previews();
+    // news
+    const nl = S.news;
+    if (nl.length > seenNews) {
+      const fresh = nl.slice(seenNews);
+      if (fresh.some(n => n.tone === 'you' && /liquidat/.test(n.text))) beep('alarm'); else if (started) beep('tick');
+      seenNews = nl.length;
+    }
+    $('news').innerHTML = nl.slice().reverse().slice(0, 60).map(n => `<li class="${n.tone}"><span class="nt">${hm(n.t)}</span><span>${n.text}${M.open && n.src ? ` <em class="htag ${n.src}">${TAG[n.src]}</em>` : ''}</span></li>`).join('') || '<li class="empty"><span></span><span>Headlines appear here once the market opens.</span></li>';
+    $('log').innerHTML = S.actions.slice().reverse().map(a => `<li class="${a.ok ? '' : 'fail'}"><span class="nt">${hm(a.t)}</span><span>${a.msg}</span></li>`).join('') || '<li class="empty"><span></span><span>Your moves will be listed here.</span></li>';
+    // charts
+    const xs = { min: 0, max: T, fmt: x => hm(x).replace(':00', 'h') };
+    const ser = arr => arr.map((y, i) => [i, y]);
+    const lq = p ? PG.liqMark(S, p) : 0;
+    const allp = H.real.concat(H.orc, H.mark, p && lq > 0 ? [lq] : []);
+    const lo = Math.min(...allp, 1.9), hi = Math.max(...allp, 2.1);
+    drawChart($('c-price'), { x: xs, y: { min: Math.floor(lo * 0.98 * 20) / 20, max: Math.ceil(hi * 1.01 * 20) / 20, fmt: y => '$' + y.toFixed(2) },
+      series: [{ pts: ser(H.real), color: '--faint', width: 1.5, dash: !M.sc.lag ? false : false }, { pts: ser(H.orc), color: '--accent', width: 2 }, { pts: ser(H.mark), color: '--warm', width: 2 }], hlines: p && lq > 0 ? [{ y: lq, color: '--crit', dash: true }] : [],
+      vlines: S.repegs.map((r, i) => ({ x: r.t, color: '--violet', dash: true, label: 'Repeg', row: i })) });
+    const nwlo = Math.min(...H.nw, W0), nwhi = Math.max(...H.nw, W0), pad = Math.max(200, (nwhi - nwlo) * 0.15);
+    drawChart($('c-nw'), { x: xs, y: { min: Math.max(0, Math.floor((nwlo - pad) / 100) * 100), max: Math.ceil((nwhi + pad) / 100) * 100, fmt: y => '$' + (y / 1000).toFixed(1) + 'K' },
+      series: [{ pts: ser(H.nw), color: '--accent', width: 2, fill: true }], hlines: [{ y: W0, color: '--muted', dash: true }] });
+    $('liqline').hidden = !(p && lq > 0);
+    $('lg-real').hidden = !M.sc.lag;
+  }
+  function card(title, big, rows, cls) {
+    return `<section class="card ${cls || ''}"><div class="card-h"><span>${title}</span></div><div class="card-v">${big}</div><dl>${rows.filter(Boolean).map(r => `<div><dt>${r[0]}</dt><dd>${r[1]}</dd></div>`).join('')}</dl></section>`;
+  }
+
+  // ---------- debrief ----------
+  const NAMES = { long: 'Opened a long', short: 'Opened a short', close: 'Closed', addMargin: 'Added margin', removeMargin: 'Removed margin', stake: 'Staked in the insurance fund', unstake: 'Unstaked', liquidate: 'Liquidated as a keeper' };
+  function amtTxt(a) { return a.type === 'long' || a.type === 'short' ? `${usd0(a.amt)} at ${a.lev}×` : a.type === 'close' || a.type === 'unstake' ? Math.round(a.amt) + '%' : a.type === 'liquidate' ? '—' : usd0(a.amt); }
+  function debrief() {
+    const sc = M.sc, H = S.hist, fin = PG.value(S).total;
+    if (!S.saved) { S.saved = true; if (M.open) savePlayed(M.key, fin); }
+    const nk = M.open ? nextKey(M.key) : null;
+    const acts = S.actions.map(a => ({ t: a.t, type: a.type, amt: a.amt, lev: a.lev }));
+    const okActs = S.actions.map((a, i) => ({ a, i })).filter(x => x.a.ok);
+    const spot = (W0 * M.real[T]) / 2;
+    let handsOff = null;
+    if (okActs.length) { const t1 = okActs[0].a.t; handsOff = PG.value(PG.replay(M, acts.filter(a => a.t <= t1))).total; }
+    const finalOf = n => (n === 0 ? W0 : PG.value(PG.replay(M, acts.slice(0, n))).total);
+    const impacts = [];
+    let prev = W0;
+    okActs.slice(0, 30).forEach(({ a, i }) => { const cur = finalOf(i + 1); impacts.push({ a, d: cur - prev }); prev = cur; });
+    const restD = fin - prev;
+    const failedActs = S.actions.filter(a => !a.ok);
+    // facts
+    let lowT = 0, highT = 0; H.real.forEach((p, i) => { if (p < H.real[lowT]) lowT = i; if (p > H.real[highT]) highT = i; });
+    let gMax = 0, gMin = 0, gMaxT = 0, gMinT = 0; H.mark.forEach((x, i) => { const gg = x / H.orc[i] - 1; if (gg > gMax) { gMax = gg; gMaxT = i; } if (gg < gMin) { gMin = gg; gMinT = i; } });
+    const fMax = Math.max(...H.fund), fMin = Math.min(...H.fund);
+    const fund = S.me.fundPaid + (PG.myPos(S) ? PG.myPos(S).funding : 0);
+    const facts = [
+      ['SUI', `opened at $2.000, ${H.real[highT] > 2.02 ? `high $${H.real[highT].toFixed(3)} at ${hm(highT)}, ` : ''}low $${H.real[lowT].toFixed(3)} at ${hm(lowT)}, closed at $${H.real[T].toFixed(3)}`],
+      ['vAMM vs oracle', `${gMax >= 0.01 ? `up to ${pct(gMax)} above (${hm(gMaxT)})` : ''}${gMax >= 0.01 && gMin <= -0.01 ? '; ' : ''}${gMin <= -0.01 ? `up to ${pct(-gMin)} below (${hm(gMinT)})` : ''}${gMax < 0.01 && gMin > -0.01 ? 'within 1% all day' : ''}`],
+      ['Funding', `${fMax >= 0.0005 ? `longs paid up to ${pct(fMax, 3)} an hour` : ''}${fMax >= 0.0005 && fMin <= -0.0005 ? '; ' : ''}${fMin <= -0.0005 ? `shorts paid up to ${pct(-fMin, 3)} an hour` : ''}${fMax < 0.0005 && fMin > -0.0005 ? 'small all day' : ''}`],
+      ['Liquidations', S.stats.liqLong + S.stats.liqShort < 1000 ? 'none' : [S.stats.liqLong > 1000 ? `${usdK(S.stats.liqLong)} of longs` : '', S.stats.liqShort > 1000 ? `${usdK(S.stats.liqShort)} of shorts` : ''].filter(Boolean).join(' and ') + ' closed by keepers'],
+      ['Insurance fund', `${usd0(M.sc.if0)} → ${usd0(S.IF)}${S.stats.badDebt > 1 ? `; it paid ${usdK(S.stats.badDebt - S.uncovered)} of bad debt` : ''}${S.uncovered > 1 ? ` and could not cover another ${usdK(S.uncovered)}` : ''}`],
+      ['Repeg', S.repegs.length ? S.repegs.map(r => r.kind === 'repeg' ? `${hm(r.t)}: vAMM $${r.from.toFixed(3)} → $${r.to.toFixed(3)}` : `${hm(r.t)}: too expensive, k cut by 1%`).join('; ') : 'none'],
+      ['You', `${S.me.liq.length ? `liquidated ${S.me.liq.some(l => l.kind === 'full') ? 'fully' : 'partly'} (${S.me.liq.length} step${S.me.liq.length > 1 ? 's' : ''}); ` : ''}fees ${usd(S.me.fees)}; funding ${fund >= 0 ? 'paid' : 'received'} ${usd(Math.abs(fund))}${S.me.keeperFees > 0 ? `; keeper fees earned ${usd(S.me.keeperFees)}` : ''}`]
+    ];
+    // lessons
+    const L = [], LQ = S.me.liq;
+    if (LQ.length) {
+      const first = LQ[0], gg = first.mark / first.orc - 1;
+      if (first.side === 'long' ? gg <= -0.015 : gg >= 0.015) L.push(`You were liquidated at ${hm(first.t)} with the vAMM at $${first.mark.toFixed(3)} and the oracle at $${first.orc.toFixed(3)} (${spct(gg)}). Margin is measured on the vAMM price, so ${gg < 0 ? 'long liquidations selling into it pushed it below the oracle, and that overshoot' : 'short liquidations buying into it pushed it above the oracle, and that overshoot'} took you out.`);
+      const flagT = H.mr.findIndex(x => x < RU.mmr);
+      if (flagT >= 0 && flagT < first.t) L.push(`Your margin ratio fell below 6.25% at ${hm(flagT)}; keepers acted at ${hm(first.t)}. Adding margin in those 15 minutes would have saved the 1.25% penalty.`);
+      const full = LQ.find(l => l.kind === 'full');
+      if (full && full.lost > 0.5) L.push(`In the full liquidation, your remaining ${usd(full.lost)} of margin went to the keeper and the insurance fund, not back to you. Closing the position yourself a little earlier would have kept it.`);
+      if (full && full.bad > 0.5) L.push(`Your loss ran ${usd(full.bad)} past your margin: that is bad debt, and the insurance fund paid it. You can’t lose more than your margin; the protocol can.`);
+    }
+    if (Math.abs(fund) >= 10) {
+      const pricePl = fin - W0 + fund + S.me.fees - S.me.keeperFees;
+      L.push(fund > 0 ? `You paid ${usd(fund)} in funding. Funding is the vAMM-vs-oracle gap ÷ 24 every hour, paid by whichever side the crowd is on. ${pricePl > 0 && fin < W0 ? 'Your trade made money on price, but funding and fees ate more than that.' : ''}` : `You received ${usd(-fund)} in funding for holding the side the crowd wasn’t on.`);
+    }
+    if (S.me.fees > 25) L.push(`Fees cost you ${usd(S.me.fees)}: 0.1% of the position on every open and close. At 10× that is 1% of your margin each way, before vAMM slippage.`);
+    if (Math.abs(S.me.repegHit) >= 1) L.push(`The repeg changed your position by ${sgn(S.me.repegHit)} in one step, with no trade. The protocol repegs after three funding hours over the 10% limit; positions on the crowded side take the hit.`);
+    if (S.me.unpaid > 0.5) L.push(`When you closed, the vault and insurance fund were ${usd(S.me.unpaid)} short of what you were owed. Winners are paid from losers’ margin and the insurance fund; when both run out, the last to close lose (Perp v1 minted PERP tokens to cover this).`);
+    if (S.myShares > 0 || S.me.staked > 0) { const st = PG.value(S).stake; if (S.stats.badDebt > 1) L.push(`As an insurance fund staker you stood behind every trader. Bad debt of ${usdK(S.stats.badDebt)} came out of the fund${S.uncovered > 1 ? `, and it ran out` : ''}; your stake ended at ${usd(st)}.`); }
+    if (S.me.keeperFees > 0) L.push(`As a keeper you earned ${usd(S.me.keeperFees)} without putting up capital: the liquidated positions close against the vAMM, and you collect half the 1.25% penalty.`);
+    const fakes = sc.script.filter(s => s.fake && !s.noise);
+    if (fakes.length && S.actions.some(a => a.ok && ['long', 'short', 'close'].includes(a.type) && fakes.some(f => a.t >= f.t && a.t <= f.t + 2))) L.push('You traded within 30 minutes of a headline that turned out to be false. Check the impact column for what that cost.');
+    if (!okActs.length) L.push(`You sat out the whole day. Buying SUI on an exchange at the start would have ended at ${usd(spot)}.`);
+    if (impacts.length) {
+      const worstI = impacts.reduce((a, x) => (x.d < a.d ? x : a)), bestI = impacts.reduce((a, x) => (x.d > a.d ? x : a));
+      if (worstI.d < -1) L.push(`Your costliest move: ${NAMES[worstI.a.type]} (${amtTxt(worstI.a)}) at ${hm(worstI.a.t)}, ${sgn(worstI.d)}.`);
+      if (bestI.d > 1) L.push(`Your best move: ${NAMES[bestI.a.type]} (${amtTxt(bestI.a)}) at ${hm(bestI.a.t)}, ${sgn(bestI.d)}.`);
+    }
+    if (!L.length) L.push('Nothing you did moved the result much. Replay the same market with more leverage to see where its limits are.');
+    const maxAbs = Math.max(1, ...impacts.map(x => Math.abs(x.d)));
+    $('debrief').innerHTML = `
+      <section class="panel reveal"><p class="eyebrow">What happened today</p><h2>${sc.title}</h2><p>${sc.story}</p></section>
+      <div class="db-grid">
+        <section class="panel"><h3>Your result</h3>
+          <div class="result ${fin >= W0 ? 'gain' : 'loss'}"><span class="big">${usd(fin)}</span><span class="pp">${spct(fin / W0 - 1, 2)}</span></div>
+          <table class="cmp"><tbody>
+            <tr><td>Kept $10,000 in USDC</td><td class="n">${usd(W0)}</td></tr>
+            <tr><td>Bought SUI on an exchange and held</td><td class="n">${usd(spot)}</td></tr>
+            ${handsOff !== null ? `<tr><td>Your first moves, then hands off</td><td class="n">${usd(handsOff)}</td></tr>` : ''}
+            <tr class="you"><td>What you actually did</td><td class="n">${usd(fin)}</td></tr>
+          </tbody></table>
+        </section>
+        <section class="panel"><h3>The market, in facts</h3><dl class="facts">${facts.map(f => `<div><dt>${f[0]}</dt><dd>${f[1]}</dd></div>`).join('')}</dl></section>
+      </div>
+      <section class="panel"><h3>What each move did <small>each move held to 24:00</small></h3>
+        <p class="d" style="margin:0 0 8px">A move’s impact compares two endings of the same market, both held to 24:00: stopping right after this move, versus stopping right before it. The column adds up to your total result: ${sgn(fin - W0)}.</p>
+        ${impacts.length ? `<div class="tbl-wrap"><table class="log imp"><thead><tr><th>Time</th><th>Move</th><th class="n">Amount</th><th class="n">Impact</th><th></th></tr></thead><tbody>${impacts.map(x => `<tr><td>${hm(x.a.t)}</td><td>${NAMES[x.a.type]}</td><td class="n">${amtTxt(x.a)}</td><td class="n ${x.d >= 0.005 ? 'gain' : x.d <= -0.005 ? 'loss' : ''}">${sgn(x.d)}</td><td class="barc"><span class="bar"><i class="${x.d < 0 ? 'neg' : 'pos'}" style="width:${((Math.abs(x.d) / maxAbs) * 50).toFixed(1)}%"></i></span></td></tr>`).join('')}</tbody></table></div>${okActs.length > 30 ? `<p class="d">Showing your first 30 moves; the rest added ${sgn(restD)}.</p>` : ''}` : '<p class="d">You made no moves.</p>'}
+      </section>
+      ${failedActs.length ? `<section class="panel"><h3>Moves that didn’t go through</h3><ul class="reveal-list">${failedActs.map(a => `<li><span class="nt">${hm(a.t)}</span><span>${NAMES[a.type] || a.type}: ${a.msg}</span><span class="tag fail">Failed</span></li>`).join('')}</ul></section>` : ''}
+      <section class="panel"><h3>Lessons from this run</h3><ul class="lessons">${L.map(l => `<li>${l}</li>`).join('')}</ul></section>
+      <section class="panel"><h3>The headlines, revealed</h3><ul class="reveal-list">${sc.script.slice().sort((a, b) => a.t - b.t).map(s => `<li><span class="nt">${hm(s.t)}</span><span>${s.text}</span><span class="tag ${s.fake ? 'fail' : 'pass'}">${s.fake ? (s.noise ? 'Noise' : 'False') : 'Real'}</span></li>`).join('')}</ul><p class="d">Every other headline was generated from what the market actually did.</p></section>
+      <div class="db-actions"><button type="button" class="btn primary" id="again-same">Replay this market</button><button type="button" class="btn" id="again-new">${M.open ? 'Same scenario, new timing' : 'New hidden market'}</button>${nk ? `<button type="button" class="btn" id="again-next">Next: ${kindOf(nk).title}</button>` : ''}<button type="button" class="btn" id="again-pick">Pick a scenario</button></div>`;
+    $('debrief').hidden = false; $('play').textContent = 'Ended';
+    $('again-same').addEventListener('click', () => { newGame(M.seed); window.scrollTo({ top: 0 }); });
+    $('again-new').addEventListener('click', () => { newGame(randomSeed()); window.scrollTo({ top: 0 }); });
+    if (nk) $('again-next').addEventListener('click', () => { chosenKey = nk; newGame(randomSeed()); window.scrollTo({ top: 0 }); });
+    $('again-pick').addEventListener('click', () => { showChooser(); window.scrollTo({ top: 0 }); });
+    $('debrief').scrollIntoView({ block: 'start' });
+  }
+  function randomSeed() { return 1 + Math.floor(Math.random() * 99999); }
+
+  // ---------- wiring ----------
+  $('play').addEventListener('click', () => (running ? stop() : play()));
+  $('endnow').addEventListener('click', endNow);
+  document.querySelectorAll('#speed button').forEach(b => {
+    b.setAttribute('aria-pressed', String(+b.dataset.s === speed));
+    b.addEventListener('click', () => {
+      speed = +b.dataset.s; try { localStorage.setItem('perp-panic-speed', String(speed)); } catch (e) {}
+      document.querySelectorAll('#speed button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      if (running) { clearInterval(timer); timer = setInterval(tick, 1000 / speed); }
+    });
+  });
+  const sb = $('sound'); sb.setAttribute('aria-pressed', String(sound)); sb.textContent = sound ? 'Sound on' : 'Sound off';
+  sb.addEventListener('click', () => { sound = !sound; sb.setAttribute('aria-pressed', String(sound)); sb.textContent = sound ? 'Sound on' : 'Sound off'; try { localStorage.setItem('perp-panic-sound', sound ? '1' : '0'); } catch (e) {} if (sound && !audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } });
+  document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#tabs button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    document.querySelectorAll('.pane').forEach(p => (p.hidden = p.id !== 'pane-' + b.dataset.tab));
+  }));
+  document.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => { const [type, input] = b.dataset.act.split(':'); doAction(type, input || null); }));
+  document.querySelectorAll('[data-fill]').forEach(b => b.addEventListener('click', () => {
+    const [key, input, frac] = b.dataset.fill.split(':');
+    const mx = maxFor(key) * (+frac || 1);
+    $(input).value = mx > 0 ? (Math.floor(mx * 100) / 100).toString() : '';
+    $(input + '-e').textContent = ''; previews();
+  }));
+  document.querySelectorAll('.amt input').forEach(i => i.addEventListener('input', () => { $(i.id + '-e').textContent = ''; previews(); }));
+  document.querySelectorAll('[data-side]').forEach(b => b.addEventListener('click', () => { side = b.dataset.side; document.querySelectorAll('[data-side]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); $('openbtn').textContent = side === 'long' ? 'Open long' : 'Open short'; previews(); }));
+  document.querySelectorAll('[data-lev]').forEach(b => b.addEventListener('click', () => { lev = +b.dataset.lev; document.querySelectorAll('[data-lev]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); previews(); }));
+  document.addEventListener('keydown', ev => {
+    if (ev.code !== 'Space' || /INPUT|TEXTAREA|BUTTON|SELECT/.test(document.activeElement.tagName)) return;
+    ev.preventDefault(); if (!S.over && !document.body.classList.contains('choosing')) (running ? stop() : play());
+  });
+  let rt = 0;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderLive, 120); });
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderLive); } catch (e) {}
+  new MutationObserver(renderLive).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderLive);
+  newGame(randomSeed());
+  showChooser();
+})();
+
+</script>
+
+
+</html>

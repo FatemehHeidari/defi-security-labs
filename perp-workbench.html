@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Perp Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>/* Layout: a clearing-house workbench. Sticky header with the lesson picker; left rail = the lesson script or your controls; right = market state (vAMM, oracle, funds), the price chart, open positions, and a ledger of every money movement. */
+:root {
+  --bg: #EEF0F3; --surface: #FFFFFF; --sunk: #F5F6F8; --ink: #15202B; --muted: #566270; --faint: #8893A0; --line: #D5DAE1;
+  --accent: #3D5AFE; --accent-ink: #FFFFFF; --accent-soft: #E3E8FF;
+  --vamm: #3D5AFE; --oracle: #15202B; --fund: #8A4FD1; --fund-soft: #F0E7FB;
+  --ok: #1D7A4B; --ok-soft: #DFF2E7; --warn: #8C5A00; --warn-soft: #FAEED4; --crit: #B3261E; --crit-soft: #FBE2DF;
+  --font-display: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0E1217; --surface: #161B22; --sunk: #12161C; --ink: #E3E8EE; --muted: #9AA5B1; --faint: #6E7884; --line: #28303A;
+  --accent: #8C9EFF; --accent-ink: #0B1033; --accent-soft: #1C2350;
+  --vamm: #8C9EFF; --oracle: #E3E8EE; --fund: #C29BF2; --fund-soft: #2A1D3D;
+  --ok: #5FCB8E; --ok-soft: #112A1D; --warn: #E8B04F; --warn-soft: #2D2311; --crit: #F28B82; --crit-soft: #361615;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0E1217; --surface: #161B22; --sunk: #12161C; --ink: #E3E8EE; --muted: #9AA5B1; --faint: #6E7884; --line: #28303A;
+  --accent: #8C9EFF; --accent-ink: #0B1033; --accent-soft: #1C2350;
+  --vamm: #8C9EFF; --oracle: #E3E8EE; --fund: #C29BF2; --fund-soft: #2A1D3D;
+  --ok: #5FCB8E; --ok-soft: #112A1D; --warn: #E8B04F; --warn-soft: #2D2311; --crit: #F28B82; --crit-soft: #361615;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding-block: 10px; }
+.brand { display: grid; line-height: 1.15; }
+.brand b { font-family: var(--font-display); font-weight: 600; font-size: 20px; }
+.brand span { font-size: 12px; color: var(--faint); }
+.lessons { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 520px; }
+.lessons button, .btn { appearance: none; border: 1px solid var(--line); background: var(--sunk); color: var(--ink); font: 500 13px/1.2 var(--font-body); padding: 8px 11px; border-radius: 8px; cursor: pointer; }
+.lessons button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.lessons button:hover, .btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.danger { color: var(--crit); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.main { display: grid; gap: 16px; padding-block: 16px 40px; }
+.grid { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+@media (min-width: 1060px) { .grid { grid-template-columns: 360px minmax(0, 1fr); } .rail { position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow-y: auto; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.panel h2 { font-family: var(--font-display); font-weight: 600; font-size: 21px; margin: 0 0 4px; text-wrap: balance; }
+.panel h3 { font-family: var(--font-display); font-weight: 600; font-size: 16px; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: space-between; }
+.panel h3 small { font-family: var(--font-body); font-weight: 400; font-size: 12.5px; color: var(--muted); }
+.d { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+.rail { display: grid; gap: 12px; }
+.steps { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 4px; counter-reset: s; }
+.steps li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 8px; padding: 6px 8px; border-radius: 8px; font-size: 14px; color: var(--muted); }
+.steps li::before { counter-increment: s; content: counter(s); font: 500 12px/22px var(--font-mono); text-align: center; border-radius: 50%; border: 1px solid var(--line); height: 22px; }
+.steps li.done { color: var(--ink); }
+.steps li.done::before { background: var(--ok-soft); color: var(--ok); border-color: transparent; content: "✓"; }
+.steps li.next { background: var(--accent-soft); color: var(--ink); font-weight: 500; }
+.steps li.next::before { border-color: var(--accent); color: var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.takeaway { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: var(--ok-soft); color: var(--ink); font-size: 14px; }
+.takeaway b { color: var(--ok); }
+details.ctl > summary { cursor: pointer; font-family: var(--font-display); font-weight: 600; font-size: 16px; list-style: none; display: flex; justify-content: space-between; }
+details.ctl > summary::after { content: "Show"; font: 500 12px var(--font-body); color: var(--accent); }
+details.ctl[open] > summary::after { content: "Hide"; }
+.trader { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; display: grid; gap: 6px; }
+.trader .nm { font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; }
+.trader .nm span { font-weight: 400; color: var(--faint); font-family: var(--font-mono); font-size: 12px; }
+.inp { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.inp label { font-size: 12px; color: var(--muted); }
+.inp input, .inp select { width: 92px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--sunk); color: var(--ink); font: 500 13px var(--font-mono); }
+.inp select { width: 70px; }
+.msg { font-size: 13px; color: var(--crit); min-height: 0; margin: 0; }
+.msg:empty { display: none; }
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 700px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; align-content: start; }
+.kpi .lb { font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.kpi .v { font: 500 22px/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+.kpi .s { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.kpi.fund { border-color: var(--fund); background: var(--fund-soft); }
+.kpi.fund .v { color: var(--fund); }
+.kpi.alert { border-color: var(--crit); background: var(--crit-soft); }
+.kpi .flags { display: inline-flex; gap: 3px; vertical-align: middle; margin-left: 4px; }
+.kpi .flags i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--warn); display: inline-block; }
+.kpi .flags i.on { background: var(--warn); }
+.up { color: var(--ok); } .dn { color: var(--crit); }
+.chart { width: 100%; height: 220px; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { padding: 8px 6px; text-align: left; border-top: 1px solid var(--line); white-space: nowrap; }
+th { border-top: 0; font-weight: 500; color: var(--muted); font-size: 12px; }
+td.n, th.n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.side { font: 600 11px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 6px; border-radius: 4px; }
+.side.long { background: var(--ok-soft); color: var(--ok); } .side.short { background: var(--crit-soft); color: var(--crit); }
+.mr { display: grid; grid-template-columns: 54px 120px; gap: 8px; align-items: center; justify-content: end; }
+.mrbar { position: relative; height: 8px; background: var(--sunk); border-radius: 4px; border: 1px solid var(--line); }
+.mrbar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--ok); }
+.mrbar i.warn { background: var(--warn); } .mrbar i.crit { background: var(--crit); }
+.mrbar b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--crit); }
+.mrbar b.p { background: var(--warn); }
+tr.liq td { background: var(--crit-soft); }
+.wallets { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); margin-top: 10px; font-family: var(--font-mono); }
+.wallets b { color: var(--ink); font-weight: 500; }
+.log { list-style: none; margin: 0; padding: 0; display: grid; }
+.log li { padding: 10px 0; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.log li:first-child { border-top: 0; }
+.log .t { display: flex; gap: 10px; align-items: baseline; font-weight: 600; font-size: 14px; }
+.log .t span { font: 500 11.5px var(--font-mono); color: var(--faint); min-width: 44px; }
+.log .note { font-size: 13.5px; color: var(--muted); margin: 0 0 0 54px; max-width: 80ch; }
+.flows { display: flex; flex-wrap: wrap; gap: 6px; margin-left: 54px; }
+.flow { font: 500 12px var(--font-mono); padding: 3px 8px; border-radius: 6px; background: var(--sunk); border: 1px solid var(--line); }
+.flow.if { border-color: var(--fund); background: var(--fund-soft); }
+.log li.fail .t { color: var(--crit); }
+.log li.latest { background: linear-gradient(var(--accent-soft), var(--accent-soft)) left / 3px 100% no-repeat; padding-left: 10px; }
+.log li.kind-funding .t::after, .log li.kind-repeg .t::after, .log li.kind-liq .t::after, .log li.kind-oracle .t::after { font: 600 10.5px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 6px; border-radius: 4px; margin-left: 4px; }
+.log li.kind-funding .t::after { content: "Funding"; background: var(--accent-soft); color: var(--accent); }
+.log li.kind-repeg .t::after { content: "Repeg"; background: var(--fund-soft); color: var(--fund); }
+.log li.kind-liq .t::after { content: "Liquidation"; background: var(--crit-soft); color: var(--crit); }
+.log li.kind-oracle .t::after { content: "Oracle"; background: var(--sunk); color: var(--muted); border: 1px solid var(--line); }
+details.rules { font-size: 14px; }
+details.rules summary { cursor: pointer; font-weight: 600; }
+details.rules ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; color: var(--muted); }
+@media (max-width: 640px) { .brand span { display: none; } .log .note, .flows { margin-left: 0; } .kpi .v { font-size: 19px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<header class="top"><div class="wrap top-in">
+  <div class="brand"><b>Perp Workbench</b><span>A vAMM perpetual, one step at a time</span></div>
+  <nav class="lessons" id="lessons" aria-label="Lessons"><button type="button" data-k="winner" aria-pressed="false">1 · Who pays a winner</button><button type="button" data-k="funding" aria-pressed="false">2 · Funding</button><button type="button" data-k="liq" aria-pressed="false">3 · Liquidation</button><button type="button" data-k="bad" aria-pressed="false">4 · Bad debt</button><button type="button" data-k="bad2" aria-pressed="false">4b · Done safely</button><button type="button" data-k="repeg" aria-pressed="false">5 · Repeg</button><button type="button" data-k="frontrun" aria-pressed="false">6 · Repeg front-run</button><button type="button" data-k="dryfund" aria-pressed="false">7 · Fund runs dry</button><button type="button" data-k="lagoracle" aria-pressed="false">8 · Lagging oracle</button><button type="button" data-k="lopsided" aria-pressed="false">9 · Lopsided gap</button><button type="button" data-k="crash" aria-pressed="false">10 · Flash crash</button><button type="button" data-k="free" aria-pressed="false">Free play</button></nav>
+</div></header>
+<main class="wrap main">
+  <div class="grid">
+    <aside class="rail">
+      <section class="panel" id="lesson"></section>
+      <details class="panel ctl" id="ctl"><summary>Controls</summary>
+        <p class="msg" id="msg" role="alert"></p>
+        <div class="trader"><div class="nm">Market</div>
+          <div class="inp"><label for="or-v">Oracle $</label><input id="or-v" type="number" min="0" step="0.05" value="2"><button type="button" class="btn" id="or-set">Set</button></div>
+          <div class="row"><button type="button" class="btn" data-or="-0.2">Oracle −20%</button><button type="button" class="btn" data-or="-0.05">−5%</button><button type="button" class="btn" data-or="0.05">+5%</button><button type="button" class="btn" data-or="0.2">+20%</button></div>
+          <div class="row"><button type="button" class="btn primary" id="fund">Pay funding (1 hour)</button></div>
+          <div class="row"><button type="button" class="btn" id="arb-half">Dan: close half the gap</button><button type="button" class="btn" id="arb">Dan: close the whole gap</button><button type="button" class="btn" id="arb-close">Dan closes</button></div>
+        </div>
+        <div class="trader"><div class="nm">Alice<span id="w-alice"></span></div>
+<div class="inp"><label for="m-alice">Margin $</label><input id="m-alice" type="number" min="0" step="100" value="1000"><label for="l-alice">Leverage</label><select id="l-alice"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="5" selected>5×</option><option value="6">6×</option><option value="8">8×</option><option value="10">10×</option></select></div>
+<div class="row"><button type="button" class="btn" id="long-alice">Long</button><button type="button" class="btn" id="short-alice">Short</button><button type="button" class="btn" id="close-alice">Close</button><button type="button" class="btn" id="add-alice">+$500 margin</button><button type="button" class="btn danger" id="liq-alice">Liquidate</button></div></div><div class="trader"><div class="nm">Bob<span id="w-bob"></span></div>
+<div class="inp"><label for="m-bob">Margin $</label><input id="m-bob" type="number" min="0" step="100" value="1000"><label for="l-bob">Leverage</label><select id="l-bob"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="5" selected>5×</option><option value="6">6×</option><option value="8">8×</option><option value="10">10×</option></select></div>
+<div class="row"><button type="button" class="btn" id="long-bob">Long</button><button type="button" class="btn" id="short-bob">Short</button><button type="button" class="btn" id="close-bob">Close</button><button type="button" class="btn" id="add-bob">+$500 margin</button><button type="button" class="btn danger" id="liq-bob">Liquidate</button></div></div><div class="trader"><div class="nm">Carol<span id="w-carol"></span></div>
+<div class="inp"><label for="m-carol">Margin $</label><input id="m-carol" type="number" min="0" step="100" value="2500"><label for="l-carol">Leverage</label><select id="l-carol"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="5">5×</option><option value="6">6×</option><option value="8">8×</option><option value="10" selected>10×</option></select></div>
+<div class="row"><button type="button" class="btn" id="long-carol">Long</button><button type="button" class="btn" id="short-carol">Short</button><button type="button" class="btn" id="close-carol">Close</button><button type="button" class="btn" id="add-carol">+$500 margin</button><button type="button" class="btn danger" id="liq-carol">Liquidate</button></div></div><div class="trader"><div class="nm">Eve<span id="w-eve"></span></div>
+<div class="inp"><label for="m-eve">Margin $</label><input id="m-eve" type="number" min="0" step="100" value="1000"><label for="l-eve">Leverage</label><select id="l-eve"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="5">5×</option><option value="6" selected>6×</option><option value="8">8×</option><option value="10">10×</option></select></div>
+<div class="row"><button type="button" class="btn" id="long-eve">Long</button><button type="button" class="btn" id="short-eve">Short</button><button type="button" class="btn" id="close-eve">Close</button><button type="button" class="btn" id="add-eve">+$500 margin</button><button type="button" class="btn danger" id="liq-eve">Liquidate</button></div></div>
+      </details>
+      <details class="panel rules"><summary>The rules in this lab</summary><ul>
+        <li>One market, SUI. The vAMM starts at 100,000 vSUI and $200,000 of virtual USDC (x × y = k), price $2.</li>
+        <li>Initial margin 10% (max 10×). Maintenance margin 6.25%. Fee: 0.1% of each trade to the insurance fund.</li>
+        <li>Funding each hour = position size × (vAMM − oracle) ÷ 24. Longs pay when the vAMM is above the oracle. The insurance fund pays or keeps whatever longs and shorts don’t cancel. Real v1 uses one-hour averages (TWAPs); this lab uses the prices at that moment.</li>
+        <li>Liquidation below 6.25%: if the margin ratio is still above 1.25%, close 25% and charge 1.25% of it (half keeper, half fund). Otherwise close it all: the keeper gets half of 1.25%, the rest of the margin goes to the fund, and any loss beyond the margin is bad debt the fund pays.</li>
+        <li>Repeg: after 3 funding hours in a row with the gap above 10%, move the vAMM to oracle ± 5% with k unchanged. The fund pays or collects the change in the traders’ net position. If it can’t afford it, the code cuts both reserves by 1% instead.</li>
+        <li>Anyone can call payFunding, which runs funding and then the repeg check.</li>
+      </ul></details>
+    </aside>
+    <div class="board" style="display:grid;gap:16px;min-width:0">
+      <div class="kpis" id="kpis"></div>
+      <section class="panel"><h3>vAMM price and oracle <small>each point is one step</small></h3><svg class="chart" id="chart" role="img" aria-label="vAMM price versus oracle price"></svg>
+        <div class="legend"><span><i style="background:var(--vamm)"></i>vAMM price</span><span><i style="background:var(--oracle)"></i>Oracle (dashed)</span><span><i style="background:var(--warn-soft);height:10px"></i>Oracle ± 10%, the repeg limit</span><span id="lg-real" hidden><i style="background:var(--ok)"></i>Real price</span></div></section>
+      <section class="panel"><h3>Open positions</h3><div id="pos"></div><div class="wallets" id="wallets"></div></section>
+      <section class="panel"><h3>Ledger <small>newest first; every arrow is real USDC moving</small></h3><ul class="log" id="log"></ul></section>
+      
+    </div>
+  </div>
+</main>
+<script>
+// vAMM perpetual mechanics in the style of Perpetual Protocol v1, simplified to one market and spot prices.
+// Real USDC lives in: trader wallets, the vault (ClearingHouse), the insurance fund, the keeper.
+const Perp = (() => {
+  const P = { imr: 0.10, mmr: 0.0625, liqFee: 0.0125, partial: 0.25, spread: 0.001, spreadLimit: 0.10, repegGap: 0.05, minFlags: 3 };
+  const NAMES = { alice: 'Alice', bob: 'Bob', carol: 'Carol', dan: 'Dan', eve: 'Eve' };
+
+  function create(o) {
+    o = o || {};
+    const B = o.base || 100000, price = o.price || 2, Q = B * price;
+    const S = { Q, B, k: Q * B, oracle: price, real: price, lag: !!o.lag, samples: [price, price, price], fluct: o.fluct || 0, IF: o.insurance == null ? 1000 : o.insurance, vault: 0, keeper: 0, unpaid: 0, flags: 0, hour: 0, traders: {}, log: [], hist: [] };
+    for (const id of Object.keys(NAMES)) S.traders[id] = { id, name: NAMES[id], wallet: o.wallet || 10000, pos: null };
+    S.total0 = total(S);
+    snap(S, 'Start');
+    return S;
+  }
+  const price = S => S.Q / S.B;
+  const total = S => Object.values(S.traders).reduce((a, t) => a + t.wallet, 0) + S.vault + S.IF + S.keeper;
+  // What a position is worth if closed now: quote received for a long, quote paid to buy back a short.
+  function exitNotional(S, size) {
+    if (size > 0) return S.Q - S.k / (S.B + size);
+    return S.k / (S.B + size) - S.Q;
+  }
+  function pnl(S, pos) { const n = exitNotional(S, pos.size); return pos.size > 0 ? n - pos.open : pos.open - n; }
+  function remain(S, pos) { return pos.margin - pos.funding + pnl(S, pos); }
+  function marginRatio(S, pos) { return remain(S, pos) / exitNotional(S, pos.size); }
+  function owed(S) { return Object.values(S.traders).reduce((a, t) => a + (t.pos ? Math.max(0, remain(S, t.pos)) : 0), 0); }
+  function netSize(S) { return Object.values(S.traders).reduce((a, t) => a + (t.pos ? t.pos.size : 0), 0); }
+
+  function ev(S, kind, title, flows, note) { S.log.push({ hour: S.hour, kind, title, flows: flows || [], note: note || '' }); }
+  function snap(S, label) { S.hist.push({ i: S.hist.length, vamm: price(S), oracle: S.oracle, real: S.real, label }); }
+  // Move money out of the vault; the insurance fund covers any shortage (ClearingHouse.withdraw).
+  function payFromVault(S, amt, flows, to) {
+    let fromVault = Math.min(amt, Math.max(0, S.vault)), short = amt - fromVault, fromIF = 0, unpaid = 0;
+    S.vault -= fromVault;
+    if (short > 1e-9) { fromIF = Math.min(short, S.IF); S.IF -= fromIF; unpaid = short - fromIF; if (fromIF > 0) flows.push(['Insurance fund', to, fromIF, 'vault short of cash']); }
+    if (fromVault > 0) flows.push(['Vault', to, fromVault, '']);
+    return amt - unpaid;
+  }
+
+  function swapLong(S, notional) { const B2 = S.k / (S.Q + notional), size = S.B - B2; S.Q += notional; S.B = B2; return size; }
+  function swapShort(S, notional) { const Q2 = S.Q - notional, B2 = S.k / Q2, size = -(B2 - S.B); S.Q = Q2; S.B = B2; return size; }
+  function swapClose(S, size) {
+    if (size > 0) { const B2 = S.B + size, Q2 = S.k / B2, out = S.Q - Q2; S.Q = Q2; S.B = B2; return out; }
+    const B2 = S.B + size, Q2 = S.k / B2, cost = Q2 - S.Q; S.Q = Q2; S.B = B2; return cost;
+  }
+
+  function open(S, id, side, margin, lev) {
+    const t = S.traders[id];
+    if (t.pos && t.pos.side !== side) return fail(S, `${t.name} already has a ${t.pos.side}. Close it first.`);
+    if (!(margin > 0)) return fail(S, 'Enter a margin above zero.');
+    if (lev > 1 / P.imr + 1e-9) return fail(S, `Leverage is capped at ${1 / P.imr}× (10% initial margin).`);
+    const notional = margin * lev, fee = notional * P.spread;
+    if (t.wallet < margin + fee - 1e-9) return fail(S, `${t.name} doesn't have $${fmt(margin + fee)} in her wallet.`);
+    if (side === 'short' && notional >= S.Q * 0.9) return fail(S, 'That short is larger than the vAMM can absorb.');
+    const p0 = price(S), Q0 = S.Q, B0 = S.B;
+    const size = side === 'long' ? swapLong(S, notional) : swapShort(S, notional);
+    if (S.fluct && Math.abs(price(S) / p0 - 1) > S.fluct + 1e-9) {
+      const moved = price(S) / p0 - 1; S.Q = Q0; S.B = B0;
+      return fail(S, `${t.name}’s $${fmt(notional)} ${side} would move the vAMM ${sgnP(moved)} in one block. The limit is ${(S.fluct * 100).toFixed(0)}%, so the trade is rejected.`);
+    }
+    t.wallet -= margin + fee; S.vault += margin; S.IF += fee;
+    const adding = !!t.pos;
+    if (adding) { const p = t.pos; p.size += size; p.open += notional; p.margin += margin; p.entry = p.open / Math.abs(p.size); p.lev = Math.round(p.open / p.margin * 10) / 10; }
+    else t.pos = { side, size, open: notional, margin, funding: 0, entry: notional / Math.abs(size), lev };
+    ev(S, 'trade', `${t.name} ${adding ? 'adds to her' : 'opens a'} ${lev}× ${side}: $${fmt(margin)} margin, $${fmt(notional)} position`,
+      [[t.name, 'Vault', margin, 'margin'], [t.name, 'Insurance fund', fee, '0.1% spread fee']],
+      `${side === 'long' ? 'Buying' : 'Selling'} ${fmtN(Math.abs(size))} vSUI from the vAMM moves its price from $${p0.toFixed(4)} to $${price(S).toFixed(4)} (average $${(notional / Math.abs(size)).toFixed(4)}). The oracle didn’t move; only this trade did.`);
+    snap(S, `${t.name} ${side}`);
+    return { ok: true };
+  }
+
+  function close(S, id) {
+    const t = S.traders[id], pos = t.pos;
+    if (!pos) return fail(S, `${t.name} has no position.`);
+    const p0 = price(S), pl = pnl(S, pos), rem = pos.margin - pos.funding + pl;
+    const exitN = swapClose(S, pos.size), fee = exitN * P.spread;
+    const flows = [];
+    let got = 0, bad = 0;
+    if (rem >= 0) got = payFromVault(S, rem, flows, t.name);
+    else { bad = -rem; const cover = Math.min(bad, S.IF); S.IF -= cover; S.vault += cover; flows.push(['Insurance fund', 'Vault', cover, 'bad debt']); }
+    t.wallet += got - fee; S.IF += fee; flows.push([t.name, 'Insurance fund', fee, '0.1% spread fee']);
+    if (got + 1e-9 < rem) S.unpaid += rem - got;
+    t.pos = null;
+    const pf = pos.funding;
+    ev(S, 'trade', `${t.name} closes: ${pl >= 0 ? 'profit' : 'loss'} ${sgn(pl)}${Math.abs(pf) > 0.005 ? `, funding ${sgn(-pf)}` : ''}`, flows,
+      `Closing moves the vAMM from $${p0.toFixed(4)} to $${price(S).toFixed(4)}. ${t.name} is owed her $${fmt(pos.margin)} margin, ${pl >= 0 ? 'plus' : 'minus'} a $${fmt(Math.abs(pl))} ${pl >= 0 ? 'profit' : 'loss'}${Math.abs(pf) > 0.005 ? `, ${pf > 0 ? 'minus' : 'plus'} $${fmt(Math.abs(pf))} of funding ${pf > 0 ? 'paid' : 'received'}` : ''}: $${fmt(Math.max(0, rem))}.` +
+      (bad > 0 ? ` The loss was bigger than the margin, so $${fmt(bad)} is bad debt and the insurance fund pays it.` : '') +
+      (got + 1e-9 < rem ? ` The vault and insurance fund together were $${fmt(rem - got)} short, so ${t.name} is paid less than owed.` : ''));
+    snap(S, `${t.name} closes`);
+    return { ok: true };
+  }
+
+  function addMargin(S, id, amt) {
+    const t = S.traders[id];
+    if (!t.pos) return fail(S, `${t.name} has no position.`);
+    if (!(amt > 0) || t.wallet < amt) return fail(S, 'Not enough in the wallet.');
+    t.wallet -= amt; S.vault += amt; t.pos.margin += amt;
+    ev(S, 'trade', `${t.name} adds $${fmt(amt)} margin`, [[t.name, 'Vault', amt, 'margin']], `Margin ratio is now ${(marginRatio(S, t.pos) * 100).toFixed(2)}%.`);
+    return { ok: true };
+  }
+
+  function setFluct(S, x) {
+    S.fluct = x;
+    ev(S, 'oracle', `Price limit on: one block can move the vAMM at most ${(x * 100).toFixed(0)}%`, [], 'This is a fluctuation limit. It stops one trade from crashing the vAMM, but it also stops traders from moving the price quickly when they need to.');
+  }
+  // The real price. With lag on, the oracle reports the average of the last 3 hourly prices (a TWAP of TWAPs).
+  function setReal(S, p) {
+    const r0 = S.real; S.real = p;
+    if (!S.lag) return setOracle(S, p);
+    ev(S, 'oracle', `The real price moves from $${r0.toFixed(4)} to $${p.toFixed(4)} (${sgnP(p / r0 - 1)})`, [], `The oracle still reports $${S.oracle.toFixed(4)}: it averages the last three hourly prices, so it only catches up as the hours pass. The vAMM is at $${price(S).toFixed(4)}.`);
+    snap(S, 'Real price');
+  }
+  function setOracle(S, p) {
+    const p0 = S.oracle; S.oracle = p; if (!S.lag) S.real = p;
+    ev(S, 'oracle', `Oracle moves from $${p0.toFixed(4)} to $${p.toFixed(4)} (${sgnP(p / p0 - 1)})`, [], `The vAMM stays at $${price(S).toFixed(4)}: no trade happened, so its reserves didn’t change. The gap is now ${sgnP(price(S) / p - 1)}.`);
+    snap(S, 'Oracle');
+  }
+
+  // payFunding: funding, then the repeg check.
+  function payFunding(S) {
+    S.hour += 1;
+    if (S.lag) {
+      const o0 = S.oracle; S.samples.push(S.real); S.samples = S.samples.slice(-3);
+      S.oracle = S.samples.reduce((a, b) => a + b, 0) / 3;
+      if (Math.abs(S.oracle - o0) > 1e-9) ev(S, 'oracle', `Oracle updates from $${o0.toFixed(4)} to $${S.oracle.toFixed(4)}`, [], `It reports the average of the last three hourly prices ($${S.samples.map(x => x.toFixed(2)).join(', $')}). The real price is $${S.real.toFixed(4)}.`);
+    }
+    const mark = price(S), idx = S.oracle, prem = mark - idx, frac = prem / 24;
+    const lines = [], flows = [];
+    for (const t of Object.values(S.traders)) if (t.pos) {
+      const pay = t.pos.size * frac; t.pos.funding += pay;
+      if (Math.abs(pay) > 0.0001) lines.push(`${t.name} ${pay > 0 ? 'pays' : 'receives'} $${fmt(Math.abs(pay))}`);
+    }
+    const net = netSize(S), amm = frac * net; // > 0: traders paid more than they received
+    if (amm > 0.0001) { S.vault -= amm; S.IF += amm; flows.push(['Vault', 'Insurance fund', amm, 'funding surplus']); }
+    else if (amm < -0.0001) { const c = Math.min(-amm, S.IF); S.IF -= c; S.vault += c; flows.push(['Insurance fund', 'Vault', c, 'funding shortfall']); }
+    ev(S, 'funding', `Hour ${S.hour}: funding ${Math.abs(prem) < 1e-6 ? 'is zero' : prem > 0 ? '(longs pay shorts)' : '(shorts pay longs)'}`, flows,
+      `vAMM $${mark.toFixed(4)} − oracle $${idx.toFixed(4)} = ${sgnD(prem)} per vSUI; one hour is 1/24 of that: ${sgnD(frac, 5)} per vSUI. ` +
+      (lines.length ? lines.join('; ') + '. ' : netSize(S) === 0 && !Object.values(S.traders).some(t => t.pos) ? 'No open positions. ' : 'Nobody pays this hour. ') +
+      (Math.abs(amm) > 0.0001 ? `Longs and shorts don’t cancel (net ${net > 0 ? 'long' : 'short'} ${fmtN(Math.abs(net))} vSUI), so the insurance fund ${amm > 0 ? 'keeps' : 'pays'} the difference, $${fmt(Math.abs(amm))}.` : ''));
+    repegCheck(S);
+    snap(S, `Hour ${S.hour}`);
+  }
+
+  function costOfReserves(S, Q2, B2) {
+    const n = netSize(S), k2 = Q2 * B2;
+    const v = (Q, B, k) => Q - k / (B + n); // value of the traders' net position
+    return v(Q2, B2, k2) - v(S.Q, S.B, S.k);
+  }
+  function repegCheck(S) {
+    const mark = price(S), o = S.oracle, over = Math.abs(mark / o - 1) > P.spreadLimit;
+    S.flags = over ? S.flags + 1 : 0;
+    const net = netSize(S);
+    let target = 0;
+    if (Math.abs(net) < 1e-9) { if (Math.abs(mark / o - 1) > 1e-6) target = o; }
+    else if (S.flags >= P.minFlags) target = o > mark ? o * (1 - P.repegGap) : o * (1 + P.repegGap);
+    if (!target) { if (over) ev(S, 'repeg', `Repeg check: gap ${sgnP(mark / o - 1)}, over the 10% limit for ${S.flags} of ${P.minFlags} hours`, [], S.flags < P.minFlags ? `No repeg yet. It happens when the gap stays above 10% for ${P.minFlags} funding hours in a row.` : ''); return; }
+    const spot = mark;
+    let Q2 = S.B * Math.sqrt(spot * target), B2 = S.B * Math.sqrt(spot / target);
+    let cost = costOfReserves(S, Q2, B2);
+    const budget = S.IF, before = mark;
+    if (cost > 0 && cost > budget) {
+      // Can't afford it: shrink both reserves by 1% instead, and accept it without re-checking the budget.
+      const q = S.Q * 0.99, b = S.B * 0.99, c2 = costOfReserves(S, q, b), want = target;
+      S.Q = q; S.B = b; S.k = q * b;
+      const flows = [];
+      if (c2 > 0) { const c = Math.min(c2, S.IF); S.IF -= c; S.vault += c; flows.push(['Insurance fund', 'Vault', c, 'k cut cost']); }
+      else if (c2 < 0) { S.vault += c2; S.IF -= c2; flows.push(['Vault', 'Insurance fund', -c2, 'k cut gain']); }
+      S.flags = 0;
+      ev(S, 'repeg', `Repeg too expensive: k cut by 1% instead, price stays at $${price(S).toFixed(4)}`, flows,
+        `Moving the vAMM to $${want.toFixed(4)} would cost $${fmt(cost)}, more than the insurance fund’s $${fmt(budget)}. The code shrinks both reserves by 1% instead: the price doesn’t move, the market gets 1% thinner, and the fund ${c2 <= 0 ? 'collects' : 'pays'} $${fmt(Math.abs(c2))}. The gap stays open. A naive fallback applies this cut once and assumes it is enough, without checking that it fits the budget.` + (c2 > budget ? ' Here it doesn’t fit either.' : ''));
+      return;
+    }
+    S.Q = Q2; S.B = B2; S.k = Q2 * B2;
+    const flows = [];
+    if (cost > 0) { const c = Math.min(cost, S.IF); S.IF -= c; S.vault += c; flows.push(['Insurance fund', 'Vault', c, 'repeg cost']); }
+    else if (cost < 0) { S.vault += cost; S.IF -= cost; flows.push(['Vault', 'Insurance fund', -cost, 'repeg gain']); }
+    S.flags = 0;
+    ev(S, 'repeg', `Repeg: vAMM moved from $${before.toFixed(4)} to $${price(S).toFixed(4)} (oracle $${o.toFixed(4)})`, flows,
+      `The protocol rewrites the vAMM reserves${Math.abs(net) < 1e-9 ? ' to the oracle price. Longs and shorts cancel exactly, so it costs nothing.' : ` to oracle ${o > before ? '− 5%' : '+ 5%'} (k stays the same). The traders’ net ${net > 0 ? 'long' : 'short'} is now worth ${cost >= 0 ? 'more' : 'less'}, so the insurance fund ${cost >= 0 ? 'pays' : 'collects'} $${fmt(Math.abs(cost))}.`}`);
+  }
+
+  function liquidate(S, id) {
+    const t = S.traders[id], pos = t.pos;
+    if (!pos) return fail(S, `${t.name} has no position.`);
+    const mr = marginRatio(S, pos);
+    if (mr >= P.mmr) return fail(S, `${t.name}’s margin ratio is ${(mr * 100).toFixed(2)}%, above the 6.25% maintenance level. She can’t be liquidated.`);
+    const flows = [];
+    if (mr > P.liqFee && P.partial < 1) {
+      // partial: close 25% of the position
+      const part = pos.size * P.partial, partOpen = pos.open * P.partial;
+      const exitN = swapClose(S, part);
+      const realized = pos.size > 0 ? exitN - partOpen : partOpen - exitN;
+      const penalty = exitN * P.liqFee, toKeeper = penalty / 2, toIF = penalty - toKeeper;
+      pos.size -= part; pos.open -= partOpen; pos.margin += realized - penalty;
+      S.vault -= penalty; S.keeper += toKeeper; S.IF += toIF;
+      flows.push(['Vault', 'Keeper', toKeeper, 'half the 1.25% penalty'], ['Vault', 'Insurance fund', toIF, 'other half']);
+      ev(S, 'liq', `${t.name} is partly liquidated (25% of her position)`, flows,
+        `Her margin ratio was ${(mr * 100).toFixed(2)}%, below 6.25% but above 1.25%, so the keeper closes only 25%. She realizes ${sgn(realized)} on that part and pays a $${fmt(penalty)} penalty (1.25% of $${fmt(exitN)}). Her margin ratio is now ${(marginRatio(S, pos) * 100).toFixed(2)}%.`);
+      snap(S, `${t.name} partial liq`);
+      return { ok: true };
+    }
+    const pl = pnl(S, pos), exitN = exitNotional(S, pos.size);
+    swapClose(S, pos.size);
+    let rem = pos.margin - pos.funding + pl, bad = 0;
+    const toKeeper = exitN * P.liqFee / 2;
+    if (rem < 0) { bad = -rem; rem = 0; }
+    let liqBad = 0, keeperPaid = toKeeper;
+    if (toKeeper > rem) { liqBad = toKeeper - rem; rem = 0; } else rem -= toKeeper;
+    const totalBad = bad + liqBad;
+    if (totalBad > 0) { const c = Math.min(totalBad, S.IF); S.IF -= c; S.vault += c; flows.push(['Insurance fund', 'Vault', c, 'bad debt']); }
+    S.vault -= keeperPaid; S.keeper += keeperPaid; flows.push(['Vault', 'Keeper', keeperPaid, 'half of 1.25% of the position']);
+    if (rem > 0) { S.vault -= rem; S.IF += rem; flows.push(['Vault', 'Insurance fund', rem, `the rest of ${t.name}’s margin`]); }
+    t.pos = null;
+    ev(S, 'liq', `${t.name} is fully liquidated`, flows,
+      `Her margin ratio was ${(mr * 100).toFixed(2)}%. The keeper closes the whole position and earns $${fmt(keeperPaid)}. ` +
+      (bad > 0 ? `Her loss was $${fmt(bad)} more than her margin: that is bad debt, and the insurance fund pays it. ` : rem > 0 ? `The remaining $${fmt(rem)} of her margin goes to the insurance fund, not back to her. ` : '') +
+      `${t.name} gets nothing back.`);
+    snap(S, `${t.name} liquidated`);
+    return { ok: true };
+  }
+
+  // An arbitrageur trades the vAMM to the oracle price (Dan).
+  // frac: how much of the gap to close (1 = all the way to the oracle).
+  function arb(S, id, frac) {
+    id = id || 'dan'; frac = frac == null ? 1 : frac;
+    const t = S.traders[id];
+    if (t.pos) return fail(S, `${t.name} already has a position.`);
+    const mark = price(S), target = mark + frac * (S.oracle - mark);
+    if (Math.abs(mark / S.oracle - 1) < 0.0005) return fail(S, 'The vAMM is already at the oracle price.');
+    const Qt = Math.sqrt(S.k * target), notional = Math.abs(Qt - S.Q);
+    const lev = 5, margin = notional / lev;
+    return open(S, id, Qt > S.Q ? 'long' : 'short', margin, lev);
+  }
+
+  function fail(S, msg) { ev(S, 'fail', msg, [], ''); return { ok: false, msg }; }
+  const fmt = v => Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtN = v => v.toLocaleString('en-US', { maximumFractionDigits: 1 });
+  const sgn = v => (v >= 0 ? '+' : '−') + '$' + fmt(v);
+  const sgnD = (v, d = 4) => (v >= 0 ? '+' : '−') + '$' + Math.abs(v).toFixed(d);
+  const sgnP = v => (v >= 0 ? '+' : '−') + Math.abs(v * 100).toFixed(1) + '%';
+
+  return { P, NAMES, create, price, total, owed, setReal, setFluct, exitNotional, pnl, remain, marginRatio, netSize, open, close, addMargin, setOracle, payFunding, liquidate, arb };
+})();
+if (typeof module !== 'undefined') module.exports = Perp;
+
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const MINUS = '−';
+  const f2 = v => Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const usd = v => (v < -0.004 ? MINUS : '') + '$' + f2(v);
+  const sgn = v => (v > 0.004 ? '+' : v < -0.004 ? MINUS : '') + '$' + f2(v);
+  const pct = (v, d = 2) => (v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%';
+  const spct = (v, d = 1) => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%';
+  const nf = v => v.toLocaleString('en-US', { maximumFractionDigits: 1 });
+  const W0 = 10000;
+  const wd = (S, id) => S.traders[id].wallet - W0;
+
+  const LESSONS = [
+    { key: 'winner', title: 'Who pays a winner', tag: '1', opts: { insurance: 1000 },
+      intro: 'A vAMM has no one on the other side of your trade. Watch where a winner’s profit really comes from.',
+      steps: [
+        ['Alice opens a 5× long with $1,000', S => Perp.open(S, 'alice', 'long', 1000, 5)],
+        ['Bob opens a 5× long with $1,000', S => Perp.open(S, 'bob', 'long', 1000, 5)],
+        ['Alice closes her position', S => Perp.close(S, 'alice')],
+        ['Bob closes his position', S => Perp.close(S, 'bob')]],
+      takeaway: S => `Alice’s wallet is ${sgn(wd(S, 'alice'))} and Bob’s is ${sgn(wd(S, 'bob'))}. Bob’s buy pushed the price up, and that is what Alice sold into. The vault ends at ${usd(S.vault)}: every dollar paid out came from a margin paid in. The insurance fund grew by ${usd(S.IF - S.IF0)}, the 0.1% fees.` },
+    { key: 'funding', title: 'Funding', tag: '2', opts: { insurance: 1000 },
+      intro: 'The vAMM never sees the real price. Funding is the hourly payment that rewards traders for pushing it there.',
+      steps: [
+        ['Alice opens a 5× long with $1,000', S => Perp.open(S, 'alice', 'long', 1000, 5)],
+        ['Bob opens a 3× short with $1,000', S => Perp.open(S, 'bob', 'short', 1000, 3)],
+        ['One hour passes: funding is paid', S => Perp.payFunding(S)],
+        ['The real price drops 10%: the oracle moves to $1.80', S => Perp.setOracle(S, 1.8)],
+        ['Another hour: funding again', S => Perp.payFunding(S)],
+        ['Dan, an arbitrageur, shorts the vAMM halfway to the oracle', S => { S.g0 = Perp.price(S) / S.oracle - 1; const r = Perp.arb(S, 'dan', 0.5); S.g1 = Perp.price(S) / S.oracle - 1; return r; }],
+        ['Hour 3: Dan collects funding', S => Perp.payFunding(S)],
+        ['Hour 4: again', S => Perp.payFunding(S)],
+        ['Hour 5: again', S => Perp.payFunding(S)],
+        ['Dan closes his short', S => { S.danFund = -S.traders.dan.pos.funding; return Perp.close(S, 'dan'); }]],
+      takeaway: S => `While the vAMM sat above the oracle, longs paid shorts every hour, and the bigger the gap the bigger the payment. Dan’s short cut the gap from ${spct(S.g0)} to ${spct(S.g1)}, and he left half of it open on purpose: for three hours he collected ${usd(S.danFund)} of funding, mostly from Alice, and after fees his wallet is ${sgn(wd(S, 'dan'))}. Had he closed the whole gap, funding would have dropped to zero and he’d have earned nothing. When he closed, the vAMM went back to ${pct(Perp.price(S) / S.oracle - 1, 1)} above the oracle: arbitrage holds the price only while the arbitrageur stays in. The insurance fund kept or paid whatever longs and shorts didn’t cancel: ${sgn(S.IF - S.IF0)} in total.` },
+    { key: 'liq', title: 'Liquidation', tag: '3', opts: { insurance: 1000 },
+      intro: 'In a vAMM, another trader’s trade can liquidate you, even if the real price never moves.',
+      steps: [
+        ['Alice opens a 10× long with $1,000, the maximum', S => Perp.open(S, 'alice', 'long', 1000, 10)],
+        ['Bob opens a 5× short with $1,500: the vAMM price drops', S => Perp.open(S, 'bob', 'short', 1500, 5)],
+        ['A keeper liquidates Alice', S => Perp.liquidate(S, 'alice')],
+        ['The keeper liquidates her again', S => Perp.liquidate(S, 'alice')],
+        ['And again', S => Perp.liquidate(S, 'alice')],
+        ['The keeper tries one more time', S => Perp.liquidate(S, 'alice')]],
+      takeaway: S => `At 10×, Alice started at a 10% margin ratio, so Bob’s short alone pushed her under 6.25%. Each partial liquidation closed 25% of her position and charged 1.25% of it: half to the keeper (${usd(S.keeper)} in total), half to the insurance fund. Once she was back above 6.25%, the keeper couldn’t touch her. The oracle never moved.` },
+    { key: 'bad', title: 'Bad debt', tag: '4', opts: { insurance: 1500 },
+      intro: 'When the price moves faster than liquidations, a loss can be bigger than the margin. The insurance fund pays the difference.',
+      steps: [
+        ['Alice opens a 10× long with $1,000', S => Perp.open(S, 'alice', 'long', 1000, 10)],
+        ['Carol opens a 10× short with $2,500 in one trade', S => Perp.open(S, 'carol', 'short', 2500, 10)],
+        ['A keeper liquidates Alice', S => Perp.liquidate(S, 'alice')]],
+      takeaway: S => `Carol’s one trade dropped the vAMM ${pct(1 - S.hist.at(-2).vamm / S.hist[1].vamm, 1)}. Alice lost more than her $1,000, so the insurance fund paid the bad debt and fell from ${usd(S.IF0)} to ${usd(S.IF)}. One more trade like that and it can’t pay, and winners get paid less than they’re owed. (Perp v1 also limits how far one block can move the price; this lab leaves that out.)` },
+    { key: 'bad2', title: 'The same crash, done safely', tag: '4b', opts: { insurance: 1500 },
+      intro: 'Carol shorts the same $25,000, but in five trades, as Perp v1’s per-block price limit would force. Keepers act between trades.',
+      steps: (() => {
+        const keep = S => { let r = { ok: true }, n = 0; while (S.traders.alice.pos && Perp.marginRatio(S, S.traders.alice.pos) < Perp.P.mmr && n < 100) { r = Perp.liquidate(S, 'alice'); n++; } if (!n) r = Perp.liquidate(S, 'alice'); return r; };
+        const st = [['Alice opens a 10× long with $1,000', S => Perp.open(S, 'alice', 'long', 1000, 10)]];
+        for (let i = 1; i <= 5; i++) {
+          st.push([`Carol shorts $5,000 (trade ${i} of 5)`, S => Perp.open(S, 'carol', 'short', 500, 10)]);
+          st.push([`Keepers liquidate Alice until she’s back above 6.25%`, keep]);
+        }
+        return st;
+      })(),
+      takeaway: S => `Same $25,000 short, and Alice still loses her $1,000, but there is no bad debt. The insurance fund ends ${sgn(S.IF - S.IF0)} instead of −$1,208.76 in lesson 4. Keepers shrank Alice’s position between Carol’s trades, so her loss never outran her margin. Carol’s short is up ${sgn(S.traders.carol.pos ? Perp.pnl(S, S.traders.carol.pos) : 0)}, less than the +$2,195 in lesson 4, because Alice’s vSUI was sold before Carol’s later trades, so Carol shorted at lower prices. The keeper earned ${usd(S.keeper)}.` },
+    { key: 'repeg', title: 'Repeg', tag: '5', opts: { insurance: 2000 },
+      intro: 'If funding doesn’t close the gap, this design moves the vAMM price itself after three hours over 10%. Someone pays for that.',
+      steps: [
+        ['Alice opens a 5× long with $1,000', S => Perp.open(S, 'alice', 'long', 1000, 5)],
+        ['The real price jumps 25%: the oracle moves to $2.50', S => Perp.setOracle(S, 2.5)],
+        ['Hour 1: funding, gap over 10% (1 of 3)', S => Perp.payFunding(S)],
+        ['Hour 2: funding (2 of 3)', S => Perp.payFunding(S)],
+        ['Hour 3: funding, then the repeg', S => Perp.payFunding(S)],
+        ['Alice closes her position', S => Perp.close(S, 'alice')]],
+      takeaway: S => `Alice did nothing, yet her wallet is ${sgn(wd(S, 'alice'))}. With no shorts to pay her, the insurance fund paid her funding for three hours, then paid again when the repeg moved the vAMM up under her long. The fund went from ${usd(S.IF0)} to ${usd(S.IF)}.` },
+    { key: 'frontrun', title: 'Front-running a repeg', tag: '6', opts: { insurance: 3000 },
+      intro: 'Anyone can call payFunding. If you know a repeg is due, you can profit from it inside one transaction.',
+      steps: [
+        ['Alice opens a 5× long with $2,000', S => Perp.open(S, 'alice', 'long', 2000, 5)],
+        ['The real price drops: the oracle moves to $1.85', S => Perp.setOracle(S, 1.85)],
+        ['Hour 1: funding, gap over 10% (1 of 3)', S => Perp.payFunding(S)],
+        ['Hour 2: funding (2 of 3)', S => Perp.payFunding(S)],
+        ['Eve shorts 6× with $1,000, keeping the gap above 10%', S => Perp.open(S, 'eve', 'short', 1000, 6)],
+        ['Eve calls payFunding herself: the repeg moves the vAMM down', S => Perp.payFunding(S)],
+        ['Eve closes in the same transaction', S => Perp.close(S, 'eve')]],
+      takeaway: S => `Eve made ${sgn(wd(S, 'eve'))} with no risk: she knew the repeg would move the price her way, and she was in and out in one transaction. Her close pushed the vAMM back up, so the gap is ${spct(Perp.price(S) / S.oracle - 1)} again and the repeg’s work is partly undone. One fix: only a trusted keeper can call payFunding.` },
+    { key: 'dryfund', title: 'The fund runs dry', tag: '7', opts: { insurance: 300 },
+      intro: 'Funding, bad debt and repegs all draw on one insurance fund. Here it starts small.',
+      steps: [
+        ['Alice opens a 10× long with $3,000', S => Perp.open(S, 'alice', 'long', 3000, 10)],
+        ['The real price jumps: the oracle moves to $3.20', S => Perp.setOracle(S, 3.2)],
+        ['Hour 1: the fund pays Alice’s funding', S => Perp.payFunding(S)],
+        ['Hour 2: it keeps paying', S => Perp.payFunding(S)],
+        ['Hour 3: the repeg is due, but the fund is empty', S => Perp.payFunding(S)],
+        ['Alice closes her position', S => Perp.close(S, 'alice')]],
+      takeaway: S => `The $300 fund couldn’t even cover the first hour of funding. When the repeg came due it was unaffordable, so the code cut k by 1% instead, and the price never moved toward the oracle. Alice was owed more than the vault and fund held, and ${usd(S.unpaid)} of it was never paid. Cutting k without re-checking the budget doesn’t guarantee the repeg ever becomes affordable.` },
+    { key: 'lagoracle', title: 'The oracle lags', tag: '8', opts: { insurance: 1000, lag: true },
+      intro: 'Some oracles average prices that are already averages. Here it reports the mean of the last three hourly prices, so it trails the real price by hours.',
+      steps: [
+        ['Alice opens a 2× long with $1,000', S => Perp.open(S, 'alice', 'long', 1000, 2)],
+        ['Bob opens a 2× short with $1,000', S => Perp.open(S, 'bob', 'short', 1000, 2)],
+        ['The real price drops 30%, to $1.40', S => Perp.setReal(S, 1.4)],
+        ['Carol sees the real price and shorts the vAMM down to $1.40', S => { const n = S.Q - Math.sqrt(S.k * S.real); return Perp.open(S, 'carol', 'short', n / 5, 5); }],
+        ['Hour 1: funding against the lagging oracle', S => Perp.payFunding(S)],
+        ['Hour 2: funding again', S => Perp.payFunding(S)],
+        ['Hour 3: the oracle finally catches up', S => Perp.payFunding(S)]],
+      takeaway: S => `Carol had the right price from the start, but the oracle said the vAMM was too low, so for two hours shorts paid longs. Carol paid ${usd(S.traders.carol.pos ? S.traders.carol.pos.funding : 0)} for being right, and the insurance fund kept whatever longs didn’t receive. The repeg counter also reached 2 of 3: one more hour of lag and the protocol would have moved the vAMM back up toward a price that no longer existed. One answer is a mid-price of bids and asks, with a TWAP that shortens when the market is busy.` },
+    { key: 'lopsided', title: 'A lopsided gap', tag: '9', opts: { insurance: 2000 },
+      intro: 'The repeg starts when the gap is over 10%, measured as |vAMM − oracle| ÷ oracle. Dividing by the oracle makes the same gap read differently depending on which side it’s on.',
+      steps: [
+        ['Alice opens a 5× long with $1,000', S => Perp.open(S, 'alice', 'long', 1000, 5)],
+        ['The oracle drops until the vAMM is 10.5% above it', S => Perp.setOracle(S, +(Perp.price(S) / 1.105).toFixed(4))],
+        ['Hour 1', S => Perp.payFunding(S)],
+        ['Hour 2', S => Perp.payFunding(S)],
+        ['Hour 3: repeg', S => Perp.payFunding(S)],
+        ['Now the mirror image: the oracle rises until it is 10.5% above the vAMM', S => Perp.setOracle(S, +(Perp.price(S) * 1.105).toFixed(4))],
+        ['Hour 4', S => Perp.payFunding(S)],
+        ['Hour 5', S => Perp.payFunding(S)],
+        ['Hour 6: no repeg', S => Perp.payFunding(S)]],
+      takeaway: S => `Both gaps were 10.5% of the vAMM price. With the vAMM above the oracle, the check read 10.5%, over the limit, and the repeg ran after three hours. With the vAMM below the oracle, the same gap read 9.5%, under the limit, so the counter never started and the vAMM can stay there forever. A safer check measures the gap both ways and repegs only when both are over the limit.` },
+    { key: 'crash', title: 'A flash crash drains the fund', tag: '10', opts: { insurance: 3000 },
+      intro: 'Three weaknesses together: a 2% price limit per block, no arbitrageurs to pull the vAMM toward the real price (the asset is hard to hedge), and margin ratios that use the vAMM price.',
+      steps: [
+        ['Bob opens a 5× short with $1,500', S => Perp.open(S, 'bob', 'short', 1500, 5)],
+        ['Alice opens a 5× long with $1,000', S => Perp.open(S, 'alice', 'long', 1000, 5)],
+        ['A price limit turns on: 2% per block', S => Perp.setFluct(S, 0.02)],
+        ['The real price flash-crashes 40%: the oracle drops to $1.20', S => Perp.setOracle(S, 1.2)],
+        ['Carol tries to short $10,000 to follow the crash', S => Perp.open(S, 'carol', 'short', 1000, 10)],
+        ['Hour 1: funding (no arbitrageurs pull the vAMM down)', S => Perp.payFunding(S)],
+        ['Hour 2: funding', S => Perp.payFunding(S)],
+        ['Hour 3: funding, then the repeg', S => Perp.payFunding(S)],
+        ['A keeper liquidates Alice', S => Perp.liquidate(S, 'alice')]],
+      takeaway: S => `The insurance fund went from ${usd(S.IF0)} to ${usd(S.IF)} in three hours. It paid ${usd(flowSum(S, 'funding shortfall'))} of funding (shorts were owed more than longs paid), ${usd(flowSum(S, 'repeg cost'))} for the repeg that handed Bob’s short its gain, and ${usd(flowSum(S, 'bad debt'))} of Alice’s bad debt. The 2% limit stopped Carol from moving the price, and no arbitrageur pulled the vAMM down, so the gap sat open. Alice’s margin ratio used the vAMM price, so she looked healthy until the repeg dropped her to below zero in one step.` },
+    { key: 'free', title: 'Free play', tag: '∞', opts: { insurance: 1000 }, intro: 'Every control, no script. Each trader starts with $10,000 in her wallet; the insurance fund starts at $1,000.', steps: [], takeaway: null }
+  ];
+
+  let L = LESSONS[0], S, step = 0;
+  function load(key) {
+    L = LESSONS.find(l => l.key === key) || LESSONS[0];
+    S = Perp.create(L.opts); S.IF0 = S.IF; step = 0;
+    try { localStorage.setItem('perp-lesson', L.key); } catch (e) {}
+    document.querySelectorAll('#lessons button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === L.key)));
+    $('ctl').open = L.key === 'free';
+    render();
+  }
+  function next() { if (step < L.steps.length) { L.steps[step][1](S); step += 1; render(); } }
+
+  // ---------- render ----------
+  const flowSum = (S, label) => S.log.reduce((a, e) => a + e.flows.filter(f => f[3] === label).reduce((x, f) => x + f[2], 0), 0);
+  function render() { renderRail(); renderKpis(); renderChart(); renderPositions(); renderLog(); }
+  function renderRail() {
+    const done = step >= L.steps.length && L.steps.length > 0;
+    $('lesson').innerHTML = `<h2>${L.title}</h2><p class="d">${L.intro}</p>` +
+      (L.steps.length ? `<ol class="steps">${L.steps.map((st, i) => `<li class="${i < step ? 'done' : i === step ? 'next' : ''}"><span>${st[0]}</span></li>`).join('')}</ol>
+      <div class="row"><button type="button" class="btn primary" id="next" ${done ? 'disabled' : ''}>${done ? 'Lesson complete' : step === 0 ? 'Start: step 1' : `Next: step ${step + 1}`}</button><button type="button" class="btn" id="restart">Restart lesson</button></div>
+      ${done ? `<div class="takeaway"><b>What happened.</b> ${L.takeaway(S)}</div><p class="d">Keep going with the controls below, or pick the next lesson.</p>` : ''}` :
+      `<div class="row"><button type="button" class="btn" id="restart">Reset the market</button></div>`);
+    const n = $('next'); if (n) n.addEventListener('click', next);
+    $('restart').addEventListener('click', () => load(L.key));
+    // trader controls state
+    for (const id of ['alice', 'bob', 'carol', 'eve']) {
+      const t = S.traders[id], has = !!t.pos;
+      $(`w-${id}`).textContent = `${usd(t.wallet)} wallet`;
+      $(`long-${id}`).disabled = has; $(`short-${id}`).disabled = has;
+      $(`close-${id}`).disabled = !has; $(`add-${id}`).disabled = !has;
+      $(`liq-${id}`).disabled = !(has && Perp.marginRatio(S, t.pos) < Perp.P.mmr);
+    }
+    $('arb').disabled = !!S.traders.dan.pos; $('arb-half').disabled = !!S.traders.dan.pos; $('arb-close').disabled = !S.traders.dan.pos;
+  }
+  function kpi(lb, v, s, cls) { return `<div class="kpi ${cls || ''}"><span class="lb">${lb}</span><span class="v">${v}</span><span class="s">${s}</span></div>`; }
+  function renderKpis() {
+    const p = Perp.price(S), gap = p / S.oracle - 1, over = Math.abs(gap) > Perp.P.spreadLimit;
+    const flags = `<span class="flags" title="Hours in a row over the 10% limit">${[0, 1, 2].map(i => `<i class="${i < S.flags ? 'on' : ''}"></i>`).join('')}</span>`;
+    const owed = Perp.owed(S), cover = S.vault + S.IF;
+    $('kpis').innerHTML = [
+      kpi('vAMM price', '$' + p.toFixed(4), `${nf(S.B)} vSUI · ${usd(S.Q)}`),
+      kpi(S.lag ? 'Oracle (lagging)' : 'Oracle (real price)', '$' + S.oracle.toFixed(4), `gap ${spct(gap)}${over ? ' · over 10%' : ''} ${flags}${S.lag ? ` · real price $${S.real.toFixed(2)}` : ''}`, over ? 'alert' : ''),
+      kpi('Insurance fund', usd(S.IF), `${sgn(S.IF - S.IF0)} since start`, 'fund'),
+      kpi('Vault (traders’ margin)', usd(S.vault), owed > cover + 0.01 ? `owes ${usd(owed)}: short ${usd(owed - cover)}` : `owes ${usd(owed)} if all closed`, owed > cover + 0.01 ? 'alert' : ''),
+      S.unpaid > 0.01 ? kpi('Never paid', usd(S.unpaid), 'winners paid less than owed', 'alert') : kpi('Keeper earned', usd(S.keeper), 'from liquidations'),
+      kpi('All USDC', usd(Perp.total(S)), Math.abs(Perp.total(S) - S.total0) < 0.01 ? 'unchanged: money only moves' : 'changed')
+    ].join('');
+    $('wallets').innerHTML = ['alice', 'bob', 'carol', 'dan', 'eve'].map(id => `<span>${S.traders[id].name} <b class="${wd(S, id) > 0.004 ? 'up' : wd(S, id) < -0.004 ? 'dn' : ''}">${sgn(wd(S, id))}</b></span>`).join('') + `<span>Keeper <b>${sgn(S.keeper)}</b></span>`;
+  }
+  function renderPositions() {
+    const rows = Object.values(S.traders).filter(t => t.pos).map(t => {
+      const p = t.pos, mr = Perp.marginRatio(S, p), pl = Perp.pnl(S, p), eq = Perp.remain(S, p);
+      const w = Math.max(0, Math.min(100, (mr / 0.25) * 100)), cls = mr < Perp.P.mmr ? 'crit' : mr < 0.1 ? 'warn' : '';
+      return `<tr class="${mr < Perp.P.mmr ? 'liq' : ''}"><td>${t.name}</td><td><span class="side ${p.side}">${p.side}</span> ${p.lev}×</td><td class="n">${nf(Math.abs(p.size))}</td><td class="n">$${p.entry.toFixed(4)}</td><td class="n">${usd(p.margin)}</td><td class="n ${pl > 0.004 ? 'up' : pl < -0.004 ? 'dn' : ''}">${sgn(pl)}</td><td class="n ${p.funding < -0.004 ? 'up' : p.funding > 0.004 ? 'dn' : ''}">${sgn(-p.funding)}</td><td class="n">${usd(eq)}</td><td><div class="mr"><span class="n">${pct(mr)}</span><span class="mrbar" title="Liquidation below 6.25%"><i class="${cls}" style="width:${w.toFixed(1)}%"></i><b style="left:25%"></b><b class="p" style="left:5%"></b></span></div></td></tr>`;
+    });
+    $('pos').innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Trader</th><th>Side</th><th class="n">Size (vSUI)</th><th class="n">Entry</th><th class="n">Margin</th><th class="n">Profit/loss</th><th class="n">Funding</th><th class="n">Equity</th><th class="n">Margin ratio</th></tr></thead><tbody>${rows.join('')}</tbody></table></div><p class="d">Margin ratio = equity ÷ position value. The red mark is 6.25%: below it, a keeper can liquidate. The amber mark is 1.25%: below it, liquidation is full instead of 25%.</p>` : '<p class="d">No open positions.</p>';
+  }
+  function renderLog() {
+    const items = S.log.slice().reverse().map((e, i) => `<li class="kind-${e.kind}${i === 0 ? ' latest' : ''}${e.kind === 'fail' ? ' fail' : ''}"><div class="t"><span>hour ${e.hour}</span>${e.title}</div>${e.note ? `<p class="note">${e.note}</p>` : ''}${e.flows.length ? `<div class="flows">${e.flows.filter(f => f[2] > 0.004).map(f => `<span class="flow${/Insurance/.test(f[0] + f[1]) ? ' if' : ''}">${f[0]} → ${f[1]} ${usd(f[2])}${f[3] ? ' · ' + f[3] : ''}</span>`).join('')}</div>` : ''}</li>`);
+    $('log').innerHTML = items.join('') || '<li><p class="d">Nothing has happened yet. Start the lesson or use the controls.</p></li>';
+  }
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  function renderChart() {
+    const svg = $('chart'), W = Math.max(300, svg.clientWidth || 600), H = 220, pl = 52, pr = 12, pt = 10, pb = 26;
+    const h = S.hist, n = Math.max(2, h.length);
+    const showReal = h.some(x => Math.abs(x.real - x.oracle) > 1e-6);
+    $('lg-real').hidden = !showReal;
+    const vals = h.flatMap(x => [x.vamm, x.oracle, x.oracle * 1.1, x.oracle * 0.9, x.real]);
+    let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.08 || 0.1; lo -= pad; hi += pad;
+    const X = i => pl + (i / (n - 1)) * (W - pl - pr), Y = v => pt + (1 - (v - lo) / (hi - lo)) * (H - pt - pb);
+    const ticks = []; const step = niceStep((hi - lo) / 4); for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) ticks.push(v);
+    const line = key => h.map((x, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(x[key]).toFixed(1)}`).join('');
+    const band = h.map((x, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(x.oracle * 1.1).toFixed(1)}`).join('') + h.slice().reverse().map((x, j) => `L${X(h.length - 1 - j).toFixed(1)} ${Y(x.oracle * 0.9).toFixed(1)}`).join('') + 'Z';
+    const one = h.length === 1;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.innerHTML = `${ticks.map(v => `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css('--line')}" stroke-width="1"/><text x="${pl - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" font-family="${css('--font-mono')}" fill="${css('--muted')}">$${v.toFixed(2)}</text>`).join('')}
+      ${one ? '' : `<path d="${band}" fill="${css('--warn-soft')}" stroke="none"/>`}
+      ${one ? '' : `<path d="${line('oracle')}" fill="none" stroke="${css('--oracle')}" stroke-width="1.5" stroke-dasharray="5 4"/>`}
+      ${one || !showReal ? '' : `<path d="${line('real')}" fill="none" stroke="${css('--ok')}" stroke-width="1.75"/>`}
+      ${one ? '' : `<path d="${line('vamm')}" fill="none" stroke="${css('--vamm')}" stroke-width="2.25"/>`}
+      ${h.map((x, i) => `<circle cx="${X(i)}" cy="${Y(x.vamm)}" r="${i === h.length - 1 ? 4.5 : 2.5}" fill="${css('--vamm')}"/>`).join('')}
+      <text x="${pl}" y="${H - 6}" font-size="11" fill="${css('--muted')}" font-family="${css('--font-body')}">${h[0].label}</text>
+      ${one ? '' : `<text x="${W - pr}" y="${H - 6}" text-anchor="end" font-size="11" fill="${css('--muted')}" font-family="${css('--font-body')}">${h.at(-1).label}</text>`}`;
+  }
+  function niceStep(r) { const p = Math.pow(10, Math.floor(Math.log10(r))), m = r / p; return (m < 1.5 ? 1 : m < 3 ? 2 : m < 7 ? 5 : 10) * p; }
+
+  // ---------- controls ----------
+  function act(fn, msgId) { const r = fn(); $('msg').textContent = r && r.ok === false ? r.msg : ''; render(); }
+  for (const id of ['alice', 'bob', 'carol', 'eve']) {
+    const m = () => parseFloat($(`m-${id}`).value), l = () => parseFloat($(`l-${id}`).value);
+    $(`long-${id}`).addEventListener('click', () => act(() => Perp.open(S, id, 'long', m(), l())));
+    $(`short-${id}`).addEventListener('click', () => act(() => Perp.open(S, id, 'short', m(), l())));
+    $(`close-${id}`).addEventListener('click', () => act(() => Perp.close(S, id)));
+    $(`add-${id}`).addEventListener('click', () => act(() => Perp.addMargin(S, id, 500)));
+    $(`liq-${id}`).addEventListener('click', () => act(() => Perp.liquidate(S, id)));
+  }
+  $('fund').addEventListener('click', () => act(() => Perp.payFunding(S)));
+  $('arb').addEventListener('click', () => act(() => Perp.arb(S, 'dan')));
+  $('arb-half').addEventListener('click', () => act(() => Perp.arb(S, 'dan', 0.5)));
+  $('arb-close').addEventListener('click', () => act(() => Perp.close(S, 'dan')));
+  document.querySelectorAll('[data-or]').forEach(b => b.addEventListener('click', () => act(() => Perp.setOracle(S, +(S.oracle * (1 + +b.dataset.or)).toFixed(4)))));
+  $('or-set').addEventListener('click', () => { const v = parseFloat($('or-v').value); if (v > 0) act(() => Perp.setOracle(S, v)); });
+  document.querySelectorAll('#lessons button').forEach(b => b.addEventListener('click', () => load(b.dataset.k)));
+  let rt = 0; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderChart, 120); });
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderChart); } catch (e) {}
+  new MutationObserver(renderChart).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  let saved = null; try { saved = localStorage.getItem('perp-lesson'); } catch (e) {}
+  load(saved || 'winner');
+})();
+
+</script>
+
+</html>

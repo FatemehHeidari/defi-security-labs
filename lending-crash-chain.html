@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Lending Crash Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one bench. Parameter rail on the left; on the right the chain strip with a time scrubber, then monitors, cause analysis, charts, and who pays. */
+:root {
+  --bg: #EDF1EF; --surface: #FFFFFF; --sunk: #F4F7F5; --ink: #122420; --muted: #56665F; --faint: #85948E; --line: #D2DCD8;
+  --accent: #0A6C8A; --accent-ink: #FFFFFF; --accent-soft: #DCEEF3;
+  --warm: #C2541A; --violet: #6552B0;
+  --ok: #1F7346; --ok-soft: #E0F1E6; --warn: #8F5B00; --warn-soft: #FAEDD2; --crit: #B42318; --crit-soft: #FBE3DF;
+  --font-display: 'IBM Plex Sans Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0C1311; --surface: #141D1A; --sunk: #101815; --ink: #E0E9E5; --muted: #9AA9A3; --faint: #6F7E78; --line: #27342F;
+  --accent: #5CB8D6; --accent-ink: #06222B; --accent-soft: #12313B;
+  --warm: #F08A4B; --violet: #AC9EEC;
+  --ok: #5CC48A; --ok-soft: #12291D; --warn: #E6AE4A; --warn-soft: #2D2310; --crit: #F2867B; --crit-soft: #351714;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0C1311; --surface: #141D1A; --sunk: #101815; --ink: #E0E9E5; --muted: #9AA9A3; --faint: #6F7E78; --line: #27342F;
+  --accent: #5CB8D6; --accent-ink: #06222B; --accent-soft: #12313B;
+  --warm: #F08A4B; --violet: #AC9EEC;
+  --ok: #5CC48A; --ok-soft: #12291D; --warn: #E6AE4A; --warn-soft: #2D2310; --crit: #F2867B; --crit-soft: #351714;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.top .wrap { padding-block: 28px 18px; display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 24px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 34px; line-height: 1.05; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.tagline { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
+.legend-key { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend-key span { display: inline-flex; align-items: center; gap: 6px; }
+nav.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+nav.tabs .wrap { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs .wrap::-webkit-scrollbar { display: none; }
+.tab { appearance: none; border: 0; background: none; color: var(--muted); font: 500 14px/1 var(--font-body); padding: 14px 12px 12px; border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; display: inline-flex; gap: 8px; align-items: center; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.tab .dot.ok { background: var(--ok); } .tab .dot.warn { background: var(--warn); } .tab .dot.crit { background: var(--crit); }
+.tab:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+main .wrap { padding-block: 22px 40px; }
+.lab-head { display: grid; gap: 10px; margin-bottom: 16px; }
+.lab-head h2 { font-family: var(--font-display); font-weight: 600; font-size: 26px; margin: 0; line-height: 1.1; }
+.lab-head p { margin: 0; color: var(--muted); max-width: 72ch; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.presets .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); margin-right: 4px; }
+.chip { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 500 13px/1 var(--font-body); padding: 8px 11px; border-radius: 999px; cursor: pointer; }
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.preset-note { font-size: 14px; color: var(--ink); background: var(--accent-soft); border-radius: 8px; padding: 10px 12px; max-width: 80ch; }
+.preset-note b { font-weight: 600; }
+.lab-grid { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
+@media (min-width: 960px) { .lab-grid { grid-template-columns: 318px minmax(0, 1fr); } .params { position: sticky; top: 64px; max-height: calc(100vh - 80px); overflow-y: auto; } }
+.params { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px 16px 14px; }
+.grp { font-family: var(--font-display); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin: 16px 0 6px; }
+.ctl { padding: 7px 0; }
+.ctl-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.ctl label, .ctl .lbl { font-size: 13.5px; color: var(--ink); }
+.ctl output { font-family: var(--font-mono); font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ctl input[type=range] { width: 100%; margin: 6px 0 0; accent-color: var(--accent); }
+.seg { display: flex; margin-top: 6px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { flex: 1; appearance: none; border: 0; background: var(--sunk); color: var(--muted); font: 500 13px/1 var(--font-body); padding: 9px 6px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.btn { appearance: none; border: 1px solid var(--line); background: var(--sunk); color: var(--ink); font: 500 13px/1 var(--font-body); padding: 9px 12px; border-radius: 8px; cursor: pointer; margin-top: 8px; }
+.btn:hover { border-color: var(--accent); }
+.outputs { display: grid; gap: 16px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.panel h3 { font-family: var(--font-display); font-weight: 600; font-size: 16px; margin: 0 0 10px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.panel h3 small { font-family: var(--font-body); font-weight: 400; font-size: 12.5px; color: var(--muted); }
+.mon { display: grid; gap: 0; }
+.mon-row { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
+.mon-row:first-child { border-top: 0; padding-top: 2px; }
+.pill { font: 600 11px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.06em; padding: 5px 0; border-radius: 4px; text-align: center; margin-top: 2px; }
+.ok .pill { background: var(--ok-soft); color: var(--ok); }
+.warn .pill { background: var(--warn-soft); color: var(--warn); }
+.crit .pill { background: var(--crit-soft); color: var(--crit); }
+.mon-row .t { font-weight: 600; font-size: 14px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.mon-row .d { font-size: 14px; color: var(--muted); margin: 2px 0 0; }
+.ref { font: 500 11px/1 var(--font-mono); color: var(--violet); border: 1px solid currentColor; border-radius: 4px; padding: 3px 5px; white-space: nowrap; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.m { background: var(--surface); padding: 12px 14px; min-width: 0; box-shadow: 1px 0 0 var(--line), 0 1px 0 var(--line); }
+.m .l { font-size: 12px; color: var(--muted); }
+.m .v { font-family: var(--font-mono); font-weight: 500; font-size: 20px; font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
+.m .s { font-size: 12px; color: var(--faint); margin-top: 2px; }
+.m .v.bad { color: var(--crit); } .m .v.good { color: var(--ok); }
+.charts { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 1180px) { .charts.two { grid-template-columns: 1fr 1fr; } }
+canvas.chart { width: 100%; height: 230px; display: block; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.sw.dash { background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px) !important; height: 2px; }
+.sw.band { height: 10px; width: 12px; border-radius: 2px; }
+details.notes { font-size: 14px; color: var(--muted); }
+details.notes summary { cursor: pointer; color: var(--ink); font-weight: 500; }
+details.notes ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.tbl-wrap { overflow-x: auto; }
+table.log { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 620px; }
+table.log th, table.log td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+table.log th { font-weight: 500; color: var(--muted); font-size: 12px; border-top: 0; }
+table.log td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+table.log th.n { text-align: right; }
+.tag { font: 600 11px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 6px; border-radius: 4px; }
+.tag.pass { background: var(--ok-soft); color: var(--ok); } .tag.fail { background: var(--crit-soft); color: var(--crit); }
+code { font-family: var(--font-mono); font-size: 0.92em; background: var(--sunk); padding: 1px 4px; border-radius: 4px; }
+.head-right { display: grid; gap: 10px; justify-items: end; }
+.viewsw { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.viewsw .seg { margin-top: 0; min-width: 230px; }
+.viewsw .seg button { padding: 9px 12px; }
+.you-only { display: none; }
+body.view-users .you-only { display: block; }
+body.view-users .legend-key { visibility: hidden; }
+.you-box { background: var(--accent-soft); border-radius: 8px; padding: 2px 12px 8px; margin: 10px 0 2px; }
+.you-box .grp { margin-top: 10px; }
+.roles { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.story { display: grid; gap: 12px; }
+.who { margin: 0; color: var(--muted); max-width: 75ch; }
+.result { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.result .big { font-family: var(--font-mono); font-size: 30px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.result .pp { font-family: var(--font-mono); font-size: 16px; }
+.gain { color: var(--ok); } .loss { color: var(--crit); }
+table.ledger { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.ledger td { padding: 7px 0; border-top: 1px solid var(--line); vertical-align: top; }
+table.ledger td.n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 14px; }
+table.ledger tr.base td { border-top: 0; color: var(--muted); }
+table.ledger tr.total td { font-weight: 600; border-top: 2px solid var(--ink); }
+table.ledger tr.info td { color: var(--faint); font-size: 13px; }
+.verdict { margin: 0; padding: 10px 12px; background: var(--sunk); border-radius: 8px; max-width: 80ch; }
+table.everyone { min-width: 640px; }
+table.everyone tr.sel td { background: var(--accent-soft); }
+.rolebtn { appearance: none; border: 0; background: none; padding: 0; font: 500 13.5px/1.3 var(--font-body); color: var(--accent); cursor: pointer; text-align: left; }
+.rolebtn:hover { text-decoration: underline; }
+td.ret { display: flex; align-items: center; gap: 10px; min-width: 200px; }
+td.ret .n { font-family: var(--font-mono); font-size: 13px; min-width: 64px; text-align: right; }
+.bar { position: relative; height: 10px; background: var(--sunk); border-radius: 2px; flex: 1; min-width: 110px; display: block; }
+.bar::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
+.bar i { position: absolute; top: 0; bottom: 0; }
+.bar i.pos { left: 50%; background: var(--ok); border-radius: 0 2px 2px 0; }
+.bar i.neg { right: 50%; background: var(--crit); border-radius: 2px 0 0 2px; }
+@media (max-width: 720px) { .head-right { justify-items: start; } }
+footer .wrap { padding-block: 0 32px; color: var(--faint); font-size: 13px; }
+@media (max-width: 520px) { h1 { font-size: 28px; } .mon-row { grid-template-columns: 1fr; } .pill { justify-self: start; padding: 5px 8px; } .m .v { font-size: 18px; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+.strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; }
+.stage { position: relative; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; background: var(--surface); display: grid; gap: 3px; align-content: start; }
+.stage:not(:last-child)::after { content: "→"; position: absolute; right: -12px; top: 50%; transform: translateY(-50%); color: var(--faint); font-size: 12px; }
+@media (max-width: 1240px) { .strip { grid-template-columns: repeat(4, minmax(0, 1fr)); } .stage::after { display: none; } }
+@media (max-width: 560px) { .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } }
+.stage.warn { border-color: var(--warn); } .stage.crit { border-color: var(--crit); background: var(--crit-soft); }
+.stage-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 6px; }
+.stage-n { font-family: var(--font-display); font-weight: 600; font-size: 14px; }
+.stage .pill { padding: 3px 6px; margin: 0; font-size: 10px; }
+.stage-v { font-family: var(--font-mono); font-size: 15px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stage-s { font-size: 12px; color: var(--muted); }
+.scrubrow { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; flex-wrap: wrap; }
+.scrubrow input[type=range] { flex: 1; min-width: 160px; accent-color: var(--accent); }
+.scrubrow output { font-family: var(--font-mono); font-size: 13px; min-width: 88px; }
+.scrubrow .btn { margin-top: 0; min-width: 70px; }
+.attr { display: grid; gap: 8px; margin-bottom: 10px; }
+.attr-row { display: grid; grid-template-columns: minmax(130px, 190px) minmax(80px, 1fr) 84px 76px; gap: 10px; align-items: center; font-size: 14px; }
+.attr-v, .attr-d { font-family: var(--font-mono); font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+.attr-d { color: var(--ok); }
+.bar1 { height: 10px; background: var(--sunk); border-radius: 2px; position: relative; display: block; }
+.bar1 i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); border-radius: 2px; }
+@media (max-width: 520px) { .attr-row { grid-template-columns: 1fr 80px 64px; } .attr-row .bar1 { display: none; } }
+table.pays { min-width: 0; }
+table.pays td.n { width: 120px; }
+.loss { color: var(--crit); }
+.crumb { font-size: 13px; color: var(--muted); margin: 0 0 6px; }
+.crumb a { color: var(--accent); }
+</style>
+
+<header class="top"><div class="wrap">
+  <div>
+    <p class="crumb">Companion to <a href="defi-risk-lab.html">DeFi Risk Lab</a></p>
+    <h1>Lending <span>Crash Chain</span></h1>
+    <p class="tagline">One SUI lending market wired to the oracle that prices it, the DEX liquidators sell into, and the LST collateral it accepts. Crash SUI and watch each link, minute by minute, until you can say what caused the bad debt.</p>
+  </div>
+  <div class="legend-key" aria-label="States">
+    <span><i class="sw" style="background:var(--ok)"></i>OK</span>
+    <span><i class="sw" style="background:var(--warn)"></i>Warning</span>
+    <span><i class="sw" style="background:var(--crit)"></i>Critical</span>
+  </div>
+</div></header>
+<main><div class="wrap">
+  <div class="lab-head"><div class="presets" id="presets"></div><div class="preset-note" id="note"></div></div>
+  <div class="lab-grid">
+    <aside class="params" id="rail" aria-label="Parameters"></aside>
+    <div class="outputs">
+      <section class="panel" aria-label="The chain">
+        <h3>The chain, minute by minute <small>drag the timeline or press Play</small></h3>
+        <div class="scrubrow"><button type="button" class="btn" id="play">Play</button><input type="range" id="scrub" min="0" max="180" step="1" value="55" aria-label="Minute"><output id="scrub-o" for="scrub">Minute 55</output></div>
+        <div class="strip" id="strip"></div>
+      </section>
+      <div id="out" style="display:grid;gap:16px;min-width:0"></div>
+    </div>
+  </div>
+</div></main>
+<footer><div class="wrap">A practice model, simplified on purpose. The notes list what it leaves out.</div></footer>
+<script>
+const Chain = (() => {
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function gauss(r) { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+  const FEE = 0.003;
+  const sellOut = (x, y, dx) => { const d = dx * (1 - FEE); return (y * d) / (x + d); }; // sell dx of X for Y
+  const T = 180, P0 = 2, R0 = 1.05; // minutes, SUI start price, LST redemption rate (SUI per LST)
+
+  // External market price and the oracle, independent of the lending market.
+  function feeds(p) {
+    const r = rng(p.seed || 7);
+    const ext = [];
+    let price = P0;
+    const gap = p.crashLen === 0;
+    for (let t = 0; t <= T; t++) {
+      if (t > 0) {
+        let ret = p.vol * gauss(r);
+        if (gap && t === p.crashAt) ret += Math.log(1 - p.drop);
+        if (!gap && t > p.crashAt && t <= p.crashAt + p.crashLen) ret += Math.log(1 - p.drop) / p.crashLen;
+        price *= Math.exp(ret);
+      }
+      ext.push(price);
+    }
+    const rep = [], age = [], conf = [];
+    let last = ext[0], lastT = 0, volEma = p.vol;
+    for (let t = 0; t <= T; t++) {
+      if (t > 0) volEma = 0.75 * volEma + 0.25 * Math.abs(Math.log(ext[t] / ext[t - 1]));
+      const out = p.outageLen > 0 && t >= p.outageAt && t < p.outageAt + p.outageLen;
+      if (!out && (t === 0 || Math.abs(ext[t] - last) / last >= p.deviation || t - lastT >= p.heartbeat)) { last = ext[t]; lastT = t; }
+      rep.push(last); age.push(t - lastT); conf.push(0.0005 + 3 * volEma);
+    }
+    const twap = [];
+    for (let t = 0; t <= T; t++) { const a = Math.max(0, t - p.twap + 1); let s = 0; for (let u = a; u <= t; u++) s += rep[u]; twap.push(s / (t - a + 1)); }
+    const src = p.source === 'twap' ? twap : rep;
+    const acc = [];
+    for (let t = 0; t <= T; t++) acc.push(age[t] <= p.maxAge && conf[t] <= p.maxConf);
+    return { ext, rep, twap, src, age, conf, acc };
+  }
+
+  function makeBorrowers(p) {
+    const r = rng(11), n = 300, sizes = [];
+    for (let i = 0; i < n; i++) sizes.push(Math.pow(r(), -0.55));
+    const sum = sizes.reduce((a, b) => a + b, 0);
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      let ltv = Math.min(p.maxLTV, Math.max(0.05, p.avgLTV + 0.12 * gauss(r)));
+      const lst = r() < p.lstShare;
+      const usd = (p.coll * sizes[i]) / sum;
+      out.push({ lst, units: lst ? usd / (R0 * P0) : usd / P0, debt: usd * ltv, debt0: usd * ltv });
+    }
+    return out;
+  }
+
+  // One full run. opts: perfectOracle, deepDex, noDepeg (counterfactuals)
+  function run(p, f, opts) {
+    opts = opts || {};
+    const pos = makeBorrowers(p);
+    const LT = p.lt, b = p.bonus, CF = p.cf;
+    // DEX pool (SUI/USDC)
+    const depth0 = opts.deepDex ? p.dexDepth * 100 : p.dexDepth;
+    let dx = depth0 / P0, dy = depth0, lpFactor = 1;
+    // LST pool (LST/SUI)
+    const lstUnits = pos.filter(q => q.lst).reduce((a, q) => a + q.units, 0);
+    const lstSupply = lstUnits * 2; // assume half of all LST sits in this market
+    let lsui = p.lstDepth / P0, llst = lsui / R0;
+    const phiL = Math.min(0.5, Math.max(0.002, 0.1 / p.wait));
+    const crashEnd = p.crashAt + Math.max(1, p.crashLen);
+    const s = { ext: f.ext, pp: [], acc: [], dex: [], peg: [], repaidCum: [], repaidMin: [], stuck: [], under: [], unprofit: [], bonusPaid: 0, liqPnl: 0, repaid: 0, seizedOracle: 0, lstSold: 0, lstRedeemed: 0 };
+    let repaidCum = 0;
+    for (let t = 0; t <= T; t++) {
+      const ext = f.ext[t];
+      const pp = opts.perfectOracle ? ext : f.src[t];
+      const ok = opts.perfectOracle ? true : f.acc[t];
+      // LPs pull liquidity during the crash
+      if (!opts.deepDex && p.drain > 0) {
+        const prog = t <= p.crashAt ? 0 : Math.min(1, (t - p.crashAt) / Math.max(1, p.crashLen + 10));
+        const nf = 1 - p.drain * prog;
+        if (nf < lpFactor) { dx *= nf / lpFactor; dy *= nf / lpFactor; lpFactor = nf; }
+      }
+      // arbitrage pulls the DEX toward the external price
+      { const k = dx * dy, q = dy / dx; const qt = q * Math.pow(ext / q, p.arb); dx = Math.sqrt(k / qt); dy = Math.sqrt(k * qt); }
+      // LST: panic selling during the crash, then arbitrage toward peg
+      if (!opts.noDepeg) {
+        if (t > p.crashAt && t <= crashEnd + 30 && p.panic > 0) { const sold = (p.panic * lstSupply) / (crashEnd + 30 - p.crashAt); const out = sellOut(llst, lsui, sold); llst += sold; lsui -= out; }
+        const k = llst * lsui, m = lsui / llst / R0; const mt = m * Math.pow(1 / m, phiL); const qt = mt * R0; llst = Math.sqrt(k / qt); lsui = Math.sqrt(k * qt);
+      }
+      const peg = opts.noDepeg ? 1 : lsui / llst / R0;
+      const priceOf = q => (q.lst ? (p.lstOracle === 'market' ? peg : 1) * R0 * pp : pp);
+      // liquidations
+      let repaidNow = 0, unprofitable = false;
+      if (ok) {
+        const order = pos.filter(q => q.debt > 1e-6 && q.units > 1e-12 && q.units * priceOf(q) * LT < q.debt)
+          .sort((a, c) => (a.units * priceOf(a)) / a.debt - (c.units * priceOf(c)) / c.debt);
+        for (const q of order) {
+          const up = priceOf(q);
+          let rounds = 0;
+          while (q.debt > 1e-6 && q.units > 1e-12 && q.units * up * LT < q.debt && rounds < 40) {
+            rounds++;
+            let R = Math.min(CF * q.debt, (q.units * up) / (1 + b));
+            let done = false;
+            for (let tryi = 0; tryi < 4 && !done; tryi++) {
+              const units = (R * (1 + b)) / up;
+              let sui, nl = llst, ns = lsui;
+              let redeemed = false;
+              if (q.lst) {
+                if (opts.noDepeg) sui = units * R0 * (1 - FEE);
+                else {
+                  const viaPool = sellOut(llst, lsui, units), viaRedeem = units * R0 * (1 - 0.002 * p.wait);
+                  if (viaPool >= viaRedeem) { sui = viaPool; nl = llst + units; ns = lsui - sui; } else { sui = viaRedeem; redeemed = true; }
+                }
+              } else sui = units;
+              const usdc = sellOut(dx, dy, sui);
+              if (usdc >= R) {
+                dx += sui; dy -= usdc; llst = nl; lsui = ns;
+                if (q.lst && !opts.noDepeg) { if (redeemed) s.lstRedeemed += units; else s.lstSold += units; }
+                q.debt -= R; q.units -= units;
+                repaidNow += R; s.bonusPaid += R * b; s.liqPnl += usdc - R; s.seizedOracle += R * (1 + b);
+                done = true;
+              } else R /= 4;
+            }
+            if (!done) { unprofitable = true; break; }
+          }
+        }
+      }
+      repaidCum += repaidNow; s.repaid = repaidCum;
+      const pegNow = opts.noDepeg ? 1 : lsui / llst / R0;
+      let stuck = 0, under = 0;
+      for (const q of pos) {
+        const up = q.lst ? (p.lstOracle === 'market' ? pegNow : 1) * R0 * pp : pp;
+        if (q.debt > 1e-6 && q.units * up * LT < q.debt) stuck += q.debt;
+        const trueVal = q.units * (q.lst ? pegNow * R0 * ext : ext);
+        under += Math.max(0, q.debt - trueVal);
+      }
+      s.pp.push(pp); s.acc.push(ok); s.dex.push(dy / dx); s.peg.push(pegNow);
+      s.repaidCum.push(repaidCum); s.repaidMin.push(repaidNow); s.stuck.push(stuck); s.under.push(under); s.unprofit.push(unprofitable || (!ok && stuck > 0));
+    }
+    s.badDebt = s.under[T];
+    s.totalDebt0 = pos.reduce((a, q) => a + q.debt0, 0);
+    s.lpFactor = lpFactor;
+    return s;
+  }
+
+  function simulate(p) {
+    const f = feeds(p);
+    const base = run(p, f);
+    const cf = {
+      oracle: run(p, f, { perfectOracle: true }).badDebt,
+      dex: run(p, f, { deepDex: true }).badDebt,
+      lst: run(p, f, { noDepeg: true }).badDebt,
+      all: run(p, f, { perfectOracle: true, deepDex: true, noDepeg: true }).badDebt
+    };
+    return { T, f, base, cf };
+  }
+
+  return { simulate, run, feeds, T, P0, R0 };
+})();
+if (typeof module !== 'undefined') module.exports = Chain;
+
+</script>
+<script>
+(() => {
+  const MINUS = '−';
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const F = {
+    usd(v) {
+      const a = Math.abs(v), s = v < 0 ? MINUS : '';
+      if (a >= 1e9) return s + '$' + (a / 1e9).toFixed(2) + 'B';
+      if (a >= 1e6) return s + '$' + (a / 1e6).toFixed(2) + 'M';
+      if (a >= 1e3) return s + '$' + (a / 1e3).toFixed(1) + 'K';
+      return s + '$' + a.toFixed(a < 10 ? 2 : 0);
+    },
+    pct(v, d = 1) { return (v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%'; },
+    spct(v, d = 1) { return (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%'; },
+    eth(v, d = 2) { return (v < 0 ? MINUS : '') + Math.abs(v).toFixed(d) + ' ETH'; },
+    seth(v, d = 2) { return (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v).toFixed(d) + ' ETH'; },
+    int(v) { return Math.round(v).toLocaleString('en-US'); },
+    usdc(v) { return v.toLocaleString('en-US', { maximumFractionDigits: v < 1 ? 6 : 2 }) + ' USDC'; },
+    units(u) {
+      const neg = u < 0n, a = neg ? -u : u;
+      const whole = a / 1000000n, frac = (a % 1000000n).toString().padStart(6, '0').replace(/0+$/, '');
+      return (neg ? MINUS : '') + whole.toLocaleString('en-US') + (frac ? '.' + frac : '') + ' USDC';
+    }
+  };
+
+  // ---------- charts ----------
+  function niceStep(range, n) {
+    const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+  }
+  function niceMax(v) { if (!(v > 0)) return 1; const s = niceStep(v, 4); return Math.ceil((v * 1.08) / s) * s; }
+  function ticks(min, max, n) {
+    const s = niceStep(max - min, n), out = [];
+    for (let v = Math.ceil(min / s - 1e-9) * s; v <= max + s * 1e-9; v += s) out.push(+v.toFixed(12));
+    return out;
+  }
+  function cssv(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'; }
+  function drawChart(cv, spec) {
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const mono = cssv('--font-mono');
+    g.font = '11px ' + mono;
+    const X = spec.x, Y = spec.y;
+    const yt = ticks(Y.min, Y.max, 4);
+    const yLabels = yt.map(Y.fmt);
+    const lw = Math.max(...yLabels.map(s => g.measureText(s).width));
+    const pad = { l: Math.ceil(lw) + 12, r: 12, t: 14, b: X.label ? 44 : 30 };
+    const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+    const xv = v => (X.log ? Math.log10(v) : v);
+    const x0 = xv(X.min), x1 = xv(X.max);
+    const px = v => pad.l + ((xv(v) - x0) / (x1 - x0)) * pw;
+    const py = v => pad.t + (1 - (v - Y.min) / (Y.max - Y.min)) * ph;
+    const line = cssv('--line'), muted = cssv('--muted');
+    // bands
+    for (const b of spec.bands || []) {
+      g.fillStyle = cssv(b.color);
+      g.fillRect(px(b.x0), pad.t, Math.max(1, px(b.x1) - px(b.x0)), ph);
+    }
+    // grid + y labels
+    g.strokeStyle = line; g.lineWidth = 1; g.fillStyle = muted; g.textBaseline = 'middle'; g.textAlign = 'right';
+    yt.forEach((v, i) => {
+      const y = Math.round(py(v)) + 0.5;
+      g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+      g.fillText(yLabels[i], pad.l - 6, y);
+    });
+    // x ticks
+    let xt;
+    if (X.log) { xt = []; for (let e = Math.ceil(x0 - 1e-9); e <= x1 + 1e-9; e++) xt.push(Math.pow(10, e)); }
+    else xt = ticks(X.min, X.max, Math.max(3, Math.min(8, Math.floor(pw / 70))));
+    g.textAlign = 'center'; g.textBaseline = 'top';
+    xt.forEach(v => { const x = px(v); g.fillText(X.fmt(v), x, pad.t + ph + 7); g.beginPath(); g.moveTo(Math.round(x) + 0.5, pad.t + ph); g.lineTo(Math.round(x) + 0.5, pad.t + ph + 4); g.stroke(); });
+    if (X.label) { g.font = '12px ' + cssv('--font-body'); g.textAlign = 'right'; g.fillText(X.label, w - pad.r, pad.t + ph + 26); g.font = '11px ' + mono; }
+    g.save();
+    g.beginPath(); g.rect(pad.l, pad.t - 2, pw, ph + 4); g.clip();
+    for (const hl of spec.hlines || []) {
+      g.strokeStyle = cssv(hl.color); g.lineWidth = 1.5; g.setLineDash(hl.dash ? [5, 4] : []);
+      const y = py(hl.y); g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+    }
+    for (const s of spec.series) {
+      const pts = s.pts.filter(p => isFinite(p[0]) && isFinite(p[1]));
+      if (!pts.length) continue;
+      const c = cssv(s.color);
+      g.setLineDash(s.dash ? [6, 4] : []);
+      g.lineWidth = s.width || 2; g.strokeStyle = c; g.lineJoin = 'round';
+      g.beginPath();
+      pts.forEach((p, i) => {
+        const x = px(p[0]), y = py(clamp(p[1], Y.min - (Y.max - Y.min), Y.max * 2));
+        if (i === 0) g.moveTo(x, y);
+        else if (s.step) { g.lineTo(x, py(pts[i - 1][1])); g.lineTo(x, y); }
+        else g.lineTo(x, y);
+      });
+      g.stroke();
+      if (s.fill) {
+        g.lineTo(px(pts[pts.length - 1][0]), py(Math.max(Y.min, 0))); g.lineTo(px(pts[0][0]), py(Math.max(Y.min, 0))); g.closePath();
+        g.globalAlpha = 0.14; g.fillStyle = c; g.fill(); g.globalAlpha = 1;
+      }
+    }
+    g.setLineDash([]);
+    g.restore();
+    for (const vl of spec.vlines || []) {
+      if (vl.x < X.min || vl.x > X.max) continue;
+      const x = Math.round(px(vl.x)) + 0.5;
+      g.strokeStyle = cssv(vl.color); g.lineWidth = 1.5; g.setLineDash(vl.dash ? [4, 3] : []);
+      g.beginPath(); g.moveTo(x, pad.t); g.lineTo(x, pad.t + ph); g.stroke(); g.setLineDash([]);
+      if (vl.label) {
+        g.fillStyle = cssv(vl.color); g.textBaseline = 'top';
+        const tw = g.measureText(vl.label).width;
+        const right = x + 5 + tw < w - pad.r;
+        g.textAlign = right ? 'left' : 'right';
+        g.fillText(vl.label, right ? x + 5 : x - 5, pad.t + (vl.row || 0) * 14);
+      }
+    }
+    for (const p of spec.points || []) {
+      if (!isFinite(p.y)) continue;
+      g.fillStyle = cssv(p.color); g.strokeStyle = cssv('--surface'); g.lineWidth = 2;
+      g.beginPath(); g.arc(px(p.x), py(clamp(p.y, Y.min, Y.max)), 4.5, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+  }
+
+  // ---------- HTML builders ----------
+  const LV = { ok: 'OK', warn: 'Warning', crit: 'Critical' };
+  const RANK = { crit: 0, warn: 1, ok: 2 };
+  function monitor(rows) {
+    const c = { ok: 0, warn: 0, crit: 0 };
+    rows.forEach(r => c[r.lv]++);
+    const sum = [c.crit ? c.crit + ' critical' : '', c.warn ? c.warn + (c.warn > 1 ? ' warnings' : ' warning') : '', c.ok ? c.ok + ' OK' : ''].filter(Boolean).join(' · ');
+    const sorted = rows.map((r, i) => [r, i]).sort((a, b) => RANK[a[0].lv] - RANK[b[0].lv] || a[1] - b[1]).map(x => x[0]);
+    return `<section class="panel" aria-label="Monitors"><h3>Monitors <small>${sum}</small></h3><div class="mon">${sorted.map(r =>
+      `<div class="mon-row ${r.lv}"><span class="pill">${LV[r.lv]}</span><div><div class="t">${r.t}${r.ref ? `<span class="ref">${r.ref}</span>` : ''}</div><p class="d">${r.d}</p></div></div>`).join('')}</div></section>`;
+  }
+  function worst(rows) { return rows.reduce((w, r) => (RANK[r.lv] < RANK[w] ? r.lv : w), 'ok'); }
+  function metrics(items) {
+    return `<section class="metrics" aria-label="Readouts">${items.map(m => `<div class="m"><div class="l">${m.l}</div><div class="v ${m.cls || ''}">${m.v}</div>${m.s ? `<div class="s">${m.s}</div>` : ''}</div>`).join('')}</section>`;
+  }
+  function chartPanel(id, title, sub, legend) {
+    return `<section class="panel"><h3>${title}${sub ? ` <small>${sub}</small>` : ''}</h3><canvas class="chart" id="${id}" role="img" aria-label="${title}"></canvas><div class="chart-legend">${(legend || []).map(l =>
+      `<span><i class="sw${l.dash ? ' dash' : ''}${l.band ? ' band' : ''}" style="background:var(${l.color});color:var(${l.color})"></i>${l.label}</span>`).join('')}</div></section>`;
+  }
+  function notes(items) {
+    return `<section class="panel"><details class="notes"><summary>Model assumptions and what this leaves out</summary><ul>${items.map(i => `<li>${i}</li>`).join('')}</ul></details></section>`;
+  }
+  const pctFmt0 = v => Math.round(v * 100) + '%';
+  const usdAxis = v => (v === 0 ? '$0' : F.usd(v));
+
+  function logPos(c, v) {
+    if (c.zero && v <= 0) return 0;
+    const f = Math.log(v / c.min) / Math.log(c.max / c.min);
+    return c.zero ? Math.round(1 + f * 999) : Math.round(f * 1000);
+  }
+  function logVal(c, p) {
+    if (c.zero && p <= 0) return 0;
+    const f = c.zero ? (p - 1) / 999 : p / 1000;
+    const v = c.min * Math.pow(c.max / c.min, f);
+    const e = Math.pow(10, Math.floor(Math.log10(v)) - 2);
+    return Math.round(v / e) * e;
+  }
+  function ctlHTML(lab, c) {
+    if (c.grp) return `<h3 class="grp">${c.grp}</h3>`;
+    const id = lab.key + '-' + c.id;
+    if (c.type === 'seg') return `<div class="ctl"><div class="ctl-top"><span class="lbl" id="${id}-l">${c.label}</span></div><div class="seg" role="group" aria-labelledby="${id}-l">${c.options.map((o, i) => `<button type="button" id="${id}-${i}" data-ctl="${c.id}" data-i="${i}">${o[1]}</button>`).join('')}</div></div>`;
+    if (c.type === 'button') return `<div class="ctl"><button type="button" class="btn" id="${id}" data-ctl="${c.id}">${c.label}</button></div>`;
+    if (c.type === 'log') return `<div class="ctl"><div class="ctl-top"><label for="${id}">${c.label}</label><output id="${id}-o" for="${id}"></output></div><input type="range" id="${id}" data-ctl="${c.id}" min="0" max="1000" step="1"></div>`;
+    return `<div class="ctl"><div class="ctl-top"><label for="${id}">${c.label}</label><output id="${id}-o" for="${id}"></output></div><input type="range" id="${id}" data-ctl="${c.id}" min="${c.min}" max="${c.max}" step="${c.step}"></div>`;
+  }
+
+
+  const CTL = [
+    { grp: 'The crash' },
+    { id: 'drop', label: 'SUI price drop', min: 5, max: 70, step: 1, value: 35, scale: 0.01, fmt: v => v + '%' },
+    { id: 'crashAt', label: 'Crash starts at minute', min: 5, max: 120, step: 5, value: 30, fmt: v => String(v) },
+    { id: 'crashLen', label: 'Crash lasts', min: 0, max: 60, step: 1, value: 20, fmt: v => (v === 0 ? 'Gap (one minute)' : v + ' min') },
+    { grp: 'Oracle' },
+    { id: 'source', label: 'Lending market prices loans with', type: 'seg', options: [['oracle', 'Oracle price'], ['twap', 'TWAP']], value: 'oracle' },
+    { id: 'twap', label: 'TWAP window', min: 1, max: 60, step: 1, value: 30, fmt: v => v + ' min' },
+    { id: 'deviation', label: 'Feed updates when price moves', min: 0.1, max: 5, step: 0.1, value: 0.5, scale: 0.01, fmt: v => v.toFixed(1) + '%' },
+    { id: 'heartbeat', label: 'Heartbeat', min: 1, max: 120, step: 1, value: 60, fmt: v => v + ' min' },
+    { id: 'outageAt', label: 'Feed outage starts at minute', min: 0, max: 170, step: 5, value: 25, fmt: v => String(v) },
+    { id: 'outageLen', label: 'Outage length', min: 0, max: 120, step: 5, value: 0, fmt: v => (v === 0 ? 'None' : v + ' min') },
+    { id: 'maxAge', label: 'Reject prices older than', min: 1, max: 120, step: 1, value: 60, fmt: v => v + ' min' },
+    { id: 'maxConf', label: 'Reject confidence wider than', min: 0.5, max: 20, step: 0.5, value: 10, scale: 0.01, fmt: v => v.toFixed(1) + '%' },
+    { grp: 'DEX liquidity' },
+    { id: 'dexDepth', label: 'SUI/USDC pool depth (USDC side)', type: 'log', min: 1e6, max: 500e6, value: 20e6, fmt: v => F.usd(v) },
+    { id: 'arb', label: 'Arbitrage closes this much of the DEX gap per minute', min: 5, max: 100, step: 5, value: 80, scale: 0.01, fmt: v => v + '%' },
+    { id: 'drain', label: 'Liquidity LPs pull during the crash', min: 0, max: 90, step: 5, value: 30, scale: 0.01, fmt: v => v + '%' },
+    { grp: 'LST collateral' },
+    { id: 'lstShare', label: 'Share of borrowers posting an LST', min: 0, max: 80, step: 5, value: 30, scale: 0.01, fmt: v => v + '%' },
+    { id: 'lstOracle', label: 'LST collateral is priced at', type: 'seg', options: [['redemption', 'Redemption rate'], ['market', 'Market price']], value: 'redemption' },
+    { id: 'wait', label: 'Time to redeem LST for SUI', min: 1, max: 60, step: 1, value: 1, fmt: v => v + (v === 1 ? ' day' : ' days') },
+    { id: 'lstDepth', label: 'LST/SUI pool depth (SUI side)', type: 'log', min: 1e6, max: 200e6, value: 10e6, fmt: v => F.usd(v) },
+    { id: 'panic', label: 'LST holders who panic-sell in the crash', min: 0, max: 20, step: 0.5, value: 3, scale: 0.01, fmt: v => v + '%' },
+    { grp: 'Lending market' },
+    { id: 'coll', label: 'Collateral deposited', min: 10, max: 200, step: 5, value: 50, scale: 1e6, fmt: v => '$' + v + 'M' },
+    { id: 'supply', label: 'USDC supplied by lenders', min: 30, max: 200, step: 5, value: 40, scale: 1e6, fmt: v => '$' + v + 'M' },
+    { id: 'avgLTV', label: 'Average borrower LTV', min: 20, max: 74, step: 1, value: 55, scale: 0.01, fmt: v => v + '%' },
+    { id: 'maxLTV', label: 'Max LTV', min: 30, max: 95, step: 1, value: 75, scale: 0.01, fmt: v => v + '%' },
+    { id: 'lt', label: 'Liquidation threshold', min: 35, max: 98, step: 1, value: 80, scale: 0.01, fmt: v => v + '%' },
+    { id: 'bonus', label: 'Liquidation bonus', min: 1, max: 15, step: 0.5, value: 5, scale: 0.01, fmt: v => v + '%' },
+    { id: 'cf', label: 'Close factor', min: 10, max: 100, step: 5, value: 50, scale: 0.01, fmt: v => v + '%' },
+    { id: 'seed', type: 'button', label: 'New random price noise', value: 7 }
+  ];
+  const PRESETS = [
+    { name: 'Orderly crash', note: '<b>Start here.</b> SUI falls 35% over 20 minutes. Liquidations mostly keep up. The small bad debt comes from the DEX: liquidators sell until its price sits right at their break-even, and arbitrage can only refill it so fast. Scrub through the minutes and watch the DEX card.', set: {} },
+    { name: 'Oracle outage', note: 'The feed goes silent five minutes before the crash and stays down 45 minutes. A 60-minute age limit keeps accepting the old price, so liquidations wait for the feed to return.', set: { outageLen: 45 } },
+    { name: 'TWAP lag', note: 'The market prices loans with a 60-minute TWAP. It trails the crash, so loans look healthy long after they aren’t.', set: { source: 'twap', twap: 60 } },
+    { name: 'Thin DEX', note: 'A $5M pool, slow arbitrage, and LPs pulling half their liquidity. Liquidations stall almost immediately and most unhealthy debt is still stuck three hours later.', set: { dexDepth: 5e6, arb: 10, drain: 50 } },
+    { name: 'LST depeg, market oracle', note: 'Half the borrowers post an LST, 3% of holders panic-sell, and redemptions take 14 days. Priced at market, LST loans liquidate in a cascade: borrowers lose big, liquidators earn big, and the dumped SUI drags the DEX far below the market.', set: { lstShare: 50, lstOracle: 'market', panic: 3, lstDepth: 6e6, wait: 14 } },
+    { name: 'LST depeg, redemption oracle', note: 'Same depeg, but the market values LST at its redemption rate. Borrowers are spared the cascade, but seized LST is worth less than the oracle says, so liquidations stall and the loss shifts toward lenders.', set: { lstShare: 50, panic: 3, lstDepth: 6e6, wait: 14 } },
+    { name: 'Redemptions locked', note: 'Redemptions take 30 days, like stETH before withdrawals opened. Liquidators can neither sell LST near peg nor redeem it cheaply, so LST loans sit unliquidated and lenders absorb the depeg.', set: { lstShare: 50, panic: 3, lstDepth: 6e6, wait: 30 } },
+    { name: 'Gap down', note: 'A 40% drop in a single minute. Fixing the oracle, the DEX, and the LST together doesn’t help: loans jump straight past their liquidation price before anyone can act.', set: { crashLen: 0, drop: 40 } }
+  ];
+
+  const S = { raw: null, preset: 0, t: 55, res: null, playing: 0 };
+  const T = Chain.T;
+
+  function defaults() { const d = {}; CTL.forEach(c => { if (!c.grp) d[c.id] = c.value; }); return d; }
+  function toState() {
+    const st = {}; CTL.forEach(c => { if (c.grp) return; const v = S.raw[c.id]; st[c.id] = (c.type || 'range') === 'range' ? v * (c.scale || 1) : v; });
+    st.vol = 0.0015; return st;
+  }
+  function sync() {
+    CTL.forEach(c => {
+      if (c.grp || c.type === 'button') return;
+      const id = 'k-' + c.id, v = S.raw[c.id];
+      if (c.type === 'seg') { c.options.forEach((o, i) => document.getElementById(id + '-' + i).setAttribute('aria-pressed', String(o[0] === v))); return; }
+      document.getElementById(id).value = c.type === 'log' ? logPos(c, v) : v;
+      document.getElementById(id + '-o').textContent = c.fmt(v);
+    });
+  }
+
+  // ---------- rendering ----------
+  const pctS = (v, d = 1) => F.spct(v, d);
+  function lv3(v, a, b) { return v <= a ? 'ok' : v <= b ? 'warn' : 'crit'; }
+  function stageCards(t) {
+    const b = S.res.base, st = S.st;
+    const ext = b.ext[t], pp = b.pp[t], gap = pp / ext - 1, dexGap = b.dex[t] / ext - 1, peg = b.peg[t];
+    const cards = [
+      { n: 'Market', lv: lv3(-(ext / 2 - 1), 0.1, 0.25), v: '$' + ext.toFixed(3), s: pctS(ext / 2 - 1) + ' since minute 0' },
+      { n: 'Oracle', lv: !b.acc[t] ? 'crit' : lv3(Math.abs(gap), 0.01, 0.05), v: '$' + pp.toFixed(3), s: !b.acc[t] ? 'price rejected: no liquidations' : pctS(gap) + ' vs market' },
+      { n: 'LST', lv: st.lstShare === 0 ? 'ok' : peg >= 0.99 ? 'ok' : peg >= 0.9 ? 'warn' : 'crit', v: st.lstShare === 0 ? 'Not used' : (peg * 100).toFixed(1) + '%', s: st.lstShare === 0 ? 'no LST collateral' : 'of redemption value' },
+      { n: 'Lending', lv: b.stuck[t] <= 1 ? 'ok' : b.stuck[t] < 0.05 * b.totalDebt0 ? 'warn' : 'crit', v: F.usd(b.stuck[t]), s: 'unhealthy, by the protocol’s own price' },
+      { n: 'Liquidators', lv: b.stuck[t] > 1 && b.unprofit[t] ? 'crit' : 'ok', v: b.repaidMin[t] > 0 ? F.usd(b.repaidMin[t]) : 'Idle', s: b.stuck[t] > 1 && b.unprofit[t] ? (b.acc[t] ? (b.repaidMin[t] > 0 ? 'repaid this minute, then stalled: selling loses money' : 'stalled: selling loses money') : 'blocked: oracle price rejected') : b.repaidMin[t] > 0 ? 'debt repaid this minute' : 'nothing to liquidate' },
+      { n: 'DEX', lv: lv3(-dexGap, 0.01, 0.05), v: '$' + b.dex[t].toFixed(3), s: pctS(dexGap) + ' vs market' },
+      { n: 'Lenders', lv: b.under[t] <= 1 ? 'ok' : b.under[t] < 0.005 * st.supply ? 'warn' : 'crit', v: F.usd(b.under[t]), s: 'debt with no collateral behind it' }
+    ];
+    return cards.map(c => `<div class="stage ${c.lv}"><div class="stage-top"><span class="stage-n">${c.n}</span><span class="pill">${LV[c.lv]}</span></div><div class="stage-v">${c.v}</div><div class="stage-s">${c.s}</div></div>`).join('');
+  }
+  function renderStrip() {
+    document.getElementById('strip').innerHTML = stageCards(S.t);
+    document.getElementById('scrub').value = S.t;
+    document.getElementById('scrub-o').textContent = 'Minute ' + S.t;
+  }
+  function chartSpecs() {
+    const b = S.res.base, f = S.res.f, st = S.st, t = S.t;
+    const xs = { min: 0, max: T, fmt: v => v + 'm', label: 'Minutes' };
+    const bands = []; let s0 = -1;
+    for (let i = 0; i <= T + 1; i++) { const bad = i <= T && !b.acc[i]; if (bad && s0 < 0) s0 = i; if (!bad && s0 >= 0) { bands.push({ x0: s0, x1: i, color: '--crit-soft' }); s0 = -1; } }
+    const all = b.ext.concat(b.pp, b.dex);
+    const lo = Math.min(...all), hi = Math.max(...all);
+    const ser = arr => arr.map((v, i) => [i, v]);
+    const scrub = [{ x: t, color: '--ink', dash: true, label: 'minute ' + t }];
+    const debtMax = niceMax(Math.max(1e6, ...b.stuck, ...b.under, b.repaidCum[T]));
+    const pegLo = Math.min(...b.peg);
+    return [
+      { id: 'c-price', spec: { x: xs, y: { min: Math.floor(lo * 0.97 * 20) / 20, max: Math.ceil(hi * 1.02 * 20) / 20, fmt: v => '$' + v.toFixed(2) }, bands,
+        series: [{ pts: ser(b.ext), color: '--faint', width: 1.5 }, { pts: ser(b.pp), color: '--accent', step: true }, { pts: ser(b.dex), color: '--warm' }], vlines: scrub } },
+      { id: 'c-debt', spec: { x: xs, y: { min: 0, max: debtMax, fmt: v => (v === 0 ? '$0' : F.usd(v)) },
+        series: [{ pts: ser(b.repaidCum), color: '--accent' }, { pts: ser(b.stuck), color: '--warn' }, { pts: ser(b.under), color: '--crit', fill: true }], vlines: scrub } },
+      { id: 'c-peg', spec: { x: xs, y: { min: Math.max(0, Math.floor((pegLo - 0.02) * 20) / 20), max: 1.01, fmt: v => Math.round(v * 100) + '%' },
+        series: [{ pts: ser(b.peg), color: '--violet' }], hlines: [{ y: 1, color: '--muted', dash: true }], vlines: scrub } }
+    ];
+  }
+  function drawAll() { (S.charts || []).forEach(ch => { const cv = document.getElementById(ch.id); if (cv) drawChart(cv, ch.spec); }); }
+
+  function renderAll() {
+    const st = toState(); S.st = st;
+    S.res = Chain.simulate(st);
+    const b = S.res.base, cf = S.res.cf, f = S.res.f;
+    // monitors
+    const rows = [];
+    const bd = b.badDebt, share = bd / b.totalDebt0;
+    rows.push(bd <= 1 ? { lv: 'ok', t: 'Bad debt after three hours', d: 'None. Every loan still has collateral behind it.' } : { lv: share < 0.01 ? 'warn' : 'crit', t: 'Bad debt after three hours', d: `${F.usd(bd)}, ${F.pct(share, 2)} of everything lent. Lenders lose ${F.usd((bd / st.supply) * 10000)} per $10,000 deposited.` });
+    const rej = b.acc.filter(x => !x).length;
+    let maxGap = 0; for (let t = 0; t <= T; t++) maxGap = Math.max(maxGap, Math.abs(b.pp[t] / b.ext[t] - 1));
+    rows.push({ lv: rej > 0 ? 'crit' : lv3(maxGap, 0.01, 0.05), t: 'Oracle', d: (rej ? `Prices were rejected for ${rej} minutes, so nothing could be liquidated then. ` : '') + `The protocol’s price was off from the market by up to ${F.pct(maxGap, 1)}.` });
+    let worstDex = 0, worstT = 0; for (let t = 0; t <= T; t++) { const g = b.dex[t] / b.ext[t] - 1; if (g < worstDex) { worstDex = g; worstT = t; } }
+    rows.push({ lv: lv3(-worstDex, 0.01, 0.05), t: 'DEX', d: `Liquidation selling pushed the pool ${F.pct(-worstDex, 1)} below the market at minute ${worstT}.${st.drain > 0 ? ` LPs pulled ${F.pct(1 - b.lpFactor, 0)} of the liquidity.` : ''}` });
+    const stalled = b.unprofit.filter(Boolean).length, peak = Math.max(...b.stuck);
+    rows.push({ lv: b.stuck[T] > 1 ? 'crit' : stalled > 10 ? 'warn' : 'ok', t: 'Liquidations', d: `Repaid ${F.usd(b.repaid)} of debt. Liquidators stalled for ${stalled} minutes while loans were unhealthy; the peak was ${F.usd(peak)} of unhealthy debt${b.stuck[T] > 1 ? `, and ${F.usd(b.stuck[T])} is still stuck at the end` : ''}.` });
+    if (st.lstShare > 0) { const mp = Math.min(...b.peg); rows.push({ lv: mp >= 0.99 ? 'ok' : mp >= 0.9 ? 'warn' : 'crit', t: 'LST peg', d: `Lowest point ${(mp * 100).toFixed(1)}% of redemption value. Liquidators sold ${F.int(b.lstSold)} LST into the pool and redeemed ${F.int(b.lstRedeemed)}.` }); }
+    // attribution
+    const items = [['A perfect oracle', cf.oracle], ['A DEX 100× deeper', cf.dex], ['LST holding its peg', cf.lst], ['All three together', cf.all]];
+    let attr;
+    if (bd <= 1) attr = '<p class="d">No bad debt to explain in this scenario.</p>';
+    else {
+      const best = items.slice(0, 3).reduce((a, c) => (c[1] < a[1] ? c : a));
+      attr = `<div class="attr">${items.map(([n, v]) => { const red = Math.max(0, bd - v), w = (red / bd) * 100; return `<div class="attr-row"><span class="attr-n">${n}</span><span class="bar1"><i style="width:${w.toFixed(1)}%"></i></span><span class="attr-v">${F.usd(v)}</span><span class="attr-d">${red > 1 ? MINUS + F.pct(red / bd, 0) : 'no change'}</span></div>`; }).join('')}</div>
+        <p class="d">${bd - best[1] > 0.1 * bd ? `The biggest single cause is the ${best[0] === 'A perfect oracle' ? 'oracle' : best[0] === 'A DEX 100× deeper' ? 'DEX liquidity' : 'LST depeg'}: fixing it alone leaves ${F.usd(best[1])}.` : 'No single link explains it.'} ${cf.all > 0.5 * bd ? 'Even with all three fixed, most of it remains: the price move itself outran liquidations.' : ''}</p>`;
+    }
+    const extra = b.liqPnl > b.bonusPaid
+      ? `<tr><td>Liquidators earned beyond the bonus: seized LST was valued at its depegged market price, then redeemed near full value</td><td class="n">${F.usd(b.liqPnl - b.bonusPaid)}</td></tr>`
+      : `<tr><td>Lost on the way out to DEX slippage and fees (paid to LPs and arbitrageurs)</td><td class="n">${F.usd(b.bonusPaid - b.liqPnl)}</td></tr>`;
+    const whoPays = `<table class="log pays"><tbody>
+      <tr><td>Borrowers paid in liquidation bonuses (at the protocol’s price)</td><td class="n">${F.usd(b.bonusPaid)}</td></tr>
+      <tr><td>Liquidators kept, after slippage and fees</td><td class="n">${F.usd(b.liqPnl)}</td></tr>
+      ${extra}
+      <tr><td>Lenders lose to bad debt</td><td class="n ${bd > 1 ? 'loss' : ''}">${F.usd(bd)}</td></tr>
+      <tr><td>Per $10,000 deposited by a lender</td><td class="n ${bd > 1 ? 'loss' : ''}">${F.usd((bd / st.supply) * 10000)}</td></tr></tbody></table>`;
+    const out = document.getElementById('out');
+    out.innerHTML = monitor(rows) +
+      `<section class="panel"><h3>What caused the bad debt <small>the same crash rerun with one link fixed</small></h3>${attr}</section>` +
+      `<div class="charts">${chartPanel('c-price', 'SUI price: market, oracle, DEX', 'shaded minutes: oracle price rejected', [{ label: 'Market', color: '--faint' }, { label: 'Price the protocol uses', color: '--accent' }, { label: 'DEX pool price', color: '--warm' }, { label: 'Rejected', color: '--crit-soft', band: true }])}
+        <div class="charts two">${chartPanel('c-debt', 'Debt over time', '', [{ label: 'Repaid by liquidators (total)', color: '--accent' }, { label: 'In unhealthy loans', color: '--warn' }, { label: 'Without collateral', color: '--crit' }])}${chartPanel('c-peg', 'LST market price', 'share of redemption value', [{ label: 'LST / redemption value', color: '--violet' }])}</div></div>` +
+      `<section class="panel"><h3>Who pays <small>totals over the three hours</small></h3><div class="tbl-wrap">${whoPays}</div></section>` +
+      notes([
+        'Minute steps for three hours. SUI follows a random walk (0.15% a minute) plus the crash, spread evenly over its length or in one minute for a gap.',
+        'Oracle: pushes a price when the market moves past the deviation threshold or the heartbeat runs out, nothing during an outage. Confidence widens with recent volatility. The market rejects prices older than the age limit or with confidence wider than the limit.',
+        'DEX: one SUI/USDC constant-product pool with a 0.3% fee. Each minute arbitrage closes the chosen share of the gap to the market price, and LPs withdraw their chosen share of liquidity over the crash.',
+        'LST: redemption rate 1.05 SUI. Half of all LST is assumed to sit in this market. Panic sales go through an LST/SUI pool, and arbitrage pulls it back toward peg faster when redemptions are quicker (10% of the gap per minute ÷ days to redeem).',
+        'Liquidators act each minute when the price is accepted, riskiest loans first. They only liquidate when selling the collateral returns at least the debt repaid, shrinking the size until it does. Seized LST is sold in the pool or redeemed, whichever pays more; redeeming costs 0.2% per day of waiting.',
+        'Bad debt is debt above the collateral’s real market value at minute 180. “What caused it” reruns the same price path with one link replaced: an oracle equal to the market, a DEX 100× deeper with no LPs leaving, or an LST that never depegs. Effects overlap, so the rows don’t add up.',
+        'Left out: gas and priority fees, lenders withdrawing in a panic, interest accrual, and the oracle reading the DEX itself.'
+      ]);
+    S.charts = chartSpecs();
+    renderStrip();
+    drawAll();
+  }
+
+  // ---------- build ----------
+  const rail = document.getElementById('rail');
+  rail.innerHTML = CTL.map(c => ctlHTML({ key: 'k' }, c)).join('');
+  document.getElementById('presets').innerHTML = '<span class="lbl">Scenarios</span>' + PRESETS.map((p, i) => `<button type="button" class="chip" data-p="${i}" id="preset-${i}">${p.name}</button>`).join('');
+  let raf = 0;
+  const schedule = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; renderAll(); }); };
+  function applyPreset(i) {
+    S.raw = Object.assign(defaults(), PRESETS[i].set); S.preset = i;
+    sync();
+    document.querySelectorAll('#presets .chip').forEach((b, j) => b.setAttribute('aria-pressed', String(j === i)));
+    document.getElementById('note').innerHTML = PRESETS[i].note;
+    const st = toState(); S.t = Math.min(T, st.crashAt + Math.max(1, st.crashLen) + 5);
+    renderAll();
+  }
+  function clearPreset() {
+    if (S.preset === -1) return; S.preset = -1;
+    document.querySelectorAll('#presets .chip').forEach(b => b.setAttribute('aria-pressed', 'false'));
+    document.getElementById('note').innerHTML = '<b>Custom settings.</b> Pick a scenario above to reset.';
+  }
+  document.getElementById('presets').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) applyPreset(+b.dataset.p); });
+  rail.addEventListener('input', e => {
+    const id = e.target.dataset && e.target.dataset.ctl; if (!id) return;
+    const c = CTL.find(x => x.id === id);
+    const v = c.type === 'log' ? logVal(c, +e.target.value) : +e.target.value;
+    S.raw[id] = v; document.getElementById('k-' + id + '-o').textContent = c.fmt(v);
+    clearPreset(); schedule();
+  });
+  rail.addEventListener('click', e => {
+    const t = e.target.closest('button[data-ctl]'); if (!t) return;
+    const c = CTL.find(x => x.id === t.dataset.ctl);
+    if (c.type === 'seg') { S.raw[c.id] = c.options[+t.dataset.i][0]; sync(); }
+    else if (c.type === 'button') S.raw[c.id] = (S.raw[c.id] * 48271 + 11) % 2147483647;
+    clearPreset(); schedule();
+  });
+  const scrub = document.getElementById('scrub');
+  scrub.max = String(T);
+  scrub.addEventListener('input', () => { S.t = +scrub.value; S.charts = chartSpecs(); renderStrip(); drawAll(); });
+  const playBtn = document.getElementById('play');
+  playBtn.addEventListener('click', () => {
+    if (S.playing) { clearInterval(S.playing); S.playing = 0; playBtn.textContent = 'Play'; return; }
+    if (S.t >= T) S.t = 0;
+    playBtn.textContent = 'Pause';
+    S.playing = setInterval(() => {
+      S.t = Math.min(T, S.t + 1); S.charts = chartSpecs(); renderStrip(); drawAll();
+      if (S.t >= T) { clearInterval(S.playing); S.playing = 0; playBtn.textContent = 'Play'; }
+    }, 70);
+  });
+  applyPreset(0);
+  let rt = 0;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(drawAll, 120); });
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawAll); } catch (e) {}
+  new MutationObserver(drawAll).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
+})();
+
+</script>
+
+</html>

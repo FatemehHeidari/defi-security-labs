@@ -1,0 +1,192 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><title>DeFi Security Labs</title><meta name="description" content="Five interactive DeFi security simulators: lending, AMMs, liquid staking, oracles and perpetual futures, and who pays when they fail."></head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a lab bench index. Name and thesis, one real ledger line from the labs, five instruments in a two-column grid (the last spans both), then how they were built and what review caught. */
+:root {
+  --paper: #F2F4F6; --surface: #FFFFFF; --ink: #111A22; --muted: #55606B; --faint: #87919B; --line: #D6DCE2;
+  --accent: #2F4BD8; --accent-soft: #E4E9FF;
+  --c-risk: #0E7A63; --c-chain: #B2531A; --c-panic: #0A6C8A; --c-pdesk: #8A3B9E; --c-perp: #3D55E0;
+  --ok: #1D7A4B; --crit: #B3261E;
+  --font-display: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0E1318; --surface: #151C23; --ink: #E4E9EE; --muted: #9BA6B1; --faint: #6F7A85; --line: #27313B;
+  --accent: #8DA0FF; --accent-soft: #1B2350;
+  --c-risk: #4FC9A6; --c-chain: #F0965B; --c-panic: #5CB8D6; --c-pdesk: #D99AE8; --c-perp: #8C9EFF;
+  --ok: #5FCB8E; --crit: #F28B82; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0E1318; --surface: #151C23; --ink: #E4E9EE; --muted: #9BA6B1; --faint: #6F7A85; --line: #27313B;
+  --accent: #8DA0FF; --accent-soft: #1B2350;
+  --c-risk: #4FC9A6; --c-chain: #F0965B; --c-panic: #5CB8D6; --c-pdesk: #D99AE8; --c-perp: #8C9EFF;
+  --ok: #5FCB8E; --crit: #F28B82; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 15.5px; line-height: 1.55; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.hero { padding-block: 48px 28px; display: grid; gap: 14px; }
+.kicker { font: 600 12px/1 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(34px, 6vw, 54px); line-height: 1.02; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { font-size: 18px; color: var(--muted); max-width: 62ch; margin: 0; }
+.by { font-size: 13.5px; color: var(--faint); margin: 0; }
+.by b { color: var(--ink); font-weight: 600; }
+.ledger { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px 18px; font: 500 13px/1.6 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--muted); padding: 10px 14px; border: 1px dashed var(--line); border-radius: 8px; background: var(--surface); max-width: max-content; }
+.ledger .lbl { color: var(--faint); }
+.up { color: var(--ok); } .dn { color: var(--crit); }
+main { display: grid; gap: 44px; padding-block: 8px 56px; }
+.grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 820px) { .grid { grid-template-columns: 1fr 1fr; } }
+.lab { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.lab .tag { justify-self: start; font: 600 11px/1 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 5px; border: 1px solid currentColor; }
+.lab h2 { font-family: var(--font-display); font-weight: 600; font-size: 26px; line-height: 1.1; margin: 0; }
+.lab p { margin: 0; color: var(--muted); }
+.lab ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14.5px; }
+.lab .check { font-size: 13px; color: var(--faint); border-top: 1px solid var(--line); padding-top: 10px; }
+.lab .check b { color: var(--muted); font-weight: 600; }
+.open { justify-self: start; display: inline-flex; align-items: center; gap: 8px; font: 600 14px/1 var(--font-body); color: var(--surface); background: var(--ink); text-decoration: none; padding: 11px 16px; border-radius: 8px; }
+.open:hover { background: var(--accent); }
+.open:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.risk .tag { color: var(--c-risk); } .chain .tag { color: var(--c-chain); } .panic .tag { color: var(--c-panic); } .pdesk .tag { color: var(--c-pdesk); } .perp .tag { color: var(--c-perp); }
+@media (min-width: 820px) { .lab.wide { grid-column: 1 / -1; } .lab.wide ul { grid-template-columns: 1fr 1fr 1fr; gap: 4px 28px; } }
+section.how { display: grid; gap: 18px; }
+section.how h2, section.caught h2 { font-family: var(--font-display); font-weight: 600; font-size: 28px; margin: 0; }
+section.how > p { margin: 0; color: var(--muted); max-width: 66ch; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; counter-reset: s; border-top: 1px solid var(--line); }
+.steps li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.steps li::before { counter-increment: s; content: counter(s); font: 500 13px/28px var(--font-mono); width: 28px; height: 28px; text-align: center; border-radius: 50%; border: 1px solid var(--line); color: var(--muted); }
+.steps b { display: block; font-weight: 600; }
+.steps span { color: var(--muted); font-size: 14.5px; }
+.split { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 820px) { .split { grid-template-columns: 1fr 1fr; } }
+.note { background: var(--accent-soft); border-radius: 10px; padding: 16px 18px; font-size: 14.5px; }
+.note b { display: block; margin-bottom: 4px; }
+section.caught { display: grid; gap: 14px; }
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 11px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+th { border-top: 0; font-weight: 500; color: var(--faint); font-size: 12.5px; }
+td:first-child { white-space: nowrap; font-weight: 500; }
+td.how { white-space: nowrap; font: 500 12px var(--font-mono); color: var(--muted); }
+footer { padding-block: 0 40px; color: var(--faint); font-size: 13px; }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <p class="kicker">Five interactive simulators</p>
+    <h1>DeFi Security Labs</h1>
+    <p class="lede">How lending markets, AMMs, liquid staking and perpetual futures fail, and who ends up paying. Every lab traces each dollar between users, liquidators, lenders and insurance funds.</p>
+    <p class="by"><b>Fatemeh Heidari</b> · built with Claude as a coding agent, October 2026</p>
+    <div class="ledger" aria-label="A line from the Perp Workbench ledger"><span class="lbl">Perp Workbench, lesson 1:</span><span>Alice <b class="up">+$233.51</b></span><span>Bob <b class="dn">−$253.51</b></span><span>Insurance fund <b class="up">+$20.00</b></span><span>Vault $0.00</span><span>All USDC unchanged</span></div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <article class="lab risk">
+        <span class="tag">Mechanics</span>
+        <h2>DeFi Risk Lab</h2>
+        <p>Six protocol labs side by side, each with its own controls, presets and charts, plus a view of what every type of user gains or loses.</p>
+        <ul>
+          <li>Lending: health factor, kinked interest rates, liquidations, bad debt</li>
+          <li>AMMs with sandwich MEV, perps, liquid staking, oracles and flash-loan manipulation, ERC-4626 vaults and share inflation</li>
+          <li>A users view that shows each role's ledger: lender, borrower, liquidator, LP, trader</li>
+        </ul>
+        <p class="check"><b>Checked:</b> math against worked examples (a 41.5% borrow rate at 90% utilization, a 5× long liquidated at $59.73); role ledgers balance in all 21 scenarios.</p>
+        <a class="open" href="defi-risk-lab.html">Open the Risk Lab →</a>
+      </article>
+
+      <article class="lab chain">
+        <span class="tag">Systemic risk</span>
+        <h2>Lending Crash Chain</h2>
+        <p>One lending market hit by everything at once: a price crash, a lagging oracle, LPs leaving the DEX, and a liquid staking token losing its peg.</p>
+        <ul>
+          <li>Liquidators act only when selling the collateral pays, so a thin DEX stalls them</li>
+          <li>Holders of the staking token choose between selling at a discount and waiting to redeem</li>
+          <li>What-if runs (perfect oracle, deep DEX, no depeg) show which cause created the bad debt</li>
+        </ul>
+        <p class="check"><b>Checked:</b> each what-if run reuses the same price path and changes one cause at a time, so a difference in bad debt comes from that cause alone.</p>
+        <a class="open" href="lending-crash-chain.html">Open the Crash Chain →</a>
+      </article>
+
+      <article class="lab panic">
+        <span class="tag">Real-time game</span>
+        <h2>Panic Desk</h2>
+        <p>You get $10,000 and two hours of market in real time, with headlines that may be false. Trade, lend, borrow, stake, provide liquidity or liquidate others.</p>
+        <ul>
+          <li>Ten scenarios, from a quiet day and a rally to an oracle outage, an LST depeg, a lender run and a pump and dump</li>
+          <li>Before you start, it plays six standard strategies on the same market and shows what goes wrong for each</li>
+          <li>The debrief attributes your final result to each move you made, and the impacts add up to the total</li>
+        </ul>
+        <p class="check"><b>Checked:</b> replaying your moves reproduces the live run exactly; the strategy table and debrief use that same replay.</p>
+        <a class="open" href="panic-desk.html">Open Panic Desk →</a>
+      </article>
+
+      <article class="lab pdesk">
+        <span class="tag">Real-time game · perps</span>
+        <h2>Perp Panic Desk</h2>
+        <p>You get $10,000 and 24 hours of a SUI perpetual on a vAMM, in the style of Perpetual Protocol v1. Go long or short up to 10×, stake in the insurance fund, or liquidate others as a keeper.</p>
+        <ul>
+          <li>Eight scenarios, from crowded longs bleeding funding and long and short squeezes to a slow oracle, a gap crash that empties the insurance fund, and a repeg</li>
+          <li>Before you start, it runs seven positions on the same market (2× and 10× longs and shorts, an insurance fund stake, a keeper) and shows what goes wrong for each</li>
+          <li>A crowd of leveraged traders, an arbitrage desk and keeper bots move the vAMM, so cascades and overshoots come out of the rules rather than a script</li>
+        </ul>
+        <p class="check"><b>Checked:</b> cash is conserved to the cent in every scenario, with and without your trades; each scenario's lesson holds across random seeds.</p>
+        <a class="open" href="perp-panic-desk.html">Open Perp Panic Desk →</a>
+      </article>
+
+      <article class="lab perp wide">
+        <span class="tag">Guided lessons</span>
+        <h2>Perp Workbench</h2>
+        <p>A vAMM perpetual in the style of Perpetual Protocol v1, one step at a time: the vAMM, funding, keepers, liquidation, bad debt and repegs, with every USDC movement in a ledger.</p>
+        <ul>
+          <li>Eleven guided lessons, from "who pays a winner" to a flash crash draining the insurance fund</li>
+          <li>Classic vAMM failure modes: front-running a repeg, an insurance fund that runs dry, a lagging oracle, a lopsided gap check and a flash crash</li>
+          <li>Free play: open and close positions yourself and watch the ledger</li>
+        </ul>
+        <p class="check"><b>Checked:</b> rules taken from the public Perpetual Protocol v1 ClearingHouse and Amm source; total USDC is conserved to the cent in every lesson.</p>
+        <a class="open" href="perp-workbench.html">Open the Workbench →</a>
+      </article>
+    </div>
+
+    <section class="how" aria-labelledby="how-h">
+      <h2 id="how-h">How they were built</h2>
+      <p>Each lab came out of a conversation with a coding agent while I prepared for a DeFi security role. I decided what each one had to show and reviewed every result. The agent wrote and tested the code.</p>
+      <ol class="steps">
+        <li><div><b>Set the question</b><span>For example: "show me what happens to my $10,000, from the point of view of every user".</span></div></li>
+        <li><div><b>Ground it in real code</b><span>The agent read the public Perpetual Protocol v1 contracts before modeling funding, liquidation and repegs, so the rules match the source rather than a summary.</span></div></li>
+        <li><div><b>Keep the math deterministic</b><span>Every number comes from plain JavaScript simulations, not from the model's text. The same inputs always give the same run.</span></div></li>
+        <li><div><b>Test what must always be true</b><span>Money is conserved, ledgers balance, replays match live runs, and pages work at desktop and phone widths in a headless browser.</span></div></li>
+        <li><div><b>Review and push back</b><span>I read the outputs as a user and as an auditor. Several bugs were only caught that way (below).</span></div></li>
+      </ol>
+      <div class="split">
+        <div class="note"><b>Where the agent helped most</b>Reading unfamiliar protocol code quickly, turning a mechanism into a working model, and writing the many small tests a model needs.</div>
+        <div class="note"><b>Where judgment had to stay human</b>Deciding what each simulation should prove, spotting results that looked right but weren't, and deciding which simplifications were acceptable.</div>
+      </div>
+    </section>
+
+    <section class="caught" aria-labelledby="caught-h">
+      <h2 id="caught-h">What review caught</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Lab</th><th>Problem</th><th>Fix</th><th>Caught by</th></tr></thead>
+        <tbody>
+          <tr><td>Panic Desk</td><td>The debrief said a loan became liquidatable at minute 58 but was liquidated at minute 51.</td><td>Record the health factor before bots act each minute, not after.</td><td class="how">my review</td></tr>
+          <tr><td>Panic Desk</td><td>Each move's impact, computed by leaving that one move out, didn't add up to the total result.</td><td>Score moves in sequence, so the impacts sum to the final result.</td><td class="how">my review</td></tr>
+          <tr><td>Panic Desk</td><td>"If you had stopped after this buy" priced SUI at the session's end, which read as if the price had already crashed at minute 0.</td><td>Reworded so both endings are clearly held to the end of the session.</td><td class="how">my review</td></tr>
+          <tr><td>Crash Chain</td><td>One unprofitable loan stopped all liquidations for the rest of the run.</td><td>Skip that loan and continue with the next one.</td><td class="how">agent’s tests</td></tr>
+          <tr><td>Perp Workbench</td><td>The total-USDC check counted unpaid IOUs as money.</td><td>Count only real cash, and report unpaid amounts separately.</td><td class="how">agent’s tests</td></tr>
+          <tr><td>Risk Lab</td><td>The insurance fund could go negative.</td><td>Floor it at zero and show the shortfall as its own line.</td><td class="how">agent’s tests</td></tr>
+          <tr><td>Perp Panic Desk</td><td>"A quiet day" liquidated $5M of shorts after a 4.5% drift: the crowd's leverage was too high for a calm market.</td><td>Lower leverage and volatility in calm scenarios, with the price pulled back toward $2.</td><td class="how">agent’s tests</td></tr>
+          <tr><td>Perp Panic Desk</td><td>Running a keeper returned +356% with no capital, because you always beat the bots.</td><td>Rival keepers win three races in four, and each position is liquidated at most once per pass.</td><td class="how">agent’s review</td></tr>
+          <tr><td>Perp Panic Desk</td><td>The setup table blamed a long's liquidation on vAMM overshoot when the vAMM was above the oracle.</td><td>Call it an overshoot only when the gap points against the position.</td><td class="how">agent’s review</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+  </main>
+
+  <footer>These are teaching models with simplified rules and illustrative numbers, not production risk engines. Protocol names refer to public designs and public incidents.</footer>
+</div>
+
+</body></html>

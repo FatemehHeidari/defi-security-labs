@@ -1,0 +1,1314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Panic Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>/* Layout: a trading desk. A sticky bar carries the clock, controls, SUI price and net worth; below it the moves rail on the left and the board (price, headlines, positions, net worth, your log) on the right. */
+:root {
+  --bg: #EDF1EF; --surface: #FFFFFF; --sunk: #F4F7F5; --ink: #122420; --muted: #56665F; --faint: #85948E; --line: #D2DCD8;
+  --accent: #0A6C8A; --accent-ink: #FFFFFF; --accent-soft: #DCEEF3;
+  --warm: #C2541A; --violet: #6552B0;
+  --ok: #1F7346; --ok-soft: #E0F1E6; --warn: #8F5B00; --warn-soft: #FAEDD2; --crit: #B42318; --crit-soft: #FBE3DF;
+  --font-display: 'IBM Plex Sans Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0C1311; --surface: #141D1A; --sunk: #101815; --ink: #E0E9E5; --muted: #9AA9A3; --faint: #6F7E78; --line: #27342F;
+  --accent: #5CB8D6; --accent-ink: #06222B; --accent-soft: #12313B;
+  --warm: #F08A4B; --violet: #AC9EEC;
+  --ok: #5CC48A; --ok-soft: #12291D; --warn: #E6AE4A; --warn-soft: #2D2310; --crit: #F2867B; --crit-soft: #351714;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0C1311; --surface: #141D1A; --sunk: #101815; --ink: #E0E9E5; --muted: #9AA9A3; --faint: #6F7E78; --line: #27342F;
+  --accent: #5CB8D6; --accent-ink: #06222B; --accent-soft: #12313B;
+  --warm: #F08A4B; --violet: #AC9EEC;
+  --ok: #5CC48A; --ok-soft: #12291D; --warn: #E6AE4A; --warn-soft: #2D2310; --crit: #F2867B; --crit-soft: #351714;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--surface); border-bottom: 1px solid var(--line); transition: box-shadow 0.3s; }
+body.danger .topbar { box-shadow: inset 0 -3px 0 var(--crit); }
+.bar-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; padding-block: 10px; }
+.brand { display: grid; line-height: 1.15; }
+.brand b { font-family: var(--font-display); font-weight: 600; font-size: 20px; }
+.mk { font-size: 12px; color: var(--faint); font-family: var(--font-mono); }
+.clockbox { min-width: 150px; display: grid; gap: 5px; }
+.clk { font-family: var(--font-mono); font-size: 15px; display: flex; gap: 6px; align-items: baseline; }
+.clk .of { color: var(--faint); font-size: 12px; }
+.prog { height: 4px; background: var(--sunk); border-radius: 2px; overflow: hidden; }
+.prog i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.3s linear; }
+.ctrls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ticker { display: flex; gap: 22px; margin-left: auto; flex-wrap: wrap; }
+.tk { display: grid; line-height: 1.1; }
+.tk .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--faint); }
+.bigv { font-family: var(--font-mono); font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.chg { font-family: var(--font-mono); font-size: 12.5px; }
+.chg.up { color: var(--ok); } .chg.down { color: var(--crit); }
+@media (prefers-reduced-motion: no-preference) {
+  .flash-up { animation: fu 0.6s ease-out; } .flash-down { animation: fd 0.6s ease-out; }
+  @keyframes fu { from { color: var(--ok); } to { color: var(--ink); } }
+  @keyframes fd { from { color: var(--crit); } to { color: var(--ink); } }
+}
+.btn { appearance: none; border: 1px solid var(--line); background: var(--sunk); color: var(--ink); font: 500 13.5px/1 var(--font-body); padding: 9px 13px; border-radius: 8px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); min-width: 84px; }
+.btn:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { appearance: none; border: 0; background: var(--sunk); color: var(--muted); font: 500 13px/1 var(--font-body); padding: 9px 10px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg.mini { margin: 4px 0 8px; } .seg.mini button { padding: 7px 12px; }
+.main { padding-block: 16px 40px; display: grid; gap: 16px; }
+.alerts { display: grid; gap: 8px; }
+.alerts:empty { display: none; }
+.al { padding: 10px 14px; border-radius: 8px; font-weight: 500; font-size: 14.5px; }
+.al.warn { background: var(--warn-soft); color: var(--warn); }
+.al.crit { background: var(--crit-soft); color: var(--crit); border: 1px solid var(--crit); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.panel h3 { font-family: var(--font-display); font-weight: 600; font-size: 16px; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: space-between; }
+.panel h3 small { font-family: var(--font-body); font-weight: 400; font-size: 12.5px; color: var(--muted); }
+.setup { border-color: var(--accent); background: var(--accent-soft); }
+.setup h2 { font-family: var(--font-display); font-weight: 600; font-size: 24px; margin: 0 0 6px; text-wrap: balance; }
+.setup p { margin: 0 0 12px; max-width: 75ch; }
+.db-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.desk { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
+@media (min-width: 1040px) { .desk { grid-template-columns: 340px minmax(0, 1fr); } .moves { position: sticky; top: 92px; max-height: calc(100vh - 108px); overflow-y: auto; } }
+.board { display: grid; gap: 16px; min-width: 0; }
+.row2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 1240px) { .row2 { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); } }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.tabs button { appearance: none; border: 1px solid var(--line); background: var(--sunk); color: var(--muted); font: 500 13px/1 var(--font-body); padding: 8px 10px; border-radius: 999px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.act { padding: 10px 0 12px; border-top: 1px solid var(--line); }
+.act:first-child { border-top: 0; }
+.act-h { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.act-h span:first-child { font-weight: 600; font-size: 14px; }
+.hint { font-size: 12px; color: var(--faint); }
+.amt { display: flex; gap: 4px; margin-top: 6px; }
+.amt input { flex: 1; min-width: 0; font: 500 15px/1 var(--font-mono); padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--sunk); color: var(--ink); }
+.fill { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 500 12px/1 var(--font-body); padding: 0 8px; border-radius: 6px; cursor: pointer; }
+.fill:hover { color: var(--ink); border-color: var(--accent); }
+.pv { margin: 6px 0; font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); min-height: 1.5em; overflow-wrap: anywhere; }
+.btn.go { width: 100%; background: var(--surface); }
+.btn.go:hover { background: var(--accent-soft); }
+.err { margin: 6px 0 0; font-size: 13px; color: var(--crit); }
+.err:empty { display: none; }
+canvas.chart { width: 100%; height: 250px; display: block; }
+canvas.chart.short { height: 170px; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend span[hidden] { display: none; }
+.sw { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.sw.dash { background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px) !important; height: 2px; }
+.feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; max-height: 292px; overflow-y: auto; }
+.feed li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; padding: 7px 4px; border-top: 1px solid var(--line); font-size: 13.5px; }
+.feed li:first-child { border-top: 0; }
+.feed .nt { font-family: var(--font-mono); font-size: 12px; color: var(--faint); padding-top: 1px; }
+.feed li.you { background: var(--crit-soft); color: var(--crit); border-radius: 6px; font-weight: 500; }
+.feed li.good span:last-child { color: var(--ok); }
+.feed li.fail span:last-child { color: var(--crit); }
+.feed li.empty { color: var(--faint); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.card.warn { border-color: var(--warn); } .card.crit { border-color: var(--crit); background: var(--crit-soft); }
+.card.ok .card-v { color: var(--ok); } .card.warn .card-v { color: var(--warn); } .card.crit .card-v { color: var(--crit); }
+.card-h { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--faint); }
+.card-v { font-family: var(--font-mono); font-size: 21px; font-weight: 500; margin: 2px 0 8px; font-variant-numeric: tabular-nums; }
+.card dl { margin: 0; display: grid; gap: 3px; }
+.card dl div { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+.card dt { color: var(--muted); } .card dd { margin: 0; font-family: var(--font-mono); text-align: right; overflow-wrap: anywhere; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; max-width: min(560px, calc(100vw - 32px)); background: var(--ink); color: var(--surface); padding: 10px 14px; border-radius: 8px; font-size: 14px; }
+.debrief { display: grid; gap: 16px; }
+.reveal { border-color: var(--accent); }
+.eyebrow { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-weight: 600; }
+.reveal h2 { font-family: var(--font-display); font-weight: 600; font-size: 30px; margin: 2px 0 6px; text-wrap: balance; }
+.reveal p { margin: 0; max-width: 78ch; }
+.db-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 900px) { .db-grid { grid-template-columns: 1fr 1fr; } }
+.result { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.result .big { font-family: var(--font-mono); font-size: 32px; font-weight: 500; }
+.result .pp { font-family: var(--font-mono); font-size: 16px; }
+.gain { color: var(--ok); } .loss { color: var(--crit); }
+table.cmp, table.log { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.cmp td, table.log td, table.log th { padding: 8px 6px; border-top: 1px solid var(--line); text-align: left; }
+table.log th { border-top: 0; font-weight: 500; color: var(--muted); font-size: 12px; }
+td.n, th.n { text-align: right !important; font-family: var(--font-mono); white-space: nowrap; }
+table.cmp tr.you td { font-weight: 600; border-top: 2px solid var(--ink); }
+.tbl-wrap { overflow-x: auto; }
+table.imp { min-width: 560px; }
+.barc { width: 32%; }
+.bar { position: relative; height: 10px; background: var(--sunk); border-radius: 2px; display: block; min-width: 100px; }
+.bar::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
+.bar i { position: absolute; top: 0; bottom: 0; }
+.bar i.pos { left: 50%; background: var(--ok); } .bar i.neg { right: 50%; background: var(--crit); }
+.facts { margin: 0; display: grid; gap: 8px; }
+.facts div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; font-size: 14px; }
+.facts dt { color: var(--muted); } .facts dd { margin: 0; }
+.linked { font-size: 12px; color: var(--faint); margin-top: 2px; }
+.lessons { margin: 0; padding-left: 18px; display: grid; gap: 8px; max-width: 85ch; }
+.reveal-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; }
+.reveal-list li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.reveal-list li:first-child { border-top: 0; }
+.reveal-list .nt { font-family: var(--font-mono); font-size: 12px; color: var(--faint); }
+.tag { font: 600 11px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 6px; border-radius: 4px; }
+.tag.pass { background: var(--ok-soft); color: var(--ok); } .tag.fail { background: var(--crit-soft); color: var(--crit); }
+.d { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+details.rules summary { cursor: pointer; font-weight: 500; }
+details.rules ul { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; color: var(--muted); max-width: 90ch; }
+@media (max-width: 640px) { .bar-in { gap: 6px 10px; padding-block: 8px; } .brand { display: none; } .clockbox { min-width: 0; flex: 1 1 100%; } .bigv { font-size: 18px; } .ticker { margin-left: 0; width: 100%; justify-content: space-between; } .ctrls { gap: 6px; } .ctrls .btn, .seg button { padding: 7px 8px; font-size: 12.5px; } .btn.primary { min-width: 70px; } .tk .lbl { font-size: 10px; } .facts div { grid-template-columns: 1fr; gap: 0; } }
+
+/* Scenario chooser and open play */
+[hidden] { display: none !important; }
+.chooser h2 { font-family: var(--font-display); font-weight: 600; font-size: 24px; margin: 0 0 6px; text-wrap: balance; }
+.chooser p { margin: 0 0 8px; max-width: 75ch; }
+.sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-top: 12px; }
+.sc { appearance: none; text-align: left; display: grid; gap: 6px; align-content: start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.sc:hover { border-color: var(--accent); background: var(--accent-soft); }
+.sc b { font-family: var(--font-display); font-weight: 600; font-size: 17px; line-height: 1.2; }
+.sc .bl { font-size: 13.5px; color: var(--muted); }
+.sc .st { font-size: 12px; font-family: var(--font-mono); color: var(--faint); }
+.sc .st.done { color: var(--ok); }
+.sc.hide { border-style: dashed; background: var(--sunk); }
+.tone { display: inline-block; justify-self: start; font: 600 11px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 6px; border-radius: 4px; }
+.tone.good { background: var(--ok-soft); color: var(--ok); }
+.tone.mixed { background: var(--warn-soft); color: var(--warn); }
+.tone.bad { background: var(--crit-soft); color: var(--crit); }
+.tone.hidden { background: var(--surface); color: var(--muted); border: 1px solid var(--line); }
+.setup .eyebrow { margin-bottom: 6px; }
+.setup .sub { margin: 0 0 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.tries { margin: 0 0 12px; padding-left: 20px; max-width: 75ch; }
+.tries li { margin: 3px 0; }
+.planbar { font-size: 13.5px; color: var(--muted); padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.planbar b { color: var(--ink); }
+.htag { font: normal 600 10.5px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 5px; border-radius: 4px; margin-left: 4px; vertical-align: 1px; white-space: nowrap; }
+.htag.real { background: var(--ok-soft); color: var(--ok); }
+.htag.false { background: var(--crit-soft); color: var(--crit); }
+.htag.noise { background: var(--sunk); color: var(--muted); border: 1px solid var(--line); }
+body.choosing #play, body.choosing #endnow { opacity: 0.45; pointer-events: none; }
+
+.setup .tbl-wrap { margin: 0 0 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+table.outc { width: 100%; }
+table.outc td { vertical-align: top; font-size: 13.5px; }
+table.outc td:first-child { font-weight: 500; min-width: 180px; }
+table.outc td.n { white-space: nowrap; font-family: var(--font-mono); }
+table.outc td.n small { display: block; font-size: 11.5px; }
+.sub .sub-n { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--faint); margin-left: 6px; }
+.setup .tbl-wrap + .d { margin: 0 0 12px; }
+</style>
+<header class="topbar"><div class="wrap bar-in">
+  <div class="brand"><b>Panic Desk</b><span class="mk">Market <span id="seed"></span></span></div>
+  <div class="clockbox"><div class="clk"><span id="clock">Minute 0</span><span class="of">of 120</span></div><div class="prog" aria-hidden="true"><i id="prog"></i></div></div>
+  <div class="ctrls"><button type="button" id="play" class="btn primary" aria-pressed="false">Start</button><div class="seg" id="speed" role="group" aria-label="Speed"><button type="button" data-s="0.5">½×</button><button type="button" data-s="1">1×</button><button type="button" data-s="2">2×</button><button type="button" data-s="4">4×</button></div><button type="button" id="sound" class="btn">Sound on</button><button type="button" id="endnow" class="btn">End now</button></div>
+  <div class="ticker"><div class="tk"><span class="lbl">SUI on exchanges</span><span id="px" class="bigv">$2.000</span><span id="pxch" class="chg"></span></div><div class="tk"><span class="lbl">Your net worth</span><span id="nw" class="bigv">$10,000.00</span><span id="nwch" class="chg"></span></div></div>
+</div></header>
+<main class="wrap main">
+  <div id="alert" class="alerts" aria-live="polite"></div>
+  <section id="chooser" class="panel chooser" hidden></section>
+  <section id="setup" class="panel setup"></section>
+  <div id="planbar" class="planbar" hidden></div>
+  <div id="desk" class="desk">
+    <aside class="moves panel" aria-label="Your moves"><h3>Your moves</h3><div class="tabs" id="tabs" role="tablist"><button type="button" role="tab" data-tab="trade" aria-selected="true">Trade</button><button type="button" role="tab" data-tab="lend" aria-selected="false">Lend</button><button type="button" role="tab" data-tab="borrow" aria-selected="false">Borrow</button><button type="button" role="tab" data-tab="stake" aria-selected="false">Stake</button><button type="button" role="tab" data-tab="lp" aria-selected="false">Liquidity</button><button type="button" role="tab" data-tab="liq" aria-selected="false">Liquidate</button></div><div class="pane" id="pane-trade" role="tabpanel"><div class="act"><div class="act-h"><span>Buy SUI</span><span class="hint">pay USDC on the DEX</span></div>
+<div class="amt"><input id="a-buy" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Buy SUI amount in USDC"><button type="button" class="fill" data-fill="buy:a-buy:0.25">25%</button><button type="button" class="fill" data-fill="buy:a-buy:0.5">50%</button><button type="button" class="fill" data-fill="buy:a-buy:1">Max</button></div>
+<p class="pv" id="p-buy"></p><button type="button" class="btn go" data-act="buy:a-buy">Buy SUI</button><p class="err" id="a-buy-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Sell SUI</span><span class="hint">receive USDC on the DEX</span></div>
+<div class="amt"><input id="a-sell" type="number" inputmode="decimal" min="0" step="any" placeholder="SUI" aria-label="Sell SUI amount in SUI"><button type="button" class="fill" data-fill="sell:a-sell:0.25">25%</button><button type="button" class="fill" data-fill="sell:a-sell:0.5">50%</button><button type="button" class="fill" data-fill="sell:a-sell:1">Max</button></div>
+<p class="pv" id="p-sell"></p><button type="button" class="btn go" data-act="sell:a-sell">Sell SUI</button><p class="err" id="a-sell-e" role="alert"></p></div></div><div class="pane" id="pane-lend" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Supply USDC</span><span class="hint">earn the lender rate</span></div>
+<div class="amt"><input id="a-supply" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Supply USDC amount in USDC"><button type="button" class="fill" data-fill="supply:a-supply:0.25">25%</button><button type="button" class="fill" data-fill="supply:a-supply:0.5">50%</button><button type="button" class="fill" data-fill="supply:a-supply:1">Max</button></div>
+<p class="pv" id="p-supply"></p><button type="button" class="btn go" data-act="supply:a-supply">Supply USDC</button><p class="err" id="a-supply-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Withdraw USDC</span><span class="hint">only if the pool has cash</span></div>
+<div class="amt"><input id="a-withdraw" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Withdraw USDC amount in USDC"><button type="button" class="fill" data-fill="withdraw:a-withdraw:0.25">25%</button><button type="button" class="fill" data-fill="withdraw:a-withdraw:0.5">50%</button><button type="button" class="fill" data-fill="withdraw:a-withdraw:1">Max</button></div>
+<p class="pv" id="p-withdraw"></p><button type="button" class="btn go" data-act="withdraw:a-withdraw">Withdraw USDC</button><p class="err" id="a-withdraw-e" role="alert"></p></div></div><div class="pane" id="pane-borrow" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Post collateral</span><span class="hint">from your wallet</span></div><div class="seg mini" role="group" aria-label="Post collateral asset"><button type="button" data-kind="post:sui" aria-pressed="true">SUI</button><button type="button" data-kind="post:lsui" aria-pressed="false">liqSUI</button></div>
+<div class="amt"><input id="a-post" type="number" inputmode="decimal" min="0" step="any" placeholder="amount" aria-label="Post collateral amount in amount"><button type="button" class="fill" data-fill="post:a-post:0.25">25%</button><button type="button" class="fill" data-fill="post:a-post:0.5">50%</button><button type="button" class="fill" data-fill="post:a-post:1">Max</button></div>
+<p class="pv" id="p-post"></p><button type="button" class="btn go" data-act="post:a-post">Post collateral</button><p class="err" id="a-post-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Borrow USDC</span><span class="hint">against your collateral</span></div>
+<div class="amt"><input id="a-borrow" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Borrow USDC amount in USDC"><button type="button" class="fill" data-fill="borrow:a-borrow:0.25">25%</button><button type="button" class="fill" data-fill="borrow:a-borrow:0.5">50%</button><button type="button" class="fill" data-fill="borrow:a-borrow:1">Max</button></div>
+<p class="pv" id="p-borrow"></p><button type="button" class="btn go" data-act="borrow:a-borrow">Borrow USDC</button><p class="err" id="a-borrow-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Repay</span><span class="hint">from your USDC</span></div>
+<div class="amt"><input id="a-repay" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Repay amount in USDC"><button type="button" class="fill" data-fill="repay:a-repay:0.25">25%</button><button type="button" class="fill" data-fill="repay:a-repay:0.5">50%</button><button type="button" class="fill" data-fill="repay:a-repay:1">Max</button></div>
+<p class="pv" id="p-repay"></p><button type="button" class="btn go" data-act="repay:a-repay">Repay</button><p class="err" id="a-repay-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Withdraw collateral</span><span class="hint">back to your wallet</span></div><div class="seg mini" role="group" aria-label="Withdraw collateral asset"><button type="button" data-kind="wd:sui" aria-pressed="true">SUI</button><button type="button" data-kind="wd:lsui" aria-pressed="false">liqSUI</button></div>
+<div class="amt"><input id="a-wdcoll" type="number" inputmode="decimal" min="0" step="any" placeholder="amount" aria-label="Withdraw collateral amount in amount"><button type="button" class="fill" data-fill="wdcoll:a-wdcoll:0.25">25%</button><button type="button" class="fill" data-fill="wdcoll:a-wdcoll:0.5">50%</button><button type="button" class="fill" data-fill="wdcoll:a-wdcoll:1">Max</button></div>
+<p class="pv" id="p-wdcoll"></p><button type="button" class="btn go" data-act="wdcoll:a-wdcoll">Withdraw collateral</button><p class="err" id="a-wdcoll-e" role="alert"></p></div></div><div class="pane" id="pane-stake" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Stake SUI</span><span class="hint">mint liqSUI at the redemption rate</span></div>
+<div class="amt"><input id="a-stake" type="number" inputmode="decimal" min="0" step="any" placeholder="SUI" aria-label="Stake SUI amount in SUI"><button type="button" class="fill" data-fill="stake:a-stake:0.25">25%</button><button type="button" class="fill" data-fill="stake:a-stake:0.5">50%</button><button type="button" class="fill" data-fill="stake:a-stake:1">Max</button></div>
+<p class="pv" id="p-stake"></p><button type="button" class="btn go" data-act="stake:a-stake">Stake SUI</button><p class="err" id="a-stake-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Sell liqSUI</span><span class="hint">for SUI on the DEX, right now</span></div>
+<div class="amt"><input id="a-sellL" type="number" inputmode="decimal" min="0" step="any" placeholder="liqSUI" aria-label="Sell liqSUI amount in liqSUI"><button type="button" class="fill" data-fill="sellL:a-sellL:0.25">25%</button><button type="button" class="fill" data-fill="sellL:a-sellL:0.5">50%</button><button type="button" class="fill" data-fill="sellL:a-sellL:1">Max</button></div>
+<p class="pv" id="p-sellL"></p><button type="button" class="btn go" data-act="sellL:a-sellL">Sell liqSUI</button><p class="err" id="a-sellL-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Redeem liqSUI</span><span class="hint">full value, paid later</span></div>
+<div class="amt"><input id="a-redeem" type="number" inputmode="decimal" min="0" step="any" placeholder="liqSUI" aria-label="Redeem liqSUI amount in liqSUI"><button type="button" class="fill" data-fill="redeem:a-redeem:0.25">25%</button><button type="button" class="fill" data-fill="redeem:a-redeem:0.5">50%</button><button type="button" class="fill" data-fill="redeem:a-redeem:1">Max</button></div>
+<p class="pv" id="p-redeem"></p><button type="button" class="btn go" data-act="redeem:a-redeem">Redeem liqSUI</button><p class="err" id="a-redeem-e" role="alert"></p></div></div><div class="pane" id="pane-lp" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Add liquidity</span><span class="hint">half your USDC is swapped to SUI</span></div>
+<div class="amt"><input id="a-lpadd" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Add liquidity amount in USDC"><button type="button" class="fill" data-fill="lpadd:a-lpadd:0.25">25%</button><button type="button" class="fill" data-fill="lpadd:a-lpadd:0.5">50%</button><button type="button" class="fill" data-fill="lpadd:a-lpadd:1">Max</button></div>
+<p class="pv" id="p-lpadd"></p><button type="button" class="btn go" data-act="lpAdd:a-lpadd">Add liquidity</button><p class="err" id="a-lpadd-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Remove liquidity</span><span class="hint">percent of your position</span></div>
+<div class="amt"><input id="a-lprm" type="number" inputmode="decimal" min="0" step="any" placeholder="%" aria-label="Remove liquidity amount in %"><button type="button" class="fill" data-fill="lprm:a-lprm:0.25">25%</button><button type="button" class="fill" data-fill="lprm:a-lprm:0.5">50%</button><button type="button" class="fill" data-fill="lprm:a-lprm:1">All</button></div>
+<p class="pv" id="p-lprm"></p><button type="button" class="btn go" data-act="lpRemove:a-lprm">Remove liquidity</button><p class="err" id="a-lprm-e" role="alert"></p></div></div><div class="pane" id="pane-liq" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Liquidate loans</span><span class="hint">repay others’ debt, take their collateral +5%</span></div>
+<div class="amt"><input id="a-liq" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Liquidate loans amount in USDC"><button type="button" class="fill" data-fill="liq:a-liq:0.25">25%</button><button type="button" class="fill" data-fill="liq:a-liq:0.5">50%</button><button type="button" class="fill" data-fill="liq:a-liq:1">Max</button></div>
+<p class="pv" id="p-liq"></p><button type="button" class="btn go" data-act="liquidate:a-liq">Liquidate loans</button><p class="err" id="a-liq-e" role="alert"></p></div></div></aside>
+    <div class="board">
+      <div class="row2">
+        <section class="panel"><h3>SUI price <small>exchanges, the lending market’s oracle, and the DEX</small></h3><canvas class="chart" id="c-price" role="img" aria-label="SUI price chart"></canvas>
+          <div class="chart-legend"><span><i class="sw" style="background:var(--ink)"></i>Exchanges</span><span><i class="sw" style="background:var(--accent)"></i>Lending market’s price</span><span><i class="sw" style="background:var(--warm)"></i>DEX</span><span id="liqline" hidden><i class="sw dash" style="background:var(--crit);color:var(--crit)"></i>Your liquidation price</span></div></section>
+        <section class="panel newsp"><h3>Headlines</h3><ul class="feed" id="news"></ul></section>
+      </div>
+      <div id="cards" class="cards"></div>
+      <div class="row2">
+        <section class="panel"><h3>Your net worth</h3><canvas class="chart short" id="c-nw" role="img" aria-label="Net worth chart"></canvas></section>
+        <section class="panel"><h3>Your moves so far</h3><ul class="feed" id="log"></ul></section>
+      </div>
+    </div>
+  </div>
+  <div id="debrief" class="debrief" hidden></div>
+  <details class="panel rules"><summary>How this market works</summary><ul>
+    <li>SUI starts at $2.00. Its exchange price is the truth; the lending market only sees the oracle’s price, and trades happen on one SUI/USDC DEX pool with a 0.3% fee.</li>
+    <li>Collateral: SUI counts at up to 75% LTV and is liquidated past 80%. liqSUI is valued at its redemption rate (1.05 SUI) and counts at up to 70% LTV, liquidated past 75%.</li>
+    <li>Liquidation: bots repay half of an unhealthy loan and take collateral worth the repaid amount plus a 5% bonus. They only do it when selling that collateral on the DEX pays; otherwise loans sit unhealthy.</li>
+    <li>The oracle updates on a 0.3% move or every 5 minutes. If its price gets too old, the lending market pauses borrowing, collateral withdrawals, and liquidations, unless it is set to accept old prices.</li>
+    <li>Lenders can only withdraw the cash left in the pool. Bad debt is shared by whoever is still lending at the end.</li>
+    <li>Redeeming liqSUI returns full value, but the SUI arrives after this session, so it’s counted at the final SUI price.</li>
+    <li>Two hours is too short for interest to matter much. This game is about prices, timing, and who gets out first.</li>
+  </ul></details>
+</main>
+<div id="toast" class="toast" hidden role="status"></div>
+<script>
+const Game = (() => {
+  const T = 120, P0 = 2, R0 = 1.05, FEE = 0.003, MPY = 525600;
+  const RULES = { sui: { ltv: 0.75, lt: 0.80 }, lsui: { ltv: 0.70, lt: 0.75 }, bonus: 0.05, cf: 0.5, kink: 0.8, slope1: 0.04, slope2: 0.75, reserve: 0.1, heartbeat: 5, deviation: 0.003 };
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function gauss(r) { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+  const sellOut = (x, y, dx) => { const d = dx * (1 - FEE); return (y * d) / (x + d); }; // pay dx of X, receive Y
+  const ri = (r, a, b) => Math.round(a + r() * (b - a));
+
+  // ---------- scenarios ----------
+  // tone: good / mixed / bad for someone holding SUI. blurb: what happens, before you pick.
+  // plan: the exact timing for this market, shown once you pick. tries: experiments worth running.
+  const NOISE = ['A whale moved 1.2M SUI between wallets.', 'Social media: “SUI is going to zero.”', 'An analyst calls SUI “oversold”.', 'Funding rates on SUI perps turn slightly negative.', 'A large holder bridges 800K USDC onto Sui.', 'Gas prices on Sui tick up as activity rises.'];
+  const P = v => Math.round(v * 100) + '%';
+  const KINDS = [
+    { key: 'quiet', w: 0.6, tone: 'good', title: 'A quiet day',
+      blurb: 'Nothing happens. SUI drifts around $2. Only fees, slippage and interest move your money.',
+      tries: ['Buy SUI and sell it straight back: the round trip shows what fees and slippage cost.', 'Add liquidity and compare “Your liquidity” with “If you’d held” at the end.'],
+      make: r => ({ plan: 'SUI drifts randomly around $2 for two hours. No crash, no rally, no real headlines; the two headlines that arrive are noise.',
+        story: 'Nothing happened. SUI drifted around $2, so anything you gained or lost came from fees, slippage, interest and timing.' }) },
+    { key: 'rally', w: 0.8, tone: 'good', title: 'A steady rally',
+      blurb: 'SUI climbs about 25% over an hour. Holding, borrowing to buy more, and providing liquidity all gain, by different amounts.',
+      tries: ['Post SUI, borrow USDC, buy more SUI: leverage multiplies the gain.', 'Add liquidity at the start and compare it with just holding: the gap is impermanent loss.'],
+      make: r => { const rise = 0.22 + 0.08 * r(), at = ri(r, 10, 20), len = ri(r, 50, 70); return { rise, riseAt: at, riseLen: len,
+        plan: `SUI rises ${P(rise)} between minute ${at} and minute ${at + len}, then holds. A real headline at minute ${at + 3} announces the buying.`,
+        script: [{ t: at + 3, text: 'A large fund announces it is buying SUI.' }],
+        story: `SUI rose ${P(rise)} between minutes ${at} and ${at + len}. Holders gained the full move; leveraged buyers gained more; liquidity providers gained less than holders, because the pool kept selling SUI as it rose.` }; } },
+    { key: 'calm', w: 1.2, tone: 'mixed', title: 'A calm day with scary rumors',
+      blurb: 'Scary rumors and a brief 6% dip that recovers. Nothing real happens.',
+      tries: ['Borrow near the limit and do nothing when the rumors hit.', 'Sell on the first rumor, then compare your result with buying and holding.'],
+      make: r => { const t1 = ri(r, 20, 40), t2 = ri(r, 55, 85), t3 = ri(r, 90, 110); return { drop: 0.06, crashAt: t2 + 2, crashLen: 4, recover: 0.95, recoverLen: 10,
+        plan: `False rumors arrive at minutes ${t1}, ${t2} and ${t3}. SUI dips 6% from minute ${t2 + 2} and recovers almost all of it by minute ${t2 + 16}.`,
+        script: [{ t: t1, text: 'Rumor: a large Sui validator has been slashed.', fake: true }, { t: t2, text: 'A whale moved 3M SUI to an exchange.', fake: true }, { t: t3, text: 'Social media: “the lending market is insolvent.”', fake: true }],
+        story: 'Nothing real happened. Two scary rumors and a brief 6% dip that recovered. The test was whether you sold or deleveraged into noise.' }; } },
+    { key: 'flash', w: 1, tone: 'mixed', title: 'A flash crash that recovers',
+      blurb: 'SUI drops about 30% in three minutes, then wins back three quarters of the fall.',
+      tries: ['Borrow near the limit and watch how fast a three-minute crash liquidates you.', 'Keep USDC ready and buy SUI, or liquidate others, at the bottom.'],
+      make: r => { const drop = 0.28 + 0.1 * r(), at = ri(r, 30, 60); return { drop, crashAt: at, crashLen: 3, recover: 0.75, recoverLen: 20,
+        plan: `SUI falls ${P(drop)} between minute ${at} and minute ${at + 3}, then wins back three quarters of the fall by minute ${at + 23}.`,
+        script: [{ t: at + 1, text: 'A large holder market-sells SUI across exchanges.' }, { t: at + 6, text: 'Buyers step in; SUI bounces off the lows.' }],
+        story: `SUI dropped ${P(drop)} in three minutes at minute ${at}, then won back three quarters of the fall over the next 20 minutes. Selling at the bottom locked in the loss; loans liquidated at the bottom stayed liquidated.` }; } },
+    { key: 'orderly', w: 1, tone: 'bad', title: 'An orderly crash',
+      blurb: 'SUI falls 25–37% over 12–25 minutes. The oracle and liquidators keep up, so the system works as designed.',
+      tries: ['Borrow at a health factor around 1.5, then repay part of the loan when it drops below 1.25.', 'Supply USDC as a lender: do lenders lose anything when liquidations work?'],
+      make: r => { const drop = 0.25 + 0.12 * r(), at = ri(r, 25, 55), len = ri(r, 12, 25), warn = ri(r, 2, 6); return { drop, crashAt: at, crashLen: len,
+        plan: `SUI falls ${P(drop)} between minute ${at} and minute ${at + len} and does not recover. A real warning headline comes at minute ${at - warn}.`,
+        script: [{ t: at - warn, text: 'Large SUI sell orders appear on major exchanges.' }],
+        story: `SUI fell ${P(drop)} between minutes ${at} and ${at + len}. The oracle kept up and liquidators mostly cleared loans as they broke.` }; } },
+    { key: 'oracle', w: 1, tone: 'bad', title: 'An oracle outage during a crash',
+      blurb: 'The oracle goes silent just before a ~30% crash, and the lending market keeps using the stale price.',
+      tries: ['During the outage, borrow against the stale price and see who ends up paying.', 'Supply USDC and watch the bad-debt haircut when the oracle comes back.'],
+      make: r => { const at = ri(r, 35, 55), drop = 0.28 + 0.1 * r(), out = ri(r, 30, 40); return { drop, crashAt: at, crashLen: 15, outageAt: at - 5, outageLen: out, maxAge: 60,
+        plan: `The oracle stops updating at minute ${at - 5}. SUI falls ${P(drop)} between minute ${at} and minute ${at + 15}. The oracle comes back at minute ${at - 5 + out}, and the lending market’s price jumps down all at once.`,
+        script: [{ t: at + 6, text: 'Oracle node operators report connectivity issues.' }],
+        story: `The oracle went silent at minute ${at - 5}, five minutes before a ${P(drop)} crash. The lending market kept accepting the stale price, so liquidations waited and bad debt piled up. Borrowing against the stale price was possible, and lenders paid for it.` }; } },
+    { key: 'depeg', w: 1, tone: 'bad', title: 'An LST depeg',
+      blurb: 'liqSUI redemptions slow to 14 days, holders dump it on the DEX, and it trades well below its value.',
+      tries: ['Stake SUI, post the liqSUI as collateral and borrow: the lending market values it at the redemption rate, not the DEX price.', 'Compare selling liqSUI on the DEX with redeeming it.'],
+      make: r => { const at = ri(r, 30, 50); return { drop: 0.12, crashAt: at, crashLen: 20, lstPanic: 0.035, lstWait: 14,
+        plan: `At minute ${at - 4} redemptions slow to 14 days. From minute ${at} SUI falls 12% over 20 minutes while holders sell liqSUI on the DEX for the next 50 minutes.`,
+        script: [{ t: at - 4, text: 'liqSUI redemption queue grows to 14 days.' }, { t: at + 8, text: 'Holders rush to exit liqSUI on the DEX.' }],
+        story: `Redemptions slowed to 14 days at minute ${at - 4}, then holders panic-sold liqSUI and it slid well below its redemption value while SUI fell only 12%. Selling liqSUI locked in the discount; redeeming meant waiting two weeks.` }; } },
+    { key: 'drain', w: 1, tone: 'bad', title: 'LPs drain the DEX during a crash',
+      blurb: 'SUI crashes while LPs pull 60% of the DEX liquidity. Liquidations stall and the DEX price falls below exchanges.',
+      tries: ['Liquidate during the crash and check the DEX price against exchanges before you sell.', 'Sell SUI during the crash and compare the price you get with exchanges.'],
+      make: r => { const at = ri(r, 30, 60), drop = 0.25 + 0.1 * r(); return { drop, crashAt: at, crashLen: 15, drain: 0.6, arb: 0.15,
+        plan: `SUI falls ${P(drop)} between minute ${at} and minute ${at + 15}. Over the same stretch, plus ten minutes, LPs pull 60% of the DEX liquidity, and arbitrage is slow all day.`,
+        script: [{ t: at + 3, text: 'LPs pull liquidity from SUI pools.' }],
+        story: `SUI fell ${P(drop)} from minute ${at} while LPs pulled 60% of the DEX liquidity and arbitrage slowed. Liquidations stalled because selling seized SUI lost money, and the DEX price traded far below exchanges.` }; } },
+    { key: 'bleed', w: 0.8, tone: 'bad', title: 'A slow bleed and a lender run',
+      blurb: 'SUI bleeds 24% over 95 minutes and other lenders run for the exit.',
+      tries: ['Supply USDC, then try to withdraw it after SUI is down 10%.', 'Borrow, then repay step by step as it bleeds.'],
+      make: r => ({ drop: 0.24, crashAt: 10, crashLen: 95, run: true,
+        plan: 'SUI falls 24% steadily from minute 10 to minute 105. Once it is down 10% (around minute 47), other lenders start withdrawing USDC every minute.',
+        script: [{ t: 25, text: 'Steady selling pressure on SUI all morning.' }],
+        story: 'SUI bled 24% over 95 minutes. Once it was down 10%, other lenders began withdrawing, utilization climbed, and late withdrawals failed.' }) },
+    { key: 'pumpdump', w: 0.8, tone: 'bad', title: 'A pump and dump',
+      blurb: 'SUI rallies 18% on a rumor, then falls 38% when the rumor is denied.',
+      tries: ['Buy the rally with borrowed USDC and see where liquidation catches you.', 'Sell into the rally, then buy back after the crash.'],
+      make: r => { const at = ri(r, 55, 75); return { rise: 0.18, riseAt: 12, riseLen: 30, drop: 0.38, crashAt: at, crashLen: 8,
+        plan: `SUI rises 18% from minute 12 to minute 42 on a rumor at minute 17. The rumor is denied at minute ${at} and SUI falls 38% by minute ${at + 8}.`,
+        script: [{ t: 17, text: 'SUI rallies on a partnership rumor.' }, { t: at, text: 'The partnership rumor is denied.' }],
+        story: `SUI rallied 18% on a rumor, then fell 38% in eight minutes from minute ${at} when it was denied. Buying the rally or borrowing at the top was the trap.` }; } }
+  ];
+  function scenario(r, key) {
+    let k = KINDS.find(kk => kk.key === key);
+    if (!k) {
+      const tot = KINDS.reduce((a, kk) => a + kk.w, 0);
+      let x = r() * tot; k = KINDS[0];
+      for (const kk of KINDS) { x -= kk.w; if (x <= 0) { k = kk; break; } }
+    }
+    const base = { drop: 0, crashAt: 999, crashLen: 10, recover: 0, recoverLen: 20, rise: 0, riseAt: 0, riseLen: 30, vol: 0.0015, outageAt: -1, outageLen: 0, maxAge: 15, drain: 0, arb: 0.8, lstPanic: 0.004, lstWait: 1, run: false, script: [] };
+    const sc = Object.assign(base, k.make(r));
+    sc.key = k.key; sc.title = k.title; sc.tone = k.tone; sc.blurb = k.blurb; sc.tries = k.tries;
+    const n1 = ri(r, 8, 50), n2 = ri(r, 60, 110);
+    sc.script.push({ t: n1, text: NOISE[ri(r, 0, NOISE.length - 1)], fake: true, noise: true }, { t: n2, text: NOISE[ri(r, 0, NOISE.length - 1)], fake: true, noise: true });
+    return sc;
+  }
+
+  // key: a scenario key to play it openly; omit for a hidden, random one.
+  function market(seed, key) {
+    const r = rng(seed);
+    const sc = scenario(r, key);
+    const ext = [P0];
+    let p = P0;
+    const cEnd = sc.crashAt + sc.crashLen;
+    for (let t = 1; t <= T; t++) {
+      let ret = sc.vol * gauss(r);
+      if (sc.rise > 0 && t > sc.riseAt && t <= sc.riseAt + sc.riseLen) ret += Math.log(1 + sc.rise) / sc.riseLen;
+      if (t > sc.crashAt && t <= cEnd) ret += Math.log(1 - sc.drop) / sc.crashLen;
+      if (sc.recover > 0 && t > cEnd && t <= cEnd + sc.recoverLen) ret += Math.log(1 + (sc.recover * sc.drop) / (1 - sc.drop)) / sc.recoverLen;
+      p *= Math.exp(ret); ext.push(p);
+    }
+    const rep = [], age = [], acc = [];
+    let last = P0, lastT = 0;
+    for (let t = 0; t <= T; t++) {
+      const out = sc.outageLen > 0 && t >= sc.outageAt && t < sc.outageAt + sc.outageLen;
+      if (!out && (t === 0 || Math.abs(ext[t] - last) / last >= RULES.deviation || t - lastT >= RULES.heartbeat)) { last = ext[t]; lastT = t; }
+      rep.push(last); age.push(t - lastT); acc.push(t - lastT <= sc.maxAge);
+    }
+    // NPC borrowers
+    const rb = rng(seed ^ 0x5bd1e995), n = 300, sizes = [];
+    for (let i = 0; i < n; i++) sizes.push(Math.pow(rb(), -0.55));
+    const sum = sizes.reduce((a, b) => a + b, 0);
+    const borrowers = [];
+    for (let i = 0; i < n; i++) {
+      const lst = rb() < 0.3, cap = lst ? RULES.lsui.ltv : RULES.sui.ltv;
+      const ltv = Math.min(cap, Math.max(0.05, 0.55 + 0.12 * gauss(rb)));
+      const usd = (50e6 * sizes[i]) / sum;
+      borrowers.push({ lst, units: lst ? usd / (R0 * P0) : usd / P0, debt: usd * ltv });
+    }
+    return { seed, key: key || null, open: !!key, sc, ext, rep, age, acc, borrowers };
+  }
+
+  // ---------- state ----------
+  function init(M) {
+    const pool = { x: 10e6, y: 20e6 }; pool.sh = Math.sqrt(pool.x * pool.y); pool.mine = 0;
+    const lst = { s: 5e6 }; lst.l = lst.s / R0;
+    const npc = M.borrowers.map(b => Object.assign({}, b));
+    const npcLst = npc.filter(b => b.lst).reduce((a, b) => a + b.units, 0);
+    return {
+      t: 0, M, over: false, pool, lst, npc, lstSupply: npcLst * 2,
+      lend: { npcSupply: 40e6, mySupply: 0 },
+      me: { usdc: 10000, sui: 0, lsui: 0, pending: 0, collSui: 0, collL: 0, debt: 0, lpX: 0, lpY: 0 },
+      actions: [], news: [], flags: {}, liqMe: [], lpFactor: 1,
+      hist: { ext: [M.ext[0]], pp: [M.rep[0]], dex: [P0], peg: [1], nw: [10000], hf: [Infinity], hfPre: [Infinity], util: [0], bad: [0], liqMin: [0] },
+      stats: { npcRepaid: 0, myLiqBonus: 0, bonusEarned: 0 }
+    };
+  }
+  const npcDebt = S => S.npc.reduce((a, b) => a + b.debt, 0);
+  const totSupply = S => S.lend.npcSupply + S.lend.mySupply;
+  const totBorrow = S => npcDebt(S) + S.me.debt;
+  const cash = S => Math.max(0, totSupply(S) - totBorrow(S));
+  const util = S => Math.min(1, totBorrow(S) / Math.max(1, totSupply(S)));
+  function rates(S) {
+    const U = util(S);
+    const b = U <= RULES.kink ? RULES.slope1 * (U / RULES.kink) : RULES.slope1 + RULES.slope2 * ((U - RULES.kink) / (1 - RULES.kink));
+    return { U, borrow: b, supply: b * U * (1 - RULES.reserve) };
+  }
+  const pp = S => S.M.rep[S.t];
+  const accepted = S => S.M.acc[S.t];
+  const extP = S => S.M.ext[S.t];
+  const peg = S => S.lst.s / S.lst.l / R0;
+  function myLimits(S) {
+    const p = pp(S), m = S.me;
+    const limit = m.collSui * p * RULES.sui.ltv + m.collL * R0 * p * RULES.lsui.ltv;
+    const liqLine = m.collSui * p * RULES.sui.lt + m.collL * R0 * p * RULES.lsui.lt;
+    const hf = m.debt > 0.005 ? liqLine / m.debt : Infinity;
+    // price at which HF hits 1
+    const per = m.collSui * RULES.sui.lt + m.collL * R0 * RULES.lsui.lt;
+    const liqPrice = m.debt > 0.005 && per > 0 ? m.debt / per : 0;
+    return { limit, hf, liqPrice };
+  }
+  function badDebt(S) {
+    const e = extP(S), g = peg(S);
+    let bd = 0;
+    for (const b of S.npc) bd += Math.max(0, b.debt - b.units * (b.lst ? g * R0 * e : e));
+    const m = S.me;
+    bd += Math.max(0, m.debt - (m.collSui * e + m.collL * R0 * g * e));
+    return bd;
+  }
+  function value(S) {
+    const e = extP(S), g = peg(S), m = S.me;
+    const wallet = m.usdc + m.sui * e + m.lsui * R0 * g * e + m.pending * e;
+    const bd = badDebt(S), ts = totSupply(S);
+    const hair = ts > 0 ? Math.min(1, bd / ts) : 0;
+    const supply = S.lend.mySupply * (1 - hair);
+    const coll = m.collSui * e + m.collL * R0 * g * e;
+    const loan = coll - m.debt;
+    const lp = S.pool.sh > 0 ? (S.pool.mine / S.pool.sh) * (S.pool.x * e + S.pool.y) : 0;
+    return { wallet, supply, supplyPar: S.lend.mySupply, coll, debt: m.debt, loan, lp, hair, total: wallet + supply + Math.max(0, loan) + lp };
+  }
+
+  // ---------- user actions ----------
+  const fmt = v => '$' + Math.round(v).toLocaleString('en-US');
+  const fs = v => v.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  function act(S, a, record = true) {
+    const res = doAct(S, a);
+    if (record) S.actions.push({ t: S.t, type: a.type, amt: a.amt, ok: res.ok, msg: res.msg });
+    if (!res.ok) S.news.push({ t: S.t, text: res.msg, tone: 'you' });
+    return res;
+  }
+  function doAct(S, a) {
+    const m = S.me, P = S.pool, L = S.lst, amt = +a.amt;
+    if (S.over) return { ok: false, msg: 'The session is over.' };
+    if (!(amt > 0)) return { ok: false, msg: 'Enter an amount above zero.' };
+    const lim = () => myLimits(S);
+    switch (a.type) {
+      case 'buy': { if (amt > m.usdc + 1e-9) return { ok: false, msg: 'Not enough USDC in your wallet.' }; const out = sellOut(P.y, P.x, amt); P.y += amt; P.x -= out; m.usdc -= amt; m.sui += out; return { ok: true, msg: `Bought ${fs(out)} SUI for ${fmt(amt)} at $${(amt / out).toFixed(3)} each.` }; }
+      case 'sell': { if (amt > m.sui + 1e-9) return { ok: false, msg: 'Not enough SUI in your wallet.' }; const out = sellOut(P.x, P.y, amt); P.x += amt; P.y -= out; m.sui -= amt; m.usdc += out; return { ok: true, msg: `Sold ${fs(amt)} SUI for ${fmt(out)} at $${(out / amt).toFixed(3)} each.` }; }
+      case 'stake': { if (amt > m.sui + 1e-9) return { ok: false, msg: 'Not enough SUI in your wallet.' }; m.sui -= amt; m.lsui += amt / R0; S.lstSupply += amt / R0; return { ok: true, msg: `Staked ${fs(amt)} SUI for ${fs(amt / R0)} liqSUI.` }; }
+      case 'sellL': { if (amt > m.lsui + 1e-9) return { ok: false, msg: 'Not enough liqSUI in your wallet.' }; const out = sellOut(L.l, L.s, amt); L.l += amt; L.s -= out; m.lsui -= amt; m.sui += out; return { ok: true, msg: `Sold ${fs(amt)} liqSUI for ${fs(out)} SUI (${((out / (amt * R0)) * 100).toFixed(1)}% of redemption value).` }; }
+      case 'redeem': { if (amt > m.lsui + 1e-9) return { ok: false, msg: 'Not enough liqSUI in your wallet.' }; m.lsui -= amt; m.pending += amt * R0; S.lstSupply -= amt; return { ok: true, msg: `Redeeming ${fs(amt)} liqSUI for ${fs(amt * R0)} SUI. It arrives after ${S.M.sc.lstWait > 1 ? S.M.sc.lstWait + ' days' : 'the next epoch'}, so it stays exposed to the SUI price.` }; }
+      case 'supply': { if (amt > m.usdc + 1e-9) return { ok: false, msg: 'Not enough USDC in your wallet.' }; m.usdc -= amt; S.lend.mySupply += amt; return { ok: true, msg: `Supplied ${fmt(amt)} USDC to the lending market.` }; }
+      case 'withdraw': { const w = Math.min(amt, S.lend.mySupply); const c = cash(S); if (w > c + 1e-6) return { ok: false, msg: `Withdrawal failed: only ${fmt(c)} of USDC is left in the pool (utilization ${(util(S) * 100).toFixed(1)}%).` }; S.lend.mySupply -= w; m.usdc += w; return { ok: true, msg: `Withdrew ${fmt(w)} USDC from the lending market.` }; }
+      case 'depSui': { if (amt > m.sui + 1e-9) return { ok: false, msg: 'Not enough SUI in your wallet.' }; m.sui -= amt; m.collSui += amt; return { ok: true, msg: `Posted ${fs(amt)} SUI as collateral.` }; }
+      case 'depL': { if (amt > m.lsui + 1e-9) return { ok: false, msg: 'Not enough liqSUI in your wallet.' }; m.lsui -= amt; m.collL += amt; return { ok: true, msg: `Posted ${fs(amt)} liqSUI as collateral.` }; }
+      case 'wdSui': case 'wdL': {
+        if (!accepted(S)) return { ok: false, msg: 'Collateral withdrawals are paused: the oracle price is too old.' };
+        const k = a.type === 'wdSui' ? 'collSui' : 'collL';
+        const w = Math.min(amt, m[k]); m[k] -= w;
+        if (m.debt > 0.005 && lim().limit < m.debt) { m[k] += w; return { ok: false, msg: 'That withdrawal would put your loan over the max LTV.' }; }
+        if (k === 'collSui') m.sui += w; else m.lsui += w;
+        return { ok: true, msg: `Withdrew ${fs(w)} ${k === 'collSui' ? 'SUI' : 'liqSUI'} of collateral.` };
+      }
+      case 'borrow': {
+        if (!accepted(S)) return { ok: false, msg: 'Borrowing is paused: the oracle price is too old.' };
+        const room = lim().limit - m.debt;
+        if (amt > room + 1e-6) return { ok: false, msg: `You can borrow at most ${fmt(Math.max(0, room))} more at the max LTV.` };
+        if (amt > cash(S) + 1e-6) return { ok: false, msg: `Only ${fmt(cash(S))} of USDC is available to borrow.` };
+        m.debt += amt; m.usdc += amt; return { ok: true, msg: `Borrowed ${fmt(amt)} USDC. Health factor now ${lim().hf.toFixed(2)}.` };
+      }
+      case 'repay': { const r = Math.min(amt, m.debt, m.usdc); if (r <= 0) return { ok: false, msg: m.debt <= 0 ? 'You have no debt to repay.' : 'Not enough USDC in your wallet.' }; m.debt -= r; m.usdc -= r; if (m.debt < 0.005) m.debt = 0; const h = lim().hf; return { ok: true, msg: `Repaid ${fmt(r)}. ${m.debt > 0 ? 'Health factor now ' + h.toFixed(2) + '.' : 'Your loan is fully repaid.'}` }; }
+      case 'lpAdd': {
+        if (amt > m.usdc + 1e-9) return { ok: false, msg: 'Not enough USDC in your wallet.' };
+        const half = amt / 2; const sui = sellOut(P.y, P.x, half); P.y += half; P.x -= sui;
+        m.usdc -= half; m.sui += sui;
+        const f = Math.min(sui / P.x, half / P.y);
+        const useX = P.x * f, useY = P.y * f, minted = P.sh * f;
+        P.x += useX; P.y += useY; P.sh += minted; P.mine += minted;
+        m.sui -= useX; m.usdc -= useY; m.lpX += useX; m.lpY += useY;
+        return { ok: true, msg: `Added liquidity: ${fmt(useY)} USDC and ${fs(useX)} SUI (half of your USDC was swapped into SUI first).` };
+      }
+      case 'lpRemove': {
+        if (P.mine <= 0) return { ok: false, msg: 'You have no liquidity in the pool.' };
+        const pct = Math.min(1, amt / 100), burn = P.mine * pct, f = burn / P.sh;
+        const ox = P.x * f, oy = P.y * f; P.x -= ox; P.y -= oy; P.sh -= burn; P.mine -= burn;
+        m.lpX *= 1 - pct; m.lpY *= 1 - pct;
+        m.sui += ox; m.usdc += oy; return { ok: true, msg: `Removed ${Math.round(pct * 100)}% of your liquidity: ${fs(ox)} SUI and ${fmt(oy)} USDC.` };
+      }
+      case 'liquidate': {
+        if (!accepted(S)) return { ok: false, msg: 'Liquidations are paused: the oracle price is too old.' };
+        if (amt > m.usdc + 1e-9) return { ok: false, msg: 'Not enough USDC in your wallet.' };
+        const p = pp(S);
+        let left = amt, gotS = 0, gotL = 0, repaid = 0;
+        const order = S.npc.filter(b => b.debt > 1 && b.units * up(b, p) * lt(b) < b.debt).sort((a1, b1) => (a1.units * up(a1, p)) / a1.debt - (b1.units * up(b1, p)) / b1.debt);
+        for (const b of order) {
+          let rounds = 0;
+          while (left > 0.01 && b.debt > 1 && b.units * up(b, p) * lt(b) < b.debt && rounds++ < 40) {
+            const R = Math.min(RULES.cf * b.debt, (b.units * up(b, p)) / (1 + RULES.bonus), left);
+            const units = (R * (1 + RULES.bonus)) / up(b, p);
+            b.debt -= R; b.units -= units; left -= R; repaid += R;
+            if (b.lst) gotL += units; else gotS += units;
+          }
+          if (left <= 0.01) break;
+        }
+        if (repaid <= 0) return { ok: false, msg: 'No loans are liquidatable right now.' };
+        m.usdc -= repaid; m.sui += gotS; m.lsui += gotL; S.stats.bonusEarned += repaid * RULES.bonus;
+        return { ok: true, msg: `Liquidated ${fmt(repaid)} of debt and received ${gotS > 0 ? fs(gotS) + ' SUI' : ''}${gotS > 0 && gotL > 0 ? ' and ' : ''}${gotL > 0 ? fs(gotL) + ' liqSUI' : ''}, valued at the oracle price with a 5% bonus. Sell it before the price moves.` };
+      }
+    }
+    return { ok: false, msg: 'Unknown action.' };
+  }
+  const up = (b, p) => (b.lst ? R0 * p : p);
+  const lt = b => (b.lst ? RULES.lsui.lt : RULES.sui.lt);
+
+  // ---------- one minute of market ----------
+  function news(S, text, tone, key, cooldown) {
+    if (key) { const last = S.flags['n_' + key]; if (last !== undefined && (cooldown === undefined || S.t - last < cooldown)) return; S.flags['n_' + key] = S.t; }
+    S.news.push({ t: S.t, text, tone: tone || 'market' });
+  }
+  // What a liquidator gets for selling seized collateral (SUI on the DEX; liqSUI sold or redeemed, whichever pays more).
+  function proceeds(S, sUnits, lUnits, wait) {
+    let px = S.pool.x, py = S.pool.y, ll = S.lst.l, ls = S.lst.s, sui = sUnits;
+    if (lUnits > 0) { const vp = sellOut(ll, ls, lUnits), vr = lUnits * R0 * (1 - 0.002 * wait); if (vp >= vr) { ll += lUnits; ls -= vp; sui += vp; } else sui += vr; }
+    const usdc = sui > 0 ? sellOut(px, py, sui) : 0; px += sui; py -= usdc;
+    return { usdc, commit: () => { S.pool.x = px; S.pool.y = py; S.lst.l = ll; S.lst.s = ls; } };
+  }
+  function step(S) {
+    if (S.over) return;
+    const M = S.M, sc = M.sc;
+    S.t += 1;
+    const t = S.t, e = M.ext[t], p = M.rep[t], ok = M.acc[t];
+    const P = S.pool, L = S.lst;
+    const cEnd = sc.crashAt + sc.crashLen;
+    // LPs pull liquidity (NPC shares only)
+    if (sc.drain > 0) {
+      const prog = t <= sc.crashAt ? 0 : Math.min(1, (t - sc.crashAt) / (sc.crashLen + 10));
+      const nf = 1 - sc.drain * prog;
+      if (nf < S.lpFactor) {
+        const npcSh = P.sh - P.mine, newNpc = npcSh * (nf / S.lpFactor), keep = (P.mine + newNpc) / P.sh;
+        P.x *= keep; P.y *= keep; P.sh = P.mine + newNpc; S.lpFactor = nf;
+        if (prog > 0 && !S.flags.drainNews) { S.flags.drainNews = 1; news(S, 'Liquidity is leaving the SUI/USDC pool as LPs withdraw.', 'market'); }
+      }
+    }
+    // background trading fees
+    { const f = FEE * 0.002; P.x *= 1 + f; P.y *= 1 + f; }
+    // arbitrage toward the market price
+    { const k = P.x * P.y, q = P.y / P.x, qt = q * Math.pow(e / q, sc.arb); const ny = Math.sqrt(k * qt), nx = Math.sqrt(k / qt); const fee = FEE * Math.abs(ny - P.y); P.x = nx; P.y = ny; const g = 1 + fee / (2 * P.y); P.x *= g; P.y *= g; }
+    // LST panic selling and peg arbitrage
+    if (t > sc.crashAt && t <= cEnd + 30 && sc.lstPanic > 0) { const sold = (sc.lstPanic * S.lstSupply) / (cEnd + 30 - sc.crashAt); const out = sellOut(L.l, L.s, sold); L.l += sold; L.s -= out; }
+    { const phi = Math.min(0.5, Math.max(0.002, 0.1 / sc.lstWait)); const k = L.l * L.s, mg = L.s / L.l / R0, mt = mg * Math.pow(1 / mg, phi), qt = mt * R0; L.l = Math.sqrt(k / qt); L.s = Math.sqrt(k * qt); }
+    // interest
+    const rt = rates(S);
+    const bi = 1 + rt.borrow / MPY, si = 1 + rt.supply / MPY;
+    for (const b of S.npc) b.debt *= bi;
+    S.me.debt *= bi; S.lend.npcSupply *= si; S.lend.mySupply *= si;
+    // other lenders withdraw in a run
+    const bdNow = badDebt(S);
+    if ((sc.run && e < P0 * 0.9) || bdNow > 0.002 * totSupply(S)) {
+      const w = Math.min(cash(S), 0.015 * S.lend.npcSupply);
+      if (w > 0) { S.lend.npcSupply -= w; if (!S.flags.runNews) { S.flags.runNews = 1; news(S, 'Lenders are pulling USDC out of the lending market.', 'market'); } }
+    }
+    // your health factor before any bot acts this minute
+    const hfPre = myLimits(S).hf;
+    // liquidations by bots (other borrowers, then you)
+    let repaidNow = 0, stalled = false;
+    if (ok) {
+      const order = S.npc.filter(b => b.debt > 1 && b.units * up(b, p) * lt(b) < b.debt).sort((a1, b1) => (a1.units * up(a1, p)) / a1.debt - (b1.units * up(b1, p)) / b1.debt);
+      for (const b of order) {
+        let rounds = 0;
+        while (b.debt > 1 && b.units > 1e-9 && b.units * up(b, p) * lt(b) < b.debt && rounds++ < 30) {
+          let R = Math.min(RULES.cf * b.debt, (b.units * up(b, p)) / (1 + RULES.bonus)), done = false;
+          for (let k = 0; k < 4 && !done; k++) {
+            const units = (R * (1 + RULES.bonus)) / up(b, p);
+            const pr = b.lst ? proceeds(S, 0, units, sc.lstWait) : proceeds(S, units, 0, sc.lstWait);
+            if (pr.usdc >= R) { pr.commit(); b.debt -= R; b.units -= units; repaidNow += R; done = true; } else R /= 4;
+          }
+          if (!done) { stalled = true; break; }
+        }
+      }
+      // you
+      const m = S.me;
+      let rounds = 0, myRep = 0, myS = 0, myL = 0;
+      while (m.debt > 0.005 && myLimits(S).hf < 1 && rounds++ < 30) {
+        const collVal = m.collSui * p + m.collL * R0 * p;
+        let R = Math.min(RULES.cf * m.debt, collVal / (1 + RULES.bonus)), done = false;
+        for (let k = 0; k < 4 && !done; k++) {
+          let need = R * (1 + RULES.bonus); const takeS = Math.min(m.collSui, need / p); need -= takeS * p;
+          const takeL = Math.min(m.collL, need / (R0 * p));
+          const pr = proceeds(S, takeS, takeL, sc.lstWait);
+          if (pr.usdc < R) { R /= 4; continue; }
+          pr.commit();
+          m.collSui -= takeS; m.collL -= takeL; m.debt -= R; repaidNow += R;
+          S.stats.myLiqBonus += R * RULES.bonus;
+          S.liqMe.push({ t, repaid: R, takeS, takeL, price: p });
+          myRep += R; myS += takeS; myL += takeL;
+          done = true;
+        }
+        if (!done) break;
+      }
+      if (m.debt < 0.005) m.debt = 0;
+      if (myRep > 0) news(S, `You were liquidated: bots repaid $${Math.round(myRep).toLocaleString('en-US')} of your debt and took ${myS > 0 ? myS.toFixed(1) + ' SUI' : ''}${myS > 0 && myL > 0 ? ' and ' : ''}${myL > 0 ? myL.toFixed(1) + ' liqSUI' : ''} of your collateral, bonus included.`, 'you');
+    }
+    S.stats.npcRepaid += repaidNow;
+    // history
+    const H = S.hist, v = value(S), lim = myLimits(S), bd = badDebt(S);
+    H.ext.push(e); H.pp.push(p); H.dex.push(P.y / P.x); H.peg.push(peg(S)); H.nw.push(v.total); H.hf.push(lim.hf); H.hfPre.push(hfPre); H.util.push(util(S)); H.bad.push(bd); H.liqMin.push(repaidNow);
+    // headlines
+    for (const s of sc.script) if (s.t === t) S.news.push({ t, text: s.text, tone: 'market', src: s.fake ? (s.noise ? 'noise' : 'false') : 'real' });
+    const ch5 = t >= 5 ? e / M.ext[t - 5] - 1 : 0;
+    if (ch5 <= -0.04) news(S, `SUI is down ${Math.abs(ch5 * 100).toFixed(1)}% in five minutes, at $${e.toFixed(3)}.`, 'market', 'drop', 6);
+    if (ch5 >= 0.04) news(S, `SUI is up ${(ch5 * 100).toFixed(1)}% in five minutes, at $${e.toFixed(3)}.`, 'good', 'rise', 6);
+    const age = M.age[t];
+    if (age >= 8) {
+      if (ok) news(S, `The oracle hasn’t updated for ${age} minutes. The lending market is still using its last price, $${p.toFixed(3)}.`, 'market', 'stale', 10);
+      else news(S, `The oracle price is ${age} minutes old. The lending market has paused liquidations and borrowing.`, 'market', 'stale', 10);
+    }
+    if (t > 0 && M.age[t] === 0 && M.age[t - 1] >= 8) news(S, `Oracle updates resume. The lending market’s price jumps to $${p.toFixed(3)}.`, 'market');
+    const dg = P.y / P.x / e - 1;
+    if (dg <= -0.03) news(S, `The DEX price is ${Math.abs(dg * 100).toFixed(1)}% below exchanges as liquidations hit the pool.`, 'market', 'dexgap', 8);
+    const g = peg(S);
+    for (const [lvl, key] of [[0.985, 'peg1'], [0.95, 'peg2'], [0.9, 'peg3'], [0.8, 'peg4']]) if (g < lvl && !S.flags[key]) { S.flags[key] = 1; news(S, `liqSUI trades at ${(g * 100).toFixed(1)}% of its redemption value on the DEX.`, 'market'); }
+    if (repaidNow > 500e3) news(S, `Liquidations: $${(repaidNow / 1e6).toFixed(2)}M of loans liquidated in the last minute.`, 'market', 'liq', 5);
+    if (stalled) { const stuck = S.npc.filter(b => b.debt > 1 && b.units * up(b, p) * lt(b) < b.debt).reduce((a, b) => a + b.debt, 0); if (stuck > 1e6) news(S, `Liquidators are holding back: selling seized collateral now loses money. $${(stuck / 1e6).toFixed(1)}M of loans are unhealthy.`, 'market', 'stall', 10); }
+    const U = util(S);
+    if (U > 0.9 && !S.flags.u90) { S.flags.u90 = 1; news(S, `Lending pool utilization is ${(U * 100).toFixed(0)}%. Withdrawals may start to fail.`, 'market'); }
+    if (U > 0.98 && !S.flags.u98) { S.flags.u98 = 1; news(S, 'The lending pool is almost empty: lenders can’t withdraw.', 'market'); }
+    if (bd > 50e3 && !S.flags.bd) { S.flags.bd = 1; news(S, `The lending market now carries $${Math.round(bd / 1e3)}K of bad debt.`, 'market'); }
+    if (bd > 1e6 && !S.flags.bd2) { S.flags.bd2 = 1; news(S, `Bad debt in the lending market passes $${(bd / 1e6).toFixed(1)}M. Lenders will share the loss.`, 'market'); }
+    // personal alerts
+    const hf = lim.hf, prevHf = H.hf[H.hf.length - 2];
+    const lvl = hf < 1 ? 3 : hf < 1.1 ? 2 : hf < 1.25 ? 1 : 0;
+    const prevLvl = S.flags.hfLvl || 0;
+    if (lvl > prevLvl) {
+      if (lvl === 3) news(S, `Your loan is liquidatable: health factor ${hf.toFixed(2)}.${ok ? '' : ' Liquidations are paused only because the oracle is stale.'}`, 'you');
+      else if (lvl === 2) news(S, `Your health factor is ${hf.toFixed(2)}. Liquidation starts at SUI $${lim.liqPrice.toFixed(3)}.`, 'you');
+      else news(S, `Your health factor fell to ${hf.toFixed(2)}. Liquidation starts at SUI $${lim.liqPrice.toFixed(3)}.`, 'you');
+      S.flags.hfLvl = lvl;
+    } else if (lvl < prevLvl) {
+      const back = [Infinity, 1.25, 1.1, 1][prevLvl] + 0.05;
+      if (hf > back) S.flags.hfLvl = lvl;
+    }
+    if (t >= T) S.over = true;
+  }
+
+  function replay(M, actions, until) {
+    const S = init(M);
+    const end = until === undefined ? T : until;
+    let i = 0;
+    const list = actions.slice().sort((a, b) => a.t - b.t);
+    while (S.t < end) {
+      while (i < list.length && list[i].t === S.t) { act(S, list[i]); i++; }
+      step(S);
+    }
+    return S;
+  }
+
+  // quotes for previews (no state change)
+  function hfWith(S, d) {
+    const p = pp(S), m = S.me, debt = m.debt + (d.debt || 0), cs = m.collSui + (d.collSui || 0), cl = m.collL + (d.collL || 0);
+    if (debt <= 0.005) return Infinity;
+    return (cs * p * RULES.sui.lt + cl * R0 * p * RULES.lsui.lt) / debt;
+  }
+  function unhealthy(S) { const p = pp(S); return S.npc.filter(b => b.debt > 1 && b.units * up(b, p) * lt(b) < b.debt).reduce((a, b) => a + b.debt, 0); }
+  const quote = {
+    buy: (S, usdc) => sellOut(S.pool.y, S.pool.x, usdc),
+    sell: (S, sui) => sellOut(S.pool.x, S.pool.y, sui),
+    sellL: (S, l) => sellOut(S.lst.l, S.lst.s, l)
+  };
+  return { T, P0, R0, RULES, quote, hfWith, unhealthy, market, init, act, step, value, myLimits, rates, cash, util, badDebt, peg, replay, KINDS };
+})();
+if (typeof module !== 'undefined') module.exports = Game;
+
+</script>
+<script>
+(() => {
+  const MINUS = '−';
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const F = {
+    usd(v) {
+      const a = Math.abs(v), s = v < 0 ? MINUS : '';
+      if (a >= 1e9) return s + '$' + (a / 1e9).toFixed(2) + 'B';
+      if (a >= 1e6) return s + '$' + (a / 1e6).toFixed(2) + 'M';
+      if (a >= 1e3) return s + '$' + (a / 1e3).toFixed(1) + 'K';
+      return s + '$' + a.toFixed(a < 10 ? 2 : 0);
+    },
+    pct(v, d = 1) { return (v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%'; },
+    spct(v, d = 1) { return (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%'; },
+    eth(v, d = 2) { return (v < 0 ? MINUS : '') + Math.abs(v).toFixed(d) + ' ETH'; },
+    seth(v, d = 2) { return (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v).toFixed(d) + ' ETH'; },
+    int(v) { return Math.round(v).toLocaleString('en-US'); },
+    usdc(v) { return v.toLocaleString('en-US', { maximumFractionDigits: v < 1 ? 6 : 2 }) + ' USDC'; },
+    units(u) {
+      const neg = u < 0n, a = neg ? -u : u;
+      const whole = a / 1000000n, frac = (a % 1000000n).toString().padStart(6, '0').replace(/0+$/, '');
+      return (neg ? MINUS : '') + whole.toLocaleString('en-US') + (frac ? '.' + frac : '') + ' USDC';
+    }
+  };
+
+  // ---------- charts ----------
+  function niceStep(range, n) {
+    const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+  }
+  function niceMax(v) { if (!(v > 0)) return 1; const s = niceStep(v, 4); return Math.ceil((v * 1.08) / s) * s; }
+  function ticks(min, max, n) {
+    const s = niceStep(max - min, n), out = [];
+    for (let v = Math.ceil(min / s - 1e-9) * s; v <= max + s * 1e-9; v += s) out.push(+v.toFixed(12));
+    return out;
+  }
+  function cssv(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'; }
+  function drawChart(cv, spec) {
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const mono = cssv('--font-mono');
+    g.font = '11px ' + mono;
+    const X = spec.x, Y = spec.y;
+    const yt = ticks(Y.min, Y.max, 4);
+    const yLabels = yt.map(Y.fmt);
+    const lw = Math.max(...yLabels.map(s => g.measureText(s).width));
+    const pad = { l: Math.ceil(lw) + 12, r: 12, t: 14, b: X.label ? 44 : 30 };
+    const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+    const xv = v => (X.log ? Math.log10(v) : v);
+    const x0 = xv(X.min), x1 = xv(X.max);
+    const px = v => pad.l + ((xv(v) - x0) / (x1 - x0)) * pw;
+    const py = v => pad.t + (1 - (v - Y.min) / (Y.max - Y.min)) * ph;
+    const line = cssv('--line'), muted = cssv('--muted');
+    // bands
+    for (const b of spec.bands || []) {
+      g.fillStyle = cssv(b.color);
+      g.fillRect(px(b.x0), pad.t, Math.max(1, px(b.x1) - px(b.x0)), ph);
+    }
+    // grid + y labels
+    g.strokeStyle = line; g.lineWidth = 1; g.fillStyle = muted; g.textBaseline = 'middle'; g.textAlign = 'right';
+    yt.forEach((v, i) => {
+      const y = Math.round(py(v)) + 0.5;
+      g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+      g.fillText(yLabels[i], pad.l - 6, y);
+    });
+    // x ticks
+    let xt;
+    if (X.log) { xt = []; for (let e = Math.ceil(x0 - 1e-9); e <= x1 + 1e-9; e++) xt.push(Math.pow(10, e)); }
+    else xt = ticks(X.min, X.max, Math.max(3, Math.min(8, Math.floor(pw / 70))));
+    g.textAlign = 'center'; g.textBaseline = 'top';
+    xt.forEach(v => { const x = px(v); g.fillText(X.fmt(v), x, pad.t + ph + 7); g.beginPath(); g.moveTo(Math.round(x) + 0.5, pad.t + ph); g.lineTo(Math.round(x) + 0.5, pad.t + ph + 4); g.stroke(); });
+    if (X.label) { g.font = '12px ' + cssv('--font-body'); g.textAlign = 'right'; g.fillText(X.label, w - pad.r, pad.t + ph + 26); g.font = '11px ' + mono; }
+    g.save();
+    g.beginPath(); g.rect(pad.l, pad.t - 2, pw, ph + 4); g.clip();
+    for (const hl of spec.hlines || []) {
+      g.strokeStyle = cssv(hl.color); g.lineWidth = 1.5; g.setLineDash(hl.dash ? [5, 4] : []);
+      const y = py(hl.y); g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+    }
+    for (const s of spec.series) {
+      const pts = s.pts.filter(p => isFinite(p[0]) && isFinite(p[1]));
+      if (!pts.length) continue;
+      const c = cssv(s.color);
+      g.setLineDash(s.dash ? [6, 4] : []);
+      g.lineWidth = s.width || 2; g.strokeStyle = c; g.lineJoin = 'round';
+      g.beginPath();
+      pts.forEach((p, i) => {
+        const x = px(p[0]), y = py(clamp(p[1], Y.min - (Y.max - Y.min), Y.max * 2));
+        if (i === 0) g.moveTo(x, y);
+        else if (s.step) { g.lineTo(x, py(pts[i - 1][1])); g.lineTo(x, y); }
+        else g.lineTo(x, y);
+      });
+      g.stroke();
+      if (s.fill) {
+        g.lineTo(px(pts[pts.length - 1][0]), py(Math.max(Y.min, 0))); g.lineTo(px(pts[0][0]), py(Math.max(Y.min, 0))); g.closePath();
+        g.globalAlpha = 0.14; g.fillStyle = c; g.fill(); g.globalAlpha = 1;
+      }
+    }
+    g.setLineDash([]);
+    g.restore();
+    for (const vl of spec.vlines || []) {
+      if (vl.x < X.min || vl.x > X.max) continue;
+      const x = Math.round(px(vl.x)) + 0.5;
+      g.strokeStyle = cssv(vl.color); g.lineWidth = 1.5; g.setLineDash(vl.dash ? [4, 3] : []);
+      g.beginPath(); g.moveTo(x, pad.t); g.lineTo(x, pad.t + ph); g.stroke(); g.setLineDash([]);
+      if (vl.label) {
+        g.fillStyle = cssv(vl.color); g.textBaseline = 'top';
+        const tw = g.measureText(vl.label).width;
+        const right = x + 5 + tw < w - pad.r;
+        g.textAlign = right ? 'left' : 'right';
+        g.fillText(vl.label, right ? x + 5 : x - 5, pad.t + (vl.row || 0) * 14);
+      }
+    }
+    for (const p of spec.points || []) {
+      if (!isFinite(p.y)) continue;
+      g.fillStyle = cssv(p.color); g.strokeStyle = cssv('--surface'); g.lineWidth = 2;
+      g.beginPath(); g.arc(px(p.x), py(clamp(p.y, Y.min, Y.max)), 4.5, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+  }
+
+  // ---------- HTML builders ----------
+  const LV = { ok: 'OK', warn: 'Warning', crit: 'Critical' };
+  const RANK = { crit: 0, warn: 1, ok: 2 };
+  function monitor(rows) {
+    const c = { ok: 0, warn: 0, crit: 0 };
+    rows.forEach(r => c[r.lv]++);
+    const sum = [c.crit ? c.crit + ' critical' : '', c.warn ? c.warn + (c.warn > 1 ? ' warnings' : ' warning') : '', c.ok ? c.ok + ' OK' : ''].filter(Boolean).join(' · ');
+    const sorted = rows.map((r, i) => [r, i]).sort((a, b) => RANK[a[0].lv] - RANK[b[0].lv] || a[1] - b[1]).map(x => x[0]);
+    return `<section class="panel" aria-label="Monitors"><h3>Monitors <small>${sum}</small></h3><div class="mon">${sorted.map(r =>
+      `<div class="mon-row ${r.lv}"><span class="pill">${LV[r.lv]}</span><div><div class="t">${r.t}${r.ref ? `<span class="ref">${r.ref}</span>` : ''}</div><p class="d">${r.d}</p></div></div>`).join('')}</div></section>`;
+  }
+  function worst(rows) { return rows.reduce((w, r) => (RANK[r.lv] < RANK[w] ? r.lv : w), 'ok'); }
+  function metrics(items) {
+    return `<section class="metrics" aria-label="Readouts">${items.map(m => `<div class="m"><div class="l">${m.l}</div><div class="v ${m.cls || ''}">${m.v}</div>${m.s ? `<div class="s">${m.s}</div>` : ''}</div>`).join('')}</section>`;
+  }
+  function chartPanel(id, title, sub, legend) {
+    return `<section class="panel"><h3>${title}${sub ? ` <small>${sub}</small>` : ''}</h3><canvas class="chart" id="${id}" role="img" aria-label="${title}"></canvas><div class="chart-legend">${(legend || []).map(l =>
+      `<span><i class="sw${l.dash ? ' dash' : ''}${l.band ? ' band' : ''}" style="background:var(${l.color});color:var(${l.color})"></i>${l.label}</span>`).join('')}</div></section>`;
+  }
+  function notes(items) {
+    return `<section class="panel"><details class="notes"><summary>Model assumptions and what this leaves out</summary><ul>${items.map(i => `<li>${i}</li>`).join('')}</ul></details></section>`;
+  }
+  const pctFmt0 = v => Math.round(v * 100) + '%';
+  const usdAxis = v => (v === 0 ? '$0' : F.usd(v));
+
+
+  const $ = id => document.getElementById(id);
+  const usd = v => (v < 0 ? MINUS : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const usd0 = v => (v < 0 ? MINUS : '') + '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
+  const sgn = v => (v > 0.005 ? '+' : v < -0.005 ? MINUS : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const num = (v, d = 2) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const pct = (v, d = 1) => (v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%';
+  const spct = (v, d = 1) => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%';
+  const T = Game.T;
+
+  let M, S, timer = 0, speed = 1, running = false, sound = true, audio = null, seenNews = 0, lastPx = 2, started = false, chosenKey = null;
+  try { const sp = localStorage.getItem('panic-speed'); if (sp) speed = +sp; const so = localStorage.getItem('panic-sound'); if (so) sound = so === '1'; } catch (e) {}
+
+  // ---------- sound ----------
+  function beep(kind) {
+    if (!sound || !audio) return;
+    try {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.connect(g); g.connect(audio.destination);
+      const now = audio.currentTime;
+      if (kind === 'alarm') { o.type = 'square'; o.frequency.setValueAtTime(880, now); o.frequency.setValueAtTime(660, now + 0.12); o.frequency.setValueAtTime(880, now + 0.24); g.gain.setValueAtTime(0.06, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.4); o.start(now); o.stop(now + 0.42); }
+      else { o.type = 'sine'; o.frequency.setValueAtTime(520, now); g.gain.setValueAtTime(0.035, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.12); o.start(now); o.stop(now + 0.13); }
+    } catch (e) {}
+  }
+
+  // ---------- scenarios: choose, or play hidden ----------
+  const TONE = { good: 'Good day', mixed: 'Mixed day', bad: 'Bad day' };
+  const TAG = { real: 'Real', false: 'False', noise: 'Noise' };
+  let playedMem = {};
+  try { playedMem = JSON.parse(localStorage.getItem('panic-played') || '{}') || {}; } catch (e) {}
+  const loadPlayed = () => playedMem;
+  function savePlayed(key, fin) {
+    if (!key) return;
+    const r = playedMem[key] || { n: 0, best: null };
+    r.n += 1; r.best = r.best == null ? fin : Math.max(r.best, fin); r.last = fin; playedMem[key] = r;
+    try { localStorage.setItem('panic-played', JSON.stringify(playedMem)); } catch (e) {}
+  }
+  function nextKey(cur) {
+    const ks = Game.KINDS.map(k => k.key), played = loadPlayed(), i = ks.indexOf(cur);
+    for (let j = 1; j <= ks.length; j++) { const k = ks[(i + j) % ks.length]; if (!played[k]) return k; }
+    return ks[(i + 1) % ks.length];
+  }
+  const kindOf = key => Game.KINDS.find(k => k.key === key);
+  function showChooser() {
+    stop();
+    const played = loadPlayed(), done = Game.KINDS.filter(k => played[k.key]).length;
+    const cardOf = k => { const p = played[k.key]; return `<button type="button" class="sc" data-pick="${k.key}"><span class="tone ${k.tone}">${TONE[k.tone]}</span><b>${k.title}</b><span class="bl">${k.blurb}</span><span class="st${p ? ' done' : ''}">${p ? `Played ${p.n}× · best ${usd0(p.best)} · last ${usd0(p.last)}` : 'Not played yet'}</span></button>`; };
+    $('chooser').innerHTML = `<h2>Pick a market to play</h2>
+      <p>Each market is two hours with your $10,000. You see what’s coming before you start, so you can test a strategy against it and watch the mechanics play out. Headlines are labeled real, false or noise.</p>
+      <p class="d">${done} of ${Game.KINDS.length} played.</p>
+      <div class="sc-grid">${Game.KINDS.map(cardOf).join('')}<button type="button" class="sc hide" data-pick=""><span class="tone hidden">Hidden</span><b>Surprise me</b><span class="bl">A random scenario you only learn at the end. Headlines aren’t labeled. Play this once the open ones make sense.</span><span class="st">Tests your instincts</span></button></div>`;
+    $('chooser').querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => { chosenKey = b.dataset.pick || null; newGame(randomSeed()); window.scrollTo({ top: 0 }); }));
+    $('chooser').hidden = false; $('setup').hidden = true; $('desk').hidden = true; $('debrief').hidden = true; $('planbar').hidden = true;
+    document.body.classList.add('choosing');
+    $('seed').textContent = 'not chosen yet';
+  }
+  // Run simple strategies on this exact market (each set up at minute 0, held to the end) to show what goes wrong.
+  function outcomes(M) {
+    const T0 = Game.T, R = Game.RULES;
+    function run(setup, watch) {
+      const S = Game.init(M); setup(S);
+      while (!S.over) { Game.step(S); if (watch) watch(S); }
+      return S;
+    }
+    const tot = S => Game.value(S).total;
+    const buyAll = S => { Game.act(S, { type: 'buy', amt: 10000 }, false); return S.me.sui; };
+    const rows = [];
+    const H0 = run(() => {}).hist;
+    let lowT = 0, highT = 0; H0.ext.forEach((p, i) => { if (p < H0.ext[lowT]) lowT = i; if (p > H0.ext[highT]) highT = i; });
+    const close = H0.ext[T0], low = H0.ext[lowT], high = H0.ext[highT];
+    // 1. hold SUI
+    const hold = run(buyAll), vh = tot(hold);
+    const path = [];
+    if (high > 2.04 && high > close * 1.03) path.push(`peaks at $${high.toFixed(3)} (minute ${highT})`);
+    if (low < 1.98 && low < close * 0.99) path.push(`bottoms at $${low.toFixed(3)} (minute ${lowT})`);
+    path.push(`closes at $${close.toFixed(3)}`);
+    rows.push(['Buy SUI and hold', vh, `SUI ${path.join(', ')}.`]);
+    // 2/3. borrow against SUI: at the max, and to a health factor of 1.5
+    const borrowRun = hfTarget => {
+      let minHf = Infinity, minT = 0;
+      const S = run(S => { const s = buyAll(S); Game.act(S, { type: 'depSui', amt: s }, false); const p = M.rep[0]; const debt = hfTarget ? (s * p * R.sui.lt) / hfTarget : s * p * R.sui.ltv * 0.999; Game.act(S, { type: 'borrow', amt: debt }, false); },
+        S => { const h = S.hist.hfPre[S.t]; if (h < minHf) { minHf = h; minT = S.t; } });
+      const lq = S.liqMe, under = S.hist.hfPre.findIndex(h => h < 1), v = Game.value(S);
+      const sunk = S.me.debt > 0.01 && v.coll < v.debt; // the loan ended worth less than its debt
+      const sunkTxt = ' The loan ended underwater: the collateral was worth less than the debt, so you keep the borrowed USDC and lenders absorb the gap. That’s why you beat simply holding.';
+      let note;
+      if (lq.length) {
+        const bonus = usd0(S.stats.myLiqBonus);
+        note = under >= 0 && under < lq[0].t - 1
+          ? `Liquidatable from minute ${under}, but bots waited until minute ${lq[0].t}, because selling your SUI on the DEX didn’t pay until then. They took ${bonus} in bonuses.`
+          : `Liquidated at minute ${lq[0].t} (lending price $${lq[0].price.toFixed(3)}), paying ${bonus} in bonuses.`;
+        if (sunk) note += sunkTxt;
+        else if (tot(S) > vh + 20) note += ' The liquidation sold your SUI early, like an expensive stop-loss, so you end above simply holding.';
+      } else if (under >= 0) {
+        note = `Liquidatable from minute ${under} (health factor down to ${minHf.toFixed(2)}), but no bot liquidated it: selling your SUI on the DEX didn’t pay.` + (sunk ? sunkTxt : Game.myLimits(S).hf >= 1 ? ' SUI recovered before they acted.' : ' It was still liquidatable at the end.');
+      } else note = `Never liquidatable; the health factor bottomed at ${minHf.toFixed(2)} at minute ${minT}.`;
+      return [tot(S), note];
+    };
+    const bm = borrowRun(0), bs = borrowRun(1.5);
+    rows.push(['Buy SUI, borrow the max (75% LTV), keep the USDC', bm[0], bm[1]]);
+    rows.push(['Buy SUI, borrow to a health factor of 1.5', bs[0], bs[1]]);
+    // 4. lend USDC
+    let blockT = -1, maxU = 0;
+    const L = run(S => Game.act(S, { type: 'supply', amt: 10000 }, false), S => { if (blockT < 0 && Game.cash(S) + 1e-6 < S.lend.mySupply) blockT = S.t; maxU = Math.max(maxU, Game.util(S)); });
+    const hair = Game.value(L).hair, peakBad = Math.max(...L.hist.bad);
+    rows.push(['Supply USDC as a lender', tot(L), (blockT >= 0 ? `Withdrawals blocked from minute ${blockT}: the pool’s cash ran out (utilization ${pct(maxU, 0)}).` : `You could withdraw all session (peak utilization ${pct(maxU, 0)}).`) + (hair > 0.0001 ? ` Bad debt took ${pct(hair, 2)} of your deposit.` : peakBad > 1000 ? ` Bad debt peaked at ${usd0(peakBad)} but was gone by the end.` : ' No bad debt.')]);
+    // 5. liquidity
+    const LP = run(S => Game.act(S, { type: 'lpAdd', amt: 10000 }, false));
+    const held = LP.me.lpX * M.ext[T0] + LP.me.lpY + LP.me.usdc + LP.me.sui * M.ext[T0], vlp = tot(LP);
+    rows.push(['Add liquidity to the SUI/USDC pool', vlp, `Holding the same SUI and USDC outside the pool would end at ${usd0(held)}: the pool ${vlp >= held ? 'beat' : 'lost to'} holding by ${usd0(Math.abs(vlp - held))}.`]);
+    // 6. liquid staking
+    const ST = run(S => { const s = buyAll(S); Game.act(S, { type: 'stake', amt: s }, false); });
+    let pT = 0; ST.hist.peg.forEach((g, i) => { if (g < ST.hist.peg[pT]) pT = i; });
+    const gMin = ST.hist.peg[pT];
+    rows.push(['Buy SUI and stake it for liqSUI', tot(ST), gMin < 0.985 ? `liqSUI fell to ${pct(gMin)} of its redemption value at minute ${pT}${ST.hist.peg[T0] < 0.985 ? ` and ended at ${pct(ST.hist.peg[T0])}` : ', then recovered'}. Versus holding SUI: ${sgn(tot(ST) - vh)}.` : `liqSUI held its peg, so it ends the same as holding SUI${Math.abs(tot(ST) - vh) >= 5 ? ` (${sgn(tot(ST) - vh)})` : ''}.`]);
+    // market-wide facts
+    const facts = [];
+    const maxAge = Math.max(...M.age); if (maxAge >= 8) facts.push(`the oracle goes ${maxAge} minutes without an update`);
+    const stall = L.news.find(n => /holding back/.test(n.text)); if (stall) facts.push(`liquidators hold back from minute ${stall.t}`);
+    const dexGap = L.news.find(n => /DEX price is/.test(n.text)); if (dexGap) facts.push(`the DEX trades below exchanges from minute ${dexGap.t}`);
+    if (peakBad > 1000) facts.push(`the lending market’s bad debt peaks at ${usd0(peakBad)}`);
+    return { rows, facts };
+  }
+  function renderSetup() {
+    const sc = M.sc;
+    $('setup').innerHTML = M.open ? `
+      <p class="eyebrow"><span class="tone ${sc.tone}">${TONE[sc.tone]}</span></p>
+      <h2>${sc.title}</h2>
+      <p><b>What will happen:</b> ${sc.plan}</p>
+      ${(() => { const o = outcomes(M); return `<p class="sub">What can go wrong <span class="sub-n">each move made at minute 0 and held to minute 120, starting from $10,000</span></p>
+      <div class="tbl-wrap"><table class="log outc"><thead><tr><th>If you…</th><th class="n">You end with</th><th>What happens</th></tr></thead><tbody>${o.rows.map(r => `<tr><td>${r[0]}</td><td class="n ${r[1] >= 10000 ? 'gain' : 'loss'}">${usd0(r[1])}<small>${spct(r[1] / 10000 - 1, 1)}</small></td><td>${r[2]}</td></tr>`).join('')}</tbody></table></div>
+      ${o.facts.length ? `<p class="d">Across the market, ${o.facts.join('; ')}.</p>` : ''}`; })()}
+      <p class="sub">Things to try</p><ul class="tries">${sc.tries.map(x => `<li>${x}</li>`).join('')}</ul>
+      <p class="d">Set up positions before you start if you like. The market runs one minute per second, and you can pause any time (space bar works too).</p>
+      <div class="db-actions"><button type="button" class="btn primary" id="startbtn">Start the market</button><button type="button" class="btn" id="newtiming">Same scenario, new timing</button><button type="button" class="btn" id="pickother">Pick another scenario</button></div>` : `
+      <h2>You have $10,000. The market is frozen until you start.</h2>
+      <p>Set up your positions first if you like. When you start, two hours of market run at one minute per second, and you can pause any time (space bar works too). Something may happen today, or nothing. Headlines will arrive, and not all of them are true.</p>
+      <div class="db-actions"><button type="button" class="btn primary" id="startbtn">Start the market</button><button type="button" class="btn" id="newtiming">Draw a different hidden market</button><button type="button" class="btn" id="pickother">Pick a scenario instead</button></div>`;
+    $('startbtn').addEventListener('click', start);
+    $('newtiming').addEventListener('click', () => newGame(randomSeed()));
+    $('pickother').addEventListener('click', showChooser);
+    $('planbar').innerHTML = M.open ? `<b>${sc.title}.</b> ${sc.plan}` : '';
+  }
+
+  // ---------- game flow ----------
+  function newGame(seed) {
+    stop();
+    M = Game.market(seed, chosenKey || undefined); S = Game.init(M); seenNews = 0; lastPx = 2; started = false;
+    $('seed').textContent = '#' + seed + ' · ' + (M.open ? M.sc.title : 'hidden');
+    $('chooser').hidden = true; document.body.classList.remove('choosing');
+    $('debrief').hidden = true; $('desk').hidden = false; $('setup').hidden = false; $('planbar').hidden = true;
+    document.querySelectorAll('.err').forEach(e => (e.textContent = ''));
+    renderSetup();
+    renderLive();
+  }
+  function start() {
+    if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (audio && audio.state === 'suspended') audio.resume();
+    started = true; $('setup').hidden = true; $('planbar').hidden = !M.open; play();
+  }
+  function play() {
+    if (S.over || document.body.classList.contains('choosing')) return;
+    if (!started) { start(); return; }
+    running = true; $('play').textContent = 'Pause'; $('play').setAttribute('aria-pressed', 'true');
+    clearInterval(timer); timer = setInterval(tick, 1000 / speed);
+    document.body.classList.add('running');
+  }
+  function stop() {
+    running = false; clearInterval(timer); timer = 0;
+    const b = $('play'); if (b) { b.textContent = S && S.t > 0 ? 'Resume' : 'Start'; b.setAttribute('aria-pressed', 'false'); }
+    document.body.classList.remove('running');
+  }
+  function tick() {
+    Game.step(S);
+    renderLive();
+    if (S.over) { stop(); debrief(); }
+  }
+  function endNow() {
+    if (document.body.classList.contains('choosing') || S.over) return;
+    stop(); started = true; $('setup').hidden = true; $('planbar').hidden = !M.open;
+    while (!S.over) Game.step(S);
+    renderLive(); debrief();
+  }
+  function doAction(type, inputId, extra) {
+    const inp = $(inputId), err = $(inputId + '-e');
+    const v = parseFloat(inp.value);
+    if (!(v > 0)) { err.textContent = 'Enter an amount above zero.'; inp.focus(); return; }
+    err.textContent = '';
+    const r = Game.act(S, { type, amt: v, ...(extra || {}) });
+    if (!r.ok) { err.textContent = r.msg; beep('tick'); }
+    else { inp.value = ''; toast(r.msg); }
+    renderLive();
+  }
+  let toastT = 0;
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 4000); }
+
+  // ---------- live render ----------
+  function maxFor(key) {
+    const m = S.me, lim = Game.myLimits(S);
+    switch (key) {
+      case 'buy': case 'supply': case 'lpadd': case 'liq': return m.usdc;
+      case 'sell': case 'stake': return m.sui;
+      case 'sellL': case 'redeem': return m.lsui;
+      case 'withdraw': return S.lend.mySupply;
+      case 'post': return postKind === 'sui' ? m.sui : m.lsui;
+      case 'wdcoll': return wdKind === 'sui' ? m.collSui : m.collL;
+      case 'borrow': return Math.max(0, Math.min(lim.limit - m.debt, Game.cash(S)));
+      case 'repay': return Math.min(m.usdc, m.debt);
+      case 'lprm': return 100;
+    }
+    return 0;
+  }
+  let postKind = 'sui', wdKind = 'sui';
+  function previews() {
+    const val = id => parseFloat($(id).value) || 0;
+    const e = S.M.ext[S.t], dex = S.pool.y / S.pool.x, g = Game.peg(S), lim = Game.myLimits(S);
+    const set = (id, txt) => { const el = $(id); if (el) el.textContent = txt; };
+    const b = val('a-buy'); set('p-buy', b > 0 ? (() => { const o = Game.quote.buy(S, b); return `≈ ${num(o)} SUI at $${(b / o).toFixed(3)} (${spct(b / o / e - 1, 2)} vs exchanges)`; })() : `DEX $${dex.toFixed(3)} · exchanges $${e.toFixed(3)}`);
+    const sl = val('a-sell'); set('p-sell', sl > 0 ? (() => { const o = Game.quote.sell(S, sl); return `≈ ${usd(o)} at $${(o / sl).toFixed(3)} (${spct(o / sl / e - 1, 2)} vs exchanges)`; })() : `You hold ${num(S.me.sui)} SUI`);
+    const sp = val('a-supply'); set('p-supply', `Lender rate ${pct(Game.rates(S).supply, 2)} a year · utilization ${pct(Game.util(S))}`);
+    set('p-withdraw', `${usd0(Game.cash(S))} of USDC is in the pool to withdraw`);
+    const po = val('a-post'); set('p-post', po > 0 ? `Health factor after: ${fmtHf(Game.hfWith(S, postKind === 'sui' ? { collSui: po } : { collL: po }))}` : `Counts at ${postKind === 'sui' ? '75% LTV, liquidated at 80%' : 'redemption value: 70% LTV, liquidated at 75%'}`);
+    const wd = val('a-wdcoll'); set('p-wdcoll', wd > 0 ? `Health factor after: ${fmtHf(Game.hfWith(S, wdKind === 'sui' ? { collSui: -wd } : { collL: -wd }))}` : `Posted: ${num(S.me.collSui)} SUI, ${num(S.me.collL)} liqSUI`);
+    const bo = val('a-borrow'); set('p-borrow', bo > 0 ? `Health factor after: ${fmtHf(Game.hfWith(S, { debt: bo }))}` : `Room to borrow: ${usd0(Math.max(0, lim.limit - S.me.debt))} · rate ${pct(Game.rates(S).borrow, 2)} a year`);
+    const rp = val('a-repay'); set('p-repay', rp > 0 ? `Health factor after: ${fmtHf(Game.hfWith(S, { debt: -Math.min(rp, S.me.debt) }))}` : `You owe ${usd(S.me.debt)}`);
+    set('p-stake', `1 liqSUI redeems for ${Game.R0} SUI · market ${pct(g)} of that`);
+    const sL = val('a-sellL'); set('p-sellL', sL > 0 ? (() => { const o = Game.quote.sellL(S, sL); return `≈ ${num(o)} SUI, ${pct(o / (sL * Game.R0))} of redemption value`; })() : `liqSUI trades at ${pct(g)} of redemption value`);
+    const rd = val('a-redeem'); set('p-redeem', rd > 0 ? `${num(rd * Game.R0)} SUI, arriving after ${S.M.sc.lstWait > 1 ? S.M.sc.lstWait + ' days' : 'the next epoch'} (after this session)` : 'Full value, but locked until it arrives');
+    const lpv = Game.value(S).lp; set('p-lpadd', `Pool: ${usd0(S.pool.y)} USDC side · your share ${pct(S.pool.sh > 0 ? S.pool.mine / S.pool.sh : 0, 3)}`);
+    set('p-lprm', S.pool.mine > 0 ? `Your liquidity is worth ${usd(lpv)} at exchange prices` : 'You have no liquidity in the pool');
+    const uh = Game.unhealthy(S);
+    set('p-liq', !S.M.acc[S.t] ? 'Liquidations are paused: the oracle price is too old.' : uh > 1 ? `${usd0(uh)} of loans are liquidatable. You get their collateral at the lending market’s price ($${S.M.rep[S.t].toFixed(3)}) plus 5%.` : 'No loans are liquidatable right now.');
+  }
+  function fmtHf(h) { return h === Infinity ? 'no debt' : h.toFixed(2); }
+  function hfClass(h) { return h === Infinity || h >= 1.5 ? 'ok' : h >= 1.15 ? 'warn' : 'crit'; }
+
+  function renderLive() {
+    const t = S.t, e = M.ext[t], v = Game.value(S), lim = Game.myLimits(S), m = S.me;
+    // bar
+    $('clock').textContent = `Minute ${t}`;
+    $('prog').style.width = (t / T) * 100 + '%';
+    const pxEl = $('px'); pxEl.textContent = '$' + e.toFixed(3);
+    const ch = e / 2 - 1; $('pxch').textContent = spct(ch, 1) + ' today'; $('pxch').className = 'chg ' + (ch >= 0 ? 'up' : 'down');
+    if (e !== lastPx) { pxEl.classList.remove('flash-up', 'flash-down'); void pxEl.offsetWidth; pxEl.classList.add(e > lastPx ? 'flash-up' : 'flash-down'); lastPx = e; }
+    $('nw').textContent = usd(v.total);
+    const pl = v.total - 10000; $('nwch').textContent = sgn(pl) + ' (' + spct(pl / 10000, 2) + ')'; $('nwch').className = 'chg ' + (pl >= 0 ? 'up' : 'down');
+    if (!started) $('play').textContent = 'Start';
+    // alert
+    const al = [];
+    if (m.debt > 0 && lim.hf < 1) al.push({ c: 'crit', t: `Your loan is liquidatable (health factor ${lim.hf.toFixed(2)}). Repay or add collateral now.` });
+    else if (m.debt > 0 && lim.hf < 1.15) al.push({ c: 'crit', t: `Health factor ${lim.hf.toFixed(2)}. Liquidation at SUI $${lim.liqPrice.toFixed(3)} (by the lending market’s price).` });
+    else if (m.debt > 0 && lim.hf < 1.3) al.push({ c: 'warn', t: `Health factor ${lim.hf.toFixed(2)}. Liquidation at SUI $${lim.liqPrice.toFixed(3)}.` });
+    if (M.age[t] >= 8) al.push({ c: 'warn', t: `The lending market’s price is ${M.age[t]} minutes old ($${M.rep[t].toFixed(3)} vs $${e.toFixed(3)} on exchanges).` });
+    if (S.lend.mySupply > 1 && Game.cash(S) < S.lend.mySupply) al.push({ c: 'crit', t: `Only ${usd0(Game.cash(S))} is left in the lending pool. You can’t withdraw your full ${usd0(S.lend.mySupply)}.` });
+    $('alert').innerHTML = al.map(a => `<div class="al ${a.c}" role="status">${a.t}</div>`).join('');
+    document.body.classList.toggle('danger', al.some(a => a.c === 'crit'));
+    // cards
+    const g = Game.peg(S), hair = v.hair;
+    const lpHold = m.lpX * e + m.lpY;
+    $('cards').innerHTML = [
+      card('Wallet', usd(v.wallet), [['USDC', usd(m.usdc)], ['SUI', num(m.sui) + ' · ' + usd(m.sui * e)], ['liqSUI', num(m.lsui) + ' · ' + usd(m.lsui * Game.R0 * g * e)], m.pending > 0 ? ['Redeeming', num(m.pending) + ' SUI · ' + usd(m.pending * e)] : null]),
+      card('Lending', usd(v.supply), [['Supplied', usd(v.supplyPar)], ['Lender rate', pct(Game.rates(S).supply, 2)], ['Pool cash', usd0(Game.cash(S))], hair > 0 ? ['Bad-debt haircut', pct(hair, 2)] : ['Utilization', pct(Game.util(S))]], hair > 0.0001 ? 'warn' : ''),
+      card('Loan', m.debt > 0 ? 'HF ' + lim.hf.toFixed(2) : m.collSui + m.collL > 0 ? 'No debt' : 'None', [['Collateral', usd(v.coll)], ['Debt', usd(m.debt)], ['Borrow limit', usd0(lim.limit)], ['Liquidation at', m.debt > 0 ? '$' + lim.liqPrice.toFixed(3) : '—']], m.debt > 0 ? hfClass(lim.hf) : ''),
+      card('Liquidity', usd(v.lp), [['Your share', pct(S.pool.sh > 0 ? S.pool.mine / S.pool.sh : 0, 3)], ['If you’d held', usd(lpHold)], ['Difference', m.lpX + m.lpY > 0 ? sgn(v.lp - lpHold) : '—']])
+    ].join('');
+    previews();
+    // news
+    const nl = S.news;
+    if (nl.length > seenNews) {
+      const fresh = nl.slice(seenNews);
+      if (fresh.some(n => n.tone === 'you' && /liquidat/.test(n.text))) beep('alarm'); else if (started) beep('tick');
+      seenNews = nl.length;
+    }
+    $('news').innerHTML = nl.slice().reverse().slice(0, 60).map(n => `<li class="${n.tone}"><span class="nt">${n.t}m</span><span>${n.text}${M.open && n.src ? ` <em class="htag ${n.src}">${TAG[n.src]}</em>` : ''}</span></li>`).join('') || '<li class="empty"><span></span><span>Headlines appear here once the market opens.</span></li>';
+    $('log').innerHTML = S.actions.slice().reverse().map(a => `<li class="${a.ok ? '' : 'fail'}"><span class="nt">${a.t}m</span><span>${a.msg}</span></li>`).join('') || '<li class="empty"><span></span><span>Your moves will be listed here.</span></li>';
+    // charts
+    const xs = { min: 0, max: T, fmt: x => x + 'm' };
+    const ser = arr => arr.map((y, i) => [i, y]);
+    const H = S.hist;
+    const allp = H.ext.concat(H.pp, H.dex, m.debt > 0 ? [lim.liqPrice] : []);
+    const lo = Math.min(...allp, 1.9), hi = Math.max(...allp, 2.1);
+    const hl = m.debt > 0 ? [{ y: lim.liqPrice, color: '--crit', dash: true }] : [];
+    drawChart($('c-price'), { x: xs, y: { min: Math.floor(lo * 0.98 * 20) / 20, max: Math.ceil(hi * 1.01 * 20) / 20, fmt: y => '$' + y.toFixed(2) },
+      series: [{ pts: ser(H.ext), color: '--ink', width: 2 }, { pts: ser(H.pp), color: '--accent', step: true, width: 1.5 }, { pts: ser(H.dex), color: '--warm', width: 1.5 }], hlines: hl });
+    const nwlo = Math.min(...H.nw, 10000), nwhi = Math.max(...H.nw, 10000);
+    const pad = Math.max(200, (nwhi - nwlo) * 0.15);
+    drawChart($('c-nw'), { x: xs, y: { min: Math.floor((nwlo - pad) / 100) * 100, max: Math.ceil((nwhi + pad) / 100) * 100, fmt: y => '$' + (y / 1000).toFixed(1) + 'K' },
+      series: [{ pts: ser(H.nw), color: '--accent', width: 2, fill: true }], hlines: [{ y: 10000, color: '--muted', dash: true }] });
+    $('liqline').hidden = !(m.debt > 0);
+  }
+  function card(title, big, rows, cls) {
+    return `<section class="card ${cls || ''}"><div class="card-h"><span>${title}</span></div><div class="card-v">${big}</div><dl>${rows.filter(Boolean).map(r => `<div><dt>${r[0]}</dt><dd>${r[1]}</dd></div>`).join('')}</dl></section>`;
+  }
+
+  // ---------- debrief ----------
+  const NAMES = { buy: 'Bought SUI', sell: 'Sold SUI', stake: 'Staked SUI', sellL: 'Sold liqSUI', redeem: 'Redeemed liqSUI', supply: 'Supplied USDC', withdraw: 'Withdrew USDC', depSui: 'Posted SUI collateral', depL: 'Posted liqSUI collateral', wdSui: 'Withdrew SUI collateral', wdL: 'Withdrew liqSUI collateral', borrow: 'Borrowed USDC', repay: 'Repaid', lpAdd: 'Added liquidity', lpRemove: 'Removed liquidity', liquidate: 'Liquidated loans' };
+  const UNIT = { buy: 'usd', sell: 'sui', stake: 'sui', sellL: 'l', redeem: 'l', supply: 'usd', withdraw: 'usd', depSui: 'sui', depL: 'l', wdSui: 'sui', wdL: 'l', borrow: 'usd', repay: 'usd', lpAdd: 'usd', lpRemove: 'pct', liquidate: 'usd' };
+  function amtTxt(a) { const u = UNIT[a.type]; return u === 'usd' ? usd0(a.amt) : u === 'sui' ? num(a.amt) + ' SUI' : u === 'l' ? num(a.amt) + ' liqSUI' : Math.round(a.amt) + '%'; }
+  function debrief() {
+    const sc = M.sc, H = S.hist, fin = Game.value(S).total;
+    if (!S.saved) { S.saved = true; if (M.open) savePlayed(M.key, fin); }
+    const nk = M.open ? nextKey(M.key) : null;
+    const acts = S.actions.map(a => ({ t: a.t, type: a.type, amt: a.amt }));
+    const okActs = S.actions.map((a, i) => ({ a, i })).filter(x => x.a.ok);
+    const holdSui = Game.value(Game.replay(M, [{ t: 0, type: 'buy', amt: 10000 }])).total;
+    let handsOff = null;
+    if (okActs.length) { const t1 = okActs[0].a.t; handsOff = Game.value(Game.replay(M, acts.filter(a => a.t <= t1))).total; }
+    // Sequential scoring: what each move added if you had stopped right after it instead of right before it.
+    // The column adds up to your total profit or loss.
+    const finalOf = n => (n === 0 ? 10000 : Game.value(Game.replay(M, acts.slice(0, n))).total);
+    const impacts = [];
+    let prev = 10000;
+    okActs.slice(0, 40).forEach(({ a, i }) => { const cur = finalOf(i + 1); impacts.push({ a, i, d: cur - prev }); prev = cur; });
+    const restD = fin - prev; // moves past the first 40, if any
+    const failedActs = S.actions.filter(a => !a.ok);
+    function stateAfter(idx) {
+      const S2 = Game.init(M); let k = 0;
+      for (;;) { while (k <= idx && acts[k].t === S2.t) { Game.act(S2, acts[k]); k++; } if (k > idx) return S2; Game.step(S2); }
+    }
+    // facts
+    let lowT = 0; H.ext.forEach((p, i) => { if (p < H.ext[lowT]) lowT = i; });
+    const maxAge = Math.max(...M.age), maxU = Math.max(...H.util), peakBad = Math.max(...H.bad), minPeg = Math.min(...H.peg);
+    const facts = [
+      ['SUI', `opened at $2.000, low $${H.ext[lowT].toFixed(3)} at minute ${lowT}, closed at $${H.ext[T].toFixed(3)}`],
+      ['Oracle', maxAge >= 8 ? `went silent for up to ${maxAge} minutes${sc.maxAge >= maxAge ? ' and the lending market kept using the stale price' : '; the lending market paused when it got too old'}` : 'kept up with the market all session'],
+      ['liqSUI', minPeg < 0.985 ? `fell to ${pct(minPeg)} of its redemption value` : 'held its peg'],
+      ['Lending market', `peak utilization ${pct(maxU)}, peak bad debt ${usd0(peakBad)}`],
+      ['You', S.liqMe.length ? `were liquidated ${S.liqMe.length} time${S.liqMe.length > 1 ? 's' : ''}, paying ${usd(S.stats.myLiqBonus)} in liquidation bonuses` : 'were never liquidated']
+    ];
+    // lessons
+    const L = [];
+    const firstBorrowIdx = S.actions.findIndex(a => a.ok && a.type === 'borrow');
+    if (firstBorrowIdx >= 0) {
+      const hb = Game.myLimits(stateAfter(firstBorrowIdx)).hf;
+      if (hb < 1.15) L.push(`You borrowed close to the limit: your health factor was ${hb.toFixed(2)} right after borrowing, so a ${pct(1 - 1 / hb, 1)} drop in SUI was enough to liquidate you. Borrowing half as much would have survived a ${pct(1 - 1 / (hb * 2), 0)} drop.`);
+    }
+    const borrowGain = impacts.filter(x => x.a.type === 'borrow').reduce((s, x) => s + x.d, 0);
+    if (S.liqMe.length && borrowGain > 1) L.push(`Your borrowing scored ${sgn(borrowGain)} only because the liquidation sold your SUI on the way down, like a stop-loss that charged you ${usd(S.stats.myLiqBonus)} in bonuses. Selling the SUI yourself would have done the same job for free.`);
+    if (S.liqMe.length) {
+      const firstLiq = S.liqMe[0].t, firstUnder = H.hfPre.findIndex(h => h < 1), warnT = H.hfPre.findIndex(h => h < 1.25);
+      if (firstUnder >= 0 && firstUnder < firstLiq) L.push(`Your loan became liquidatable at minute ${firstUnder}, but bots only liquidated it at minute ${firstLiq} because selling your collateral didn’t pay until then. Repaying part of the debt or adding collateral in those ${firstLiq - firstUnder} minutes would have saved the ${usd(S.stats.myLiqBonus)} in bonuses.`);
+      else L.push(`Bots liquidated you at minute ${firstLiq}, the same minute your health factor crossed 1, and charged ${usd(S.stats.myLiqBonus)} in bonuses. The time to act was earlier: it first fell below 1.25 at minute ${warnT} (SUI at $${H.ext[warnT].toFixed(3)}).`);
+    }
+    const sells = S.actions.filter(a => a.ok && a.type === 'sell');
+    for (const s of sells) if (Math.abs(s.t - lowT) <= 4 && H.ext[T] > H.ext[lowT] * 1.08) { L.push(`You sold SUI at minute ${s.t}, within minutes of the day’s low ($${H.ext[lowT].toFixed(3)}). It closed at $${H.ext[T].toFixed(3)}.`); break; }
+    const sellLs = S.actions.filter(a => a.ok && a.type === 'sellL' && H.peg[a.t] < 0.97);
+    if (sellLs.length) L.push(`You sold liqSUI at ${pct(H.peg[sellLs[0].t])} of its value. Redeeming returns full value, but only after ${sc.lstWait > 1 ? sc.lstWait + ' days' : 'the next epoch'}: you trade price for time.`);
+    const failW = S.actions.find(a => !a.ok && a.type === 'withdraw');
+    if (failW) L.push(`Your withdrawal failed at minute ${failW.t} because the pool ran out of cash. Lenders who withdrew earlier got out at full value; the ones left behind share the bad debt.`);
+    const hair = Game.value(S).hair;
+    if (S.lend.mySupply > 1 && hair > 0.0005) L.push(`Bad debt cost lenders ${pct(hair, 2)} of what they had in the pool at the end, ${usd(S.lend.mySupply * hair)} of yours.`);
+    const staleBorrow = S.actions.find(a => a.ok && a.type === 'borrow' && M.age[a.t] >= 8);
+    if (staleBorrow) L.push(`You borrowed at minute ${staleBorrow.t} while the oracle was ${M.age[staleBorrow.t]} minutes stale: the lending market priced SUI at $${M.rep[staleBorrow.t].toFixed(3)} while it really traded at $${M.ext[staleBorrow.t].toFixed(3)}. Lenders carry that gap.`);
+    const liqs = S.actions.filter(a => a.ok && a.type === 'liquidate');
+    if (liqs.length) L.push(`You liquidated other borrowers and earned ${usd(S.stats.bonusEarned)} in bonuses before selling the collateral. What you kept depended on how fast you sold, and at what DEX price.`);
+    const fakes = sc.script.filter(s => s.fake && !s.noise);
+    if (fakes.length && S.actions.some(a => a.ok && ['sell', 'repay', 'withdraw', 'sellL'].includes(a.type) && fakes.some(f => a.t >= f.t && a.t <= f.t + 5))) L.push('You reacted within minutes of a headline that turned out to be false. Check the impact column for what that move cost.');
+    if (!okActs.length) L.push(`You sat out the whole session. Buying SUI at the start and holding would have ended at ${usd(holdSui)}.`);
+    if (impacts.length) {
+      const worstI = impacts.reduce((a, x) => (x.d < a.d ? x : a)), bestI = impacts.reduce((a, x) => (x.d > a.d ? x : a));
+      if (worstI.d < -1) L.push(`Your costliest move: ${NAMES[worstI.a.type]} (${amtTxt(worstI.a)}) at minute ${worstI.a.t}, ${sgn(worstI.d)} compared with making no more moves before it, holding to minute 120.`);
+      if (bestI.d > 1 && !(bestI.a.type === 'borrow' && S.liqMe.length)) L.push(`Your best move: ${NAMES[bestI.a.type]} (${amtTxt(bestI.a)}) at minute ${bestI.a.t}, ${sgn(bestI.d)}.`);
+    }
+    if (!L.length) L.push('Nothing you did moved the result much. Replay the same market and try a bolder strategy to see where its limits are.');
+    const maxAbs = Math.max(1, ...impacts.map(x => Math.abs(x.d)));
+    $('debrief').innerHTML = `
+      <section class="panel reveal"><p class="eyebrow">What happened today</p><h2>${sc.title}</h2><p>${sc.story}</p></section>
+      <div class="db-grid">
+        <section class="panel"><h3>Your result</h3>
+          <div class="result ${fin >= 10000 ? 'gain' : 'loss'}"><span class="big">${usd(fin)}</span><span class="pp">${spct(fin / 10000 - 1, 2)}</span></div>
+          <table class="cmp"><tbody>
+            <tr><td>Kept $10,000 in USDC</td><td class="n">${usd(10000)}</td></tr>
+            <tr><td>Bought SUI at the start and held</td><td class="n">${usd(holdSui)}</td></tr>
+            ${handsOff !== null ? `<tr><td>Your first moves, then hands off</td><td class="n">${usd(handsOff)}</td></tr>` : ''}
+            <tr class="you"><td>What you actually did</td><td class="n">${usd(fin)}</td></tr>
+          </tbody></table>
+        </section>
+        <section class="panel"><h3>The market, in facts</h3><dl class="facts">${facts.map(f => `<div><dt>${f[0]}</dt><dd>${f[1]}</dd></div>`).join('')}</dl></section>
+      </div>
+      <section class="panel"><h3>What each move did <small>each move held to the end of the session</small></h3>
+        <p class="d" style="margin:0 0 8px">A move’s impact compares two endings of the same market, both held to minute 120: making no more moves after this one, versus making no more moves before it. The column adds up to your total result: ${sgn(fin - 10000)}.</p>
+        ${impacts.length ? `<div class="tbl-wrap"><table class="log imp"><thead><tr><th>Minute</th><th>Move</th><th class="n">Amount</th><th class="n">Impact</th><th></th></tr></thead><tbody>${impacts.map(x => `<tr><td>${x.a.t}</td><td>${NAMES[x.a.type]}</td><td class="n">${amtTxt(x.a)}</td><td class="n ${x.d >= 0.005 ? 'gain' : x.d <= -0.005 ? 'loss' : ''}">${sgn(x.d)}</td><td class="barc"><span class="bar"><i class="${x.d < 0 ? 'neg' : 'pos'}" style="width:${((Math.abs(x.d) / maxAbs) * 50).toFixed(1)}%"></i></span></td></tr>`).join('')}</tbody></table></div>${okActs.length > 40 ? `<p class="d">Showing your first 40 moves; the rest added ${sgn(restD)}.</p>` : ''}` : '<p class="d">You made no moves.</p>'}
+      </section>
+      ${failedActs.length ? `<section class="panel"><h3>Moves that didn’t go through</h3><ul class="reveal-list">${failedActs.map(a => `<li><span class="nt">${a.t}m</span><span>${NAMES[a.type] || a.type}: ${a.msg}</span><span class="tag fail">Failed</span></li>`).join('')}</ul></section>` : ''}
+      <section class="panel"><h3>Lessons from this run</h3><ul class="lessons">${L.map(l => `<li>${l}</li>`).join('')}</ul></section>
+      <section class="panel"><h3>The headlines, revealed</h3><ul class="reveal-list">${sc.script.slice().sort((a, b) => a.t - b.t).map(s => `<li><span class="nt">${s.t}m</span><span>${s.text}</span><span class="tag ${s.fake ? 'fail' : 'pass'}">${s.fake ? (s.noise ? 'Noise' : 'False') : 'Real'}</span></li>`).join('')}</ul><p class="d">Every other headline was generated from what the market actually did.</p></section>
+      <div class="db-actions"><button type="button" class="btn primary" id="again-same">Replay this market</button><button type="button" class="btn" id="again-new">${M.open ? 'Same scenario, new timing' : 'New hidden market'}</button>${nk ? `<button type="button" class="btn" id="again-next">Next: ${kindOf(nk).title}</button>` : ''}<button type="button" class="btn" id="again-pick">Pick a scenario</button></div>`;
+    $('debrief').hidden = false;
+    $('again-same').addEventListener('click', () => { newGame(M.seed); window.scrollTo({ top: 0 }); });
+    $('again-new').addEventListener('click', () => { newGame(randomSeed()); window.scrollTo({ top: 0 }); });
+    if (nk) $('again-next').addEventListener('click', () => { chosenKey = nk; newGame(randomSeed()); window.scrollTo({ top: 0 }); });
+    $('again-pick').addEventListener('click', () => { showChooser(); window.scrollTo({ top: 0 }); });
+    $('debrief').scrollIntoView({ block: 'start' });
+  }
+  function randomSeed() { return 1 + Math.floor(Math.random() * 99999); }
+
+  // ---------- wiring ----------
+  $('play').addEventListener('click', () => (running ? stop() : play()));
+  $('endnow').addEventListener('click', endNow);
+  document.querySelectorAll('#speed button').forEach(b => {
+    b.setAttribute('aria-pressed', String(+b.dataset.s === speed));
+    b.addEventListener('click', () => {
+      speed = +b.dataset.s; try { localStorage.setItem('panic-speed', String(speed)); } catch (e) {}
+      document.querySelectorAll('#speed button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      if (running) { clearInterval(timer); timer = setInterval(tick, 1000 / speed); }
+    });
+  });
+  const sb = $('sound'); sb.setAttribute('aria-pressed', String(sound)); sb.textContent = sound ? 'Sound on' : 'Sound off';
+  sb.addEventListener('click', () => { sound = !sound; sb.setAttribute('aria-pressed', String(sound)); sb.textContent = sound ? 'Sound on' : 'Sound off'; try { localStorage.setItem('panic-sound', sound ? '1' : '0'); } catch (e) {} if (sound && !audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } });
+  document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#tabs button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    document.querySelectorAll('.pane').forEach(p => (p.hidden = p.id !== 'pane-' + b.dataset.tab));
+  }));
+  document.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
+    const [type, input] = b.dataset.act.split(':');
+    let ty = type;
+    if (type === 'post') ty = postKind === 'sui' ? 'depSui' : 'depL';
+    if (type === 'wdcoll') ty = wdKind === 'sui' ? 'wdSui' : 'wdL';
+    doAction(ty, input);
+  }));
+  document.querySelectorAll('[data-fill]').forEach(b => b.addEventListener('click', () => {
+    const [key, input, frac] = b.dataset.fill.split(':');
+    const mx = maxFor(key) * (+frac || 1);
+    $(input).value = mx > 0 ? (Math.floor(mx * 100) / 100).toString() : '';
+    $(input + '-e').textContent = ''; previews();
+  }));
+  document.querySelectorAll('.amt input').forEach(i => i.addEventListener('input', () => { $(i.id + '-e').textContent = ''; previews(); }));
+  document.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => {
+    const [grp, k] = b.dataset.kind.split(':');
+    if (grp === 'post') postKind = k; else wdKind = k;
+    document.querySelectorAll(`[data-kind^="${grp}:"]`).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    previews();
+  }));
+  document.addEventListener('keydown', ev => {
+    if (ev.code !== 'Space' || /INPUT|TEXTAREA|BUTTON|SELECT/.test(document.activeElement.tagName)) return;
+    ev.preventDefault(); if (!S.over && !document.body.classList.contains('choosing')) (running ? stop() : play());
+  });
+  let rt = 0;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderLive, 120); });
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderLive); } catch (e) {}
+  new MutationObserver(renderLive).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderLive);
+  newGame(randomSeed());
+  showChooser();
+})();
+
+</script>
+
+</html>
