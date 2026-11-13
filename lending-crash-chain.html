@@ -190,7 +190,7 @@ table.pays td.n { width: 120px; }
   <div>
     <p class="crumb">Companion to <a href="defi-risk-lab.html">DeFi Risk Lab</a></p>
     <h1>Lending <span>Crash Chain</span></h1>
-    <p class="tagline">One SUI lending market wired to the oracle that prices it, the DEX liquidators sell into, and the LST collateral it accepts. Crash SUI and watch each link, minute by minute, until you can say what caused the bad debt.</p>
+    <p class="tagline">One TKN lending market wired to the oracle that prices it, the DEX liquidators sell into, and the LST collateral it accepts. Crash TKN and watch each link, minute by minute, until you can say what caused the bad debt.</p>
   </div>
   <div class="legend-key" aria-label="States">
     <span><i class="sw" style="background:var(--ok)"></i>OK</span>
@@ -227,7 +227,7 @@ const Chain = (() => {
   function gauss(r) { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
   const FEE = 0.003;
   const sellOut = (x, y, dx) => { const d = dx * (1 - FEE); return (y * d) / (x + d); }; // sell dx of X for Y
-  const T = 180, P0 = 2, R0 = 1.05; // minutes, SUI start price, LST redemption rate (SUI per LST)
+  const T = 180, P0 = 2, R0 = 1.05; // minutes, TKN start price, LST redemption rate (TKN per LST)
 
   // External market price and the oracle, independent of the lending market.
   function feeds(p) {
@@ -279,13 +279,13 @@ const Chain = (() => {
     opts = opts || {};
     const pos = makeBorrowers(p);
     const LT = p.lt, b = p.bonus, CF = p.cf;
-    // DEX pool (SUI/USDC)
+    // DEX pool (TKN/USDC)
     const depth0 = opts.deepDex ? p.dexDepth * 100 : p.dexDepth;
     let dx = depth0 / P0, dy = depth0, lpFactor = 1;
-    // LST pool (LST/SUI)
+    // LST pool (LST/TKN)
     const lstUnits = pos.filter(q => q.lst).reduce((a, q) => a + q.units, 0);
     const lstSupply = lstUnits * 2; // assume half of all LST sits in this market
-    let lsui = p.lstDepth / P0, llst = lsui / R0;
+    let ltkn = p.lstDepth / P0, llst = ltkn / R0;
     const phiL = Math.min(0.5, Math.max(0.002, 0.1 / p.wait));
     const crashEnd = p.crashAt + Math.max(1, p.crashLen);
     const s = { ext: f.ext, pp: [], acc: [], dex: [], peg: [], repaidCum: [], repaidMin: [], stuck: [], under: [], unprofit: [], bonusPaid: 0, liqPnl: 0, repaid: 0, seizedOracle: 0, lstSold: 0, lstRedeemed: 0 };
@@ -304,10 +304,10 @@ const Chain = (() => {
       { const k = dx * dy, q = dy / dx; const qt = q * Math.pow(ext / q, p.arb); dx = Math.sqrt(k / qt); dy = Math.sqrt(k * qt); }
       // LST: panic selling during the crash, then arbitrage toward peg
       if (!opts.noDepeg) {
-        if (t > p.crashAt && t <= crashEnd + 30 && p.panic > 0) { const sold = (p.panic * lstSupply) / (crashEnd + 30 - p.crashAt); const out = sellOut(llst, lsui, sold); llst += sold; lsui -= out; }
-        const k = llst * lsui, m = lsui / llst / R0; const mt = m * Math.pow(1 / m, phiL); const qt = mt * R0; llst = Math.sqrt(k / qt); lsui = Math.sqrt(k * qt);
+        if (t > p.crashAt && t <= crashEnd + 30 && p.panic > 0) { const sold = (p.panic * lstSupply) / (crashEnd + 30 - p.crashAt); const out = sellOut(llst, ltkn, sold); llst += sold; ltkn -= out; }
+        const k = llst * ltkn, m = ltkn / llst / R0; const mt = m * Math.pow(1 / m, phiL); const qt = mt * R0; llst = Math.sqrt(k / qt); ltkn = Math.sqrt(k * qt);
       }
-      const peg = opts.noDepeg ? 1 : lsui / llst / R0;
+      const peg = opts.noDepeg ? 1 : ltkn / llst / R0;
       const priceOf = q => (q.lst ? (p.lstOracle === 'market' ? peg : 1) * R0 * pp : pp);
       // liquidations
       let repaidNow = 0, unprofitable = false;
@@ -323,18 +323,18 @@ const Chain = (() => {
             let done = false;
             for (let tryi = 0; tryi < 4 && !done; tryi++) {
               const units = (R * (1 + b)) / up;
-              let sui, nl = llst, ns = lsui;
+              let tkn, nl = llst, ns = ltkn;
               let redeemed = false;
               if (q.lst) {
-                if (opts.noDepeg) sui = units * R0 * (1 - FEE);
+                if (opts.noDepeg) tkn = units * R0 * (1 - FEE);
                 else {
-                  const viaPool = sellOut(llst, lsui, units), viaRedeem = units * R0 * (1 - 0.002 * p.wait);
-                  if (viaPool >= viaRedeem) { sui = viaPool; nl = llst + units; ns = lsui - sui; } else { sui = viaRedeem; redeemed = true; }
+                  const viaPool = sellOut(llst, ltkn, units), viaRedeem = units * R0 * (1 - 0.002 * p.wait);
+                  if (viaPool >= viaRedeem) { tkn = viaPool; nl = llst + units; ns = ltkn - tkn; } else { tkn = viaRedeem; redeemed = true; }
                 }
-              } else sui = units;
-              const usdc = sellOut(dx, dy, sui);
+              } else tkn = units;
+              const usdc = sellOut(dx, dy, tkn);
               if (usdc >= R) {
-                dx += sui; dy -= usdc; llst = nl; lsui = ns;
+                dx += tkn; dy -= usdc; llst = nl; ltkn = ns;
                 if (q.lst && !opts.noDepeg) { if (redeemed) s.lstRedeemed += units; else s.lstSold += units; }
                 q.debt -= R; q.units -= units;
                 repaidNow += R; s.bonusPaid += R * b; s.liqPnl += usdc - R; s.seizedOracle += R * (1 + b);
@@ -346,7 +346,7 @@ const Chain = (() => {
         }
       }
       repaidCum += repaidNow; s.repaid = repaidCum;
-      const pegNow = opts.noDepeg ? 1 : lsui / llst / R0;
+      const pegNow = opts.noDepeg ? 1 : ltkn / llst / R0;
       let stuck = 0, under = 0;
       for (const q of pos) {
         const up = q.lst ? (p.lstOracle === 'market' ? pegNow : 1) * R0 * pp : pp;
@@ -553,7 +553,7 @@ if (typeof module !== 'undefined') module.exports = Chain;
 
   const CTL = [
     { grp: 'The crash' },
-    { id: 'drop', label: 'SUI price drop', min: 5, max: 70, step: 1, value: 35, scale: 0.01, fmt: v => v + '%' },
+    { id: 'drop', label: 'TKN price drop', min: 5, max: 70, step: 1, value: 35, scale: 0.01, fmt: v => v + '%' },
     { id: 'crashAt', label: 'Crash starts at minute', min: 5, max: 120, step: 5, value: 30, fmt: v => String(v) },
     { id: 'crashLen', label: 'Crash lasts', min: 0, max: 60, step: 1, value: 20, fmt: v => (v === 0 ? 'Gap (one minute)' : v + ' min') },
     { grp: 'Oracle' },
@@ -566,14 +566,14 @@ if (typeof module !== 'undefined') module.exports = Chain;
     { id: 'maxAge', label: 'Reject prices older than', min: 1, max: 120, step: 1, value: 60, fmt: v => v + ' min' },
     { id: 'maxConf', label: 'Reject confidence wider than', min: 0.5, max: 20, step: 0.5, value: 10, scale: 0.01, fmt: v => v.toFixed(1) + '%' },
     { grp: 'DEX liquidity' },
-    { id: 'dexDepth', label: 'SUI/USDC pool depth (USDC side)', type: 'log', min: 1e6, max: 500e6, value: 20e6, fmt: v => F.usd(v) },
+    { id: 'dexDepth', label: 'TKN/USDC pool depth (USDC side)', type: 'log', min: 1e6, max: 500e6, value: 20e6, fmt: v => F.usd(v) },
     { id: 'arb', label: 'Arbitrage closes this much of the DEX gap per minute', min: 5, max: 100, step: 5, value: 80, scale: 0.01, fmt: v => v + '%' },
     { id: 'drain', label: 'Liquidity LPs pull during the crash', min: 0, max: 90, step: 5, value: 30, scale: 0.01, fmt: v => v + '%' },
     { grp: 'LST collateral' },
     { id: 'lstShare', label: 'Share of borrowers posting an LST', min: 0, max: 80, step: 5, value: 30, scale: 0.01, fmt: v => v + '%' },
     { id: 'lstOracle', label: 'LST collateral is priced at', type: 'seg', options: [['redemption', 'Redemption rate'], ['market', 'Market price']], value: 'redemption' },
-    { id: 'wait', label: 'Time to redeem LST for SUI', min: 1, max: 60, step: 1, value: 1, fmt: v => v + (v === 1 ? ' day' : ' days') },
-    { id: 'lstDepth', label: 'LST/SUI pool depth (SUI side)', type: 'log', min: 1e6, max: 200e6, value: 10e6, fmt: v => F.usd(v) },
+    { id: 'wait', label: 'Time to redeem LST for TKN', min: 1, max: 60, step: 1, value: 1, fmt: v => v + (v === 1 ? ' day' : ' days') },
+    { id: 'lstDepth', label: 'LST/TKN pool depth (TKN side)', type: 'log', min: 1e6, max: 200e6, value: 10e6, fmt: v => F.usd(v) },
     { id: 'panic', label: 'LST holders who panic-sell in the crash', min: 0, max: 20, step: 0.5, value: 3, scale: 0.01, fmt: v => v + '%' },
     { grp: 'Lending market' },
     { id: 'coll', label: 'Collateral deposited', min: 10, max: 200, step: 5, value: 50, scale: 1e6, fmt: v => '$' + v + 'M' },
@@ -586,11 +586,11 @@ if (typeof module !== 'undefined') module.exports = Chain;
     { id: 'seed', type: 'button', label: 'New random price noise', value: 7 }
   ];
   const PRESETS = [
-    { name: 'Orderly crash', note: '<b>Start here.</b> SUI falls 35% over 20 minutes. Liquidations mostly keep up. The small bad debt comes from the DEX: liquidators sell until its price sits right at their break-even, and arbitrage can only refill it so fast. Scrub through the minutes and watch the DEX card.', set: {} },
+    { name: 'Orderly crash', note: '<b>Start here.</b> TKN falls 35% over 20 minutes. Liquidations mostly keep up. The small bad debt comes from the DEX: liquidators sell until its price sits right at their break-even, and arbitrage can only refill it so fast. Scrub through the minutes and watch the DEX card.', set: {} },
     { name: 'Oracle outage', note: 'The feed goes silent five minutes before the crash and stays down 45 minutes. A 60-minute age limit keeps accepting the old price, so liquidations wait for the feed to return.', set: { outageLen: 45 } },
     { name: 'TWAP lag', note: 'The market prices loans with a 60-minute TWAP. It trails the crash, so loans look healthy long after they aren’t.', set: { source: 'twap', twap: 60 } },
     { name: 'Thin DEX', note: 'A $5M pool, slow arbitrage, and LPs pulling half their liquidity. Liquidations stall almost immediately and most unhealthy debt is still stuck three hours later.', set: { dexDepth: 5e6, arb: 10, drain: 50 } },
-    { name: 'LST depeg, market oracle', note: 'Half the borrowers post an LST, 3% of holders panic-sell, and redemptions take 14 days. Priced at market, LST loans liquidate in a cascade: borrowers lose big, liquidators earn big, and the dumped SUI drags the DEX far below the market.', set: { lstShare: 50, lstOracle: 'market', panic: 3, lstDepth: 6e6, wait: 14 } },
+    { name: 'LST depeg, market oracle', note: 'Half the borrowers post an LST, 3% of holders panic-sell, and redemptions take 14 days. Priced at market, LST loans liquidate in a cascade: borrowers lose big, liquidators earn big, and the dumped TKN drags the DEX far below the market.', set: { lstShare: 50, lstOracle: 'market', panic: 3, lstDepth: 6e6, wait: 14 } },
     { name: 'LST depeg, redemption oracle', note: 'Same depeg, but the market values LST at its redemption rate. Borrowers are spared the cascade, but seized LST is worth less than the oracle says, so liquidations stall and the loss shifts toward lenders.', set: { lstShare: 50, panic: 3, lstDepth: 6e6, wait: 14 } },
     { name: 'Redemptions locked', note: 'Redemptions take 30 days, like stETH before withdrawals opened. Liquidators can neither sell LST near peg nor redeem it cheaply, so LST loans sit unliquidated and lenders absorb the depeg.', set: { lstShare: 50, panic: 3, lstDepth: 6e6, wait: 30 } },
     { name: 'Gap down', note: 'A 40% drop in a single minute. Fixing the oracle, the DEX, and the LST together doesn’t help: loans jump straight past their liquidation price before anyone can act.', set: { crashLen: 0, drop: 40 } }
@@ -695,14 +695,14 @@ if (typeof module !== 'undefined') module.exports = Chain;
     const out = document.getElementById('out');
     out.innerHTML = monitor(rows) +
       `<section class="panel"><h3>What caused the bad debt <small>the same crash rerun with one link fixed</small></h3>${attr}</section>` +
-      `<div class="charts">${chartPanel('c-price', 'SUI price: market, oracle, DEX', 'shaded minutes: oracle price rejected', [{ label: 'Market', color: '--faint' }, { label: 'Price the protocol uses', color: '--accent' }, { label: 'DEX pool price', color: '--warm' }, { label: 'Rejected', color: '--crit-soft', band: true }])}
+      `<div class="charts">${chartPanel('c-price', 'TKN price: market, oracle, DEX', 'shaded minutes: oracle price rejected', [{ label: 'Market', color: '--faint' }, { label: 'Price the protocol uses', color: '--accent' }, { label: 'DEX pool price', color: '--warm' }, { label: 'Rejected', color: '--crit-soft', band: true }])}
         <div class="charts two">${chartPanel('c-debt', 'Debt over time', '', [{ label: 'Repaid by liquidators (total)', color: '--accent' }, { label: 'In unhealthy loans', color: '--warn' }, { label: 'Without collateral', color: '--crit' }])}${chartPanel('c-peg', 'LST market price', 'share of redemption value', [{ label: 'LST / redemption value', color: '--violet' }])}</div></div>` +
       `<section class="panel"><h3>Who pays <small>totals over the three hours</small></h3><div class="tbl-wrap">${whoPays}</div></section>` +
       notes([
-        'Minute steps for three hours. SUI follows a random walk (0.15% a minute) plus the crash, spread evenly over its length or in one minute for a gap.',
+        'Minute steps for three hours. TKN follows a random walk (0.15% a minute) plus the crash, spread evenly over its length or in one minute for a gap.',
         'Oracle: pushes a price when the market moves past the deviation threshold or the heartbeat runs out, nothing during an outage. Confidence widens with recent volatility. The market rejects prices older than the age limit or with confidence wider than the limit.',
-        'DEX: one SUI/USDC constant-product pool with a 0.3% fee. Each minute arbitrage closes the chosen share of the gap to the market price, and LPs withdraw their chosen share of liquidity over the crash.',
-        'LST: redemption rate 1.05 SUI. Half of all LST is assumed to sit in this market. Panic sales go through an LST/SUI pool, and arbitrage pulls it back toward peg faster when redemptions are quicker (10% of the gap per minute ÷ days to redeem).',
+        'DEX: one TKN/USDC constant-product pool with a 0.3% fee. Each minute arbitrage closes the chosen share of the gap to the market price, and LPs withdraw their chosen share of liquidity over the crash.',
+        'LST: redemption rate 1.05 TKN. Half of all LST is assumed to sit in this market. Panic sales go through an LST/TKN pool, and arbitrage pulls it back toward peg faster when redemptions are quicker (10% of the gap per minute ÷ days to redeem).',
         'Liquidators act each minute when the price is accepted, riskiest loans first. They only liquidate when selling the collateral returns at least the debt repaid, shrinking the size until it does. Seized LST is sold in the pool or redeemed, whichever pays more; redeeming costs 0.2% per day of waiting.',
         'Bad debt is debt above the collateral’s real market value at minute 180. “What caused it” reruns the same price path with one link replaced: an oracle equal to the market, a DEX 100× deeper with no LPs leaving, or an LST that never depegs. Effects overlap, so the rows don’t add up.',
         'Left out: gas and priority fees, lenders withdrawing in a panic, interest accrual, and the oracle reading the DEX itself.'

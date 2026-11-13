@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<style>/* Layout: a trading desk. A sticky bar carries the clock, controls, SUI price and net worth; below it the moves rail on the left and the board (price, headlines, positions, net worth, your log) on the right. */
+<style>/* Layout: a trading desk. A sticky bar carries the clock, controls, TKN price and net worth; below it the moves rail on the left and the board (price, headlines, positions, net worth, your log) on the right. */
 :root {
   --bg: #EDF1EF; --surface: #FFFFFF; --sunk: #F4F7F5; --ink: #122420; --muted: #56665F; --faint: #85948E; --line: #D2DCD8;
   --accent: #0A6C8A; --accent-ink: #FFFFFF; --accent-soft: #DCEEF3;
@@ -216,7 +216,7 @@ table.outc td.n small { display: block; font-size: 11.5px; }
   <div class="brand"><b>Perp Panic Desk</b><span class="mk">Market <span id="seed"></span></span></div>
   <div class="clockbox"><div class="clk"><span id="clock">0:00</span><span class="of">of 24:00</span></div><div class="prog" aria-hidden="true"><i id="prog"></i></div></div>
   <div class="ctrls"><button type="button" id="play" class="btn primary" aria-pressed="false">Start</button><div class="seg" id="speed" role="group" aria-label="Speed"><button type="button" data-s="0.5">½×</button><button type="button" data-s="1">1×</button><button type="button" data-s="2">2×</button><button type="button" data-s="4">4×</button></div><button type="button" id="sound" class="btn">Sound on</button><button type="button" id="endnow" class="btn">End now</button></div>
-  <div class="ticker"><div class="tk"><span class="lbl">SUI oracle</span><span id="px" class="bigv">$2.000</span><span id="pxch" class="chg"></span></div><div class="tk"><span class="lbl">vAMM price</span><span id="mk" class="bigv">$2.000</span><span id="mkch" class="chg"></span></div><div class="tk"><span class="lbl">Your net worth</span><span id="nw" class="bigv">$10,000.00</span><span id="nwch" class="chg"></span></div></div>
+  <div class="ticker"><div class="tk"><span class="lbl">TKN oracle</span><span id="px" class="bigv">$2.000</span><span id="pxch" class="chg"></span></div><div class="tk"><span class="lbl">vAMM price</span><span id="mk" class="bigv">$2.000</span><span id="mkch" class="chg"></span></div><div class="tk"><span class="lbl">Your net worth</span><span id="nw" class="bigv">$10,000.00</span><span id="nwch" class="chg"></span></div></div>
 </div></header>
 <main class="wrap main">
   <div id="alert" class="alerts" aria-live="polite"></div>
@@ -239,7 +239,7 @@ table.outc td.n small { display: block; font-size: 11.5px; }
 <p class="pv" id="p-unstake"></p><button type="button" class="btn go" data-act="unstake:a-unstake">Unstake</button><p class="err" id="a-unstake-e" role="alert"></p></div></div><div class="pane" id="pane-keeper" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Liquidate positions</span><span class="hint">no capital needed</span></div><p class="pv" id="p-liq"></p><button type="button" class="btn go" data-act="liquidate">Liquidate everything I can</button><p class="err" id="a-liq-e" role="alert"></p></div></div></aside>
     <div class="board">
       <div class="row2">
-        <section class="panel"><h3>SUI price <small>the oracle, the vAMM, and your liquidation price</small></h3><canvas class="chart" id="c-price" role="img" aria-label="SUI price chart"></canvas>
+        <section class="panel"><h3>TKN price <small>the oracle, the vAMM, and your liquidation price</small></h3><canvas class="chart" id="c-price" role="img" aria-label="TKN price chart"></canvas>
           <div class="chart-legend"><span><i class="sw" style="background:var(--accent)"></i>Oracle (index)</span><span><i class="sw" style="background:var(--warm)"></i>vAMM (mark)</span><span id="lg-real" hidden><i class="sw" style="background:var(--faint)"></i>Exchanges</span><span id="liqline" hidden><i class="sw dash" style="background:var(--crit);color:var(--crit)"></i>Your liquidation price</span></div></section>
         <section class="panel newsp"><h3>Headlines</h3><ul class="feed" id="news"></ul></section>
       </div>
@@ -252,11 +252,11 @@ table.outc td.n small { display: block; font-size: 11.5px; }
   </div>
   <div id="debrief" class="debrief" hidden></div>
   <details class="panel rules"><summary>How this market works</summary><ul>
-    <li>One SUI perpetual for 24 hours, in 15-minute steps. Funding is paid every hour. It follows the public Perpetual Protocol v1 design, plus an automatic repeg rule.</li>
+    <li>One TKN perpetual for 24 hours, in 15-minute steps. Funding is paid every hour. It follows the public Perpetual Protocol v1 design, plus an automatic repeg rule.</li>
     <li>The vAMM is x·y = k with $60M of virtual USDC. It holds no real money: its price moves only when someone trades. The oracle is the index price; in most scenarios it equals the exchange price.</li>
     <li>Margin: up to 10× (10% initial margin). A position is liquidatable below a 6.25% margin ratio, measured on the vAMM price. When the vAMM and oracle are more than 10% apart, Perp v1 also checks the oracle and uses whichever is better for the trader.</li>
     <li>Liquidation: above a 1.25% margin ratio a keeper closes 25% of the position; below that, all of it. The penalty is 1.25% of what is closed, half to the keeper and half to the insurance fund. On a full liquidation, leftover margin goes to the insurance fund.</li>
-    <li>Funding: every hour, (average vAMM price − average oracle price over the hour) ÷ 24, per vSUI. When longs and shorts don’t cancel, the insurance fund keeps or pays the difference.</li>
+    <li>Funding: every hour, (average vAMM price − average oracle price over the hour) ÷ 24, per vTKN. When longs and shorts don’t cancel, the insurance fund keeps or pays the difference.</li>
     <li>Fees: 0.1% of the position on every open and close, paid to the insurance fund.</li>
     <li>Payouts: winners are paid from the vault, which holds everyone’s margin. The insurance fund covers bad debt and shortfalls; once it is empty, the vault holds less than traders are owed.</li>
     <li>Repeg: after three funding hours in a row with the vAMM more than 10% from the oracle, the protocol moves it to the oracle ± 5%, keeping k. The insurance fund pays or collects the cost. If that costs more than the fund holds, k is cut by 1% instead.</li>
@@ -267,7 +267,7 @@ table.outc td.n small { display: block; font-size: 11.5px; }
 </main>
 <div id="toast" class="toast" hidden role="status"></div>
 <script>
-// Panic Desk: Perps. One SUI perpetual on a vAMM in the style of Perpetual Protocol v1, with an automatic repeg.
+// Panic Desk: Perps. One TKN perpetual on a vAMM in the style of Perpetual Protocol v1, with an automatic repeg.
 // Cash lives in: your wallet, other traders (net), the arbitrage desk (net), the vault, the insurance fund, keeper bots.
 const PG = (() => {
   const T = 96, TPH = 4, MIN = 15, P0 = 2, W0 = 10000;
@@ -288,65 +288,65 @@ const PG = (() => {
 
   // ---------- scenarios ----------
   // Each tick is 15 minutes; the session is 24 hours (96 ticks); funding is paid every hour.
-  const NOISE = ['A whale moved 1.2M SUI between wallets.', 'Social media: “SUI is going to zero.”', 'An analyst calls SUI “oversold”.', 'A large holder bridges 800K USDC onto Sui.', 'Gas prices on Sui tick up as activity rises.', 'A new SUI perp market launches on another exchange.'];
+  const NOISE = ['A whale moved 1.2M TKN between wallets.', 'Social media: “TKN is going to zero.”', 'An analyst calls TKN “oversold”.', 'A large holder bridges 800K USDC onto the chain.', 'Gas prices on the chain tick up as activity rises.', 'A new TKN perp market launches on another exchange.'];
   const KINDS = [
     { key: 'quiet', tone: 'good', title: 'A quiet day',
-      blurb: 'SUI drifts around $2 all day. Only fees, slippage on the vAMM and small funding payments move your money.',
+      blurb: 'TKN drifts around $2 all day. Only fees, slippage on the vAMM and small funding payments move your money.',
       tries: ['Open a 10× long and close it straight away: the round trip shows what fees and vAMM slippage cost at leverage.', 'Hold a 10× position all day and add up the funding you pay or receive.'],
-      make: r => ({ vol: 0.0025, revert: 0.04, lev: [2, 5], plan: 'SUI drifts randomly around $2 for 24 hours. Other traders open small longs and shorts in equal amounts, and the arbitrage desk keeps the vAMM close to the oracle.',
-        story: 'Nothing happened. SUI drifted around $2, so anything you gained or lost came from fees, vAMM slippage, funding and timing.' }) },
+      make: r => ({ vol: 0.0025, revert: 0.04, lev: [2, 5], plan: 'TKN drifts randomly around $2 for 24 hours. Other traders open small longs and shorts in equal amounts, and the arbitrage desk keeps the vAMM close to the oracle.',
+        story: 'Nothing happened. TKN drifted around $2, so anything you gained or lost came from fees, vAMM slippage, funding and timing.' }) },
     { key: 'rally', tone: 'good', title: 'A rally with crowded longs',
-      blurb: 'SUI climbs about 20% over eight hours. Late longs pile in, the vAMM runs above the oracle, and longs pay funding to shorts.',
+      blurb: 'TKN climbs about 20% over eight hours. Late longs pile in, the vAMM runs above the oracle, and longs pay funding to shorts.',
       tries: ['Open a long early and compare your profit with the funding you paid.', 'Open a 10× short and see when it gets liquidated, and how the liquidation buys back into the vAMM.'],
       make: r => { const rise = 0.18 + 0.06 * r(), at = ri(r, 10, 20), len = ri(r, 28, 36); return { rise, riseAt: at, riseLen: len, longShare: 0.45, lev: [3, 10], arb: 0.25,
         flows: [{ a: at + 4, b: at + len + 8, usd: 140e3 }],
-        plan: `SUI rises ${P(rise)} between ${hm(at)} and ${hm(at + len)}, then holds. From ${hm(at + 4)} other traders keep opening longs every 15 minutes until ${hm(at + len + 8)}, so the vAMM trades above the oracle and longs pay funding.`,
-        script: [{ t: at + 2, text: 'A large fund announces it is buying SUI.' }, { t: at + 14, text: 'Retail longs on SUI perps hit a record.' }],
-        story: `SUI rose ${P(rise)} between ${hm(at)} and ${hm(at + len)}. Longs gained, but the crowd of late longs kept the vAMM above the oracle, so every hour longs paid funding to shorts.` }; } },
+        plan: `TKN rises ${P(rise)} between ${hm(at)} and ${hm(at + len)}, then holds. From ${hm(at + 4)} other traders keep opening longs every 15 minutes until ${hm(at + len + 8)}, so the vAMM trades above the oracle and longs pay funding.`,
+        script: [{ t: at + 2, text: 'A large fund announces it is buying TKN.' }, { t: at + 14, text: 'Retail longs on TKN perps hit a record.' }],
+        story: `TKN rose ${P(rise)} between ${hm(at)} and ${hm(at + len)}. Longs gained, but the crowd of late longs kept the vAMM above the oracle, so every hour longs paid funding to shorts.` }; } },
     { key: 'funding', tone: 'mixed', title: 'Crowded longs, flat price',
-      blurb: 'SUI goes nowhere, but traders keep buying the perp. The vAMM stays above the oracle all day, and longs bleed funding every hour.',
+      blurb: 'TKN goes nowhere, but traders keep buying the perp. The vAMM stays above the oracle all day, and longs bleed funding every hour.',
       tries: ['Open a long and hold it all day: the price doesn’t move, so you see funding on its own.', 'Open a short: you’re paid to hold it, as long as the price doesn’t rise.'],
       make: r => ({ longShare: 0.6, lev: [3, 10], arb: 0.1, vol: 0.0025, revert: 0.03,
         push: { a: 2, b: 94, gap: 0.05 },
-        plan: 'SUI stays around $2 all day. Other traders keep buying the perp and the arbitrage desk is slow, so the vAMM sits about 5% above the oracle and longs pay shorts every hour.',
-        script: [{ t: 20, text: 'Traders say SUI “has to” break out soon.', fake: true }, { t: 60, text: 'Funding on SUI perps is the highest this month.' }],
+        plan: 'TKN stays around $2 all day. Other traders keep buying the perp and the arbitrage desk is slow, so the vAMM sits about 5% above the oracle and longs pay shorts every hour.',
+        script: [{ t: 20, text: 'Traders say TKN “has to” break out soon.', fake: true }, { t: 60, text: 'Funding on TKN perps is the highest this month.' }],
         story: 'The price went nowhere, but the crowd kept buying the perp, so the vAMM stayed above the oracle all day. Longs paid funding every hour without any price move to pay for it; shorts were paid to wait.' }) },
     { key: 'shortsq', tone: 'mixed', title: 'A short squeeze',
-      blurb: 'Most traders are short with high leverage. SUI jumps about 12% in two hours, short liquidations buy into the vAMM, and the mark overshoots the oracle.',
+      blurb: 'Most traders are short with high leverage. TKN jumps about 12% in two hours, short liquidations buy into the vAMM, and the mark overshoots the oracle.',
       tries: ['Open a 10× short and watch the liquidation cascade take it.', 'Open a long before the jump, and close it while the mark is above the oracle.'],
       make: r => { const at = ri(r, 30, 50), rise = 0.11 + 0.03 * r(); return { rise, riseAt: at, riseLen: 8, recover: 0, drop: 0.06, crashAt: at + 12, crashLen: 24, longShare: 0.25, lev: [4, 10], oi: 10e6, arb: 0.35,
-        plan: `SUI jumps ${P(rise)} between ${hm(at)} and ${hm(at + 8)}, then gives back about 6% over the next six hours. Three quarters of other traders are short, at 4–10×.`,
-        script: [{ t: at + 1, text: 'SUI breaks above a level many traders shorted.' }, { t: at + 5, text: 'Shorts are being liquidated across SUI perp markets.' }],
-        story: `SUI jumped ${P(rise)} in two hours from ${hm(at)}. Liquidated shorts had to buy back on the vAMM, pushing the mark above the oracle and liquidating more shorts.` }; } },
+        plan: `TKN jumps ${P(rise)} between ${hm(at)} and ${hm(at + 8)}, then gives back about 6% over the next six hours. Three quarters of other traders are short, at 4–10×.`,
+        script: [{ t: at + 1, text: 'TKN breaks above a level many traders shorted.' }, { t: at + 5, text: 'Shorts are being liquidated across TKN perp markets.' }],
+        story: `TKN jumped ${P(rise)} in two hours from ${hm(at)}. Liquidated shorts had to buy back on the vAMM, pushing the mark above the oracle and liquidating more shorts.` }; } },
     { key: 'longsq', tone: 'bad', title: 'A long squeeze',
-      blurb: 'Most traders are long with high leverage. SUI drops 12% in an hour, long liquidations sell into the vAMM, and the mark falls further than the oracle.',
+      blurb: 'Most traders are long with high leverage. TKN drops 12% in an hour, long liquidations sell into the vAMM, and the mark falls further than the oracle.',
       tries: ['Open a 10× long and see where liquidation catches you: by the mark, not the oracle.', 'Open nothing and act as a keeper: liquidate positions before the bots do and collect the fee.'],
       make: r => { const at = ri(r, 30, 50), drop = 0.11 + 0.02 * r(); return { drop, crashAt: at, crashLen: 4, recover: 0.5, recoverLen: 24, longShare: 0.78, lev: [4, 10], oi: 10e6, arb: 0.3,
-        plan: `SUI falls ${P(drop)} between ${hm(at)} and ${hm(at + 4)}, then wins back half of the fall over six hours. Three quarters of other traders are long, at 4–10×.`,
-        script: [{ t: at - 2, text: 'Large SUI sell orders appear on major exchanges.' }, { t: at + 2, text: 'Long liquidations spike on SUI perps.' }],
-        story: `SUI fell ${P(drop)} in an hour at ${hm(at)}. Each liquidated long sold into the vAMM, so the mark fell further than the oracle and liquidated more longs, until the arbitrage desk pulled it back.` }; } },
+        plan: `TKN falls ${P(drop)} between ${hm(at)} and ${hm(at + 4)}, then wins back half of the fall over six hours. Three quarters of other traders are long, at 4–10×.`,
+        script: [{ t: at - 2, text: 'Large TKN sell orders appear on major exchanges.' }, { t: at + 2, text: 'Long liquidations spike on TKN perps.' }],
+        story: `TKN fell ${P(drop)} in an hour at ${hm(at)}. Each liquidated long sold into the vAMM, so the mark fell further than the oracle and liquidated more longs, until the arbitrage desk pulled it back.` }; } },
     { key: 'lag', tone: 'bad', title: 'A slow oracle in a crash',
-      blurb: 'SUI falls 18% over three hours, but the oracle reports a three-hour average. Traders short the vAMM ahead of it, so shorts pay funding even though they’re right.',
+      blurb: 'TKN falls 18% over three hours, but the oracle reports a three-hour average. Traders short the vAMM ahead of it, so shorts pay funding even though they’re right.',
       tries: ['Open a short as the crash starts and look at the funding you pay while the oracle catches up.', 'Open a long: you’re liquidated by the mark while the oracle still shows a small drop.'],
       make: r => { const at = ri(r, 24, 40), drop = 0.16 + 0.04 * r(); return { drop, crashAt: at, crashLen: 12, lag: 12, longShare: 0.6, lev: [4, 10], arb: 0.12,
         flows: [{ a: at, b: at + 16, usd: -160e3 }],
-        plan: `SUI falls ${P(drop)} between ${hm(at)} and ${hm(at + 12)}. The oracle reports the average of the last three hours, so it reaches the new price only around ${hm(at + 24)}. From ${hm(at)} other traders short the vAMM as the price falls.`,
-        script: [{ t: at + 1, text: 'SUI is falling fast on spot exchanges.' }, { t: at + 6, text: 'Traders note the perp oracle is far behind spot.' }],
-        story: `SUI fell ${P(drop)} over three hours from ${hm(at)}, but the oracle averaged the last three hours. Traders shorted the vAMM ahead of it, so the mark was below the oracle and shorts paid funding to longs for being right. Longs were liquidated by the mark while the oracle still showed a small drop.` }; } },
+        plan: `TKN falls ${P(drop)} between ${hm(at)} and ${hm(at + 12)}. The oracle reports the average of the last three hours, so it reaches the new price only around ${hm(at + 24)}. From ${hm(at)} other traders short the vAMM as the price falls.`,
+        script: [{ t: at + 1, text: 'TKN is falling fast on spot exchanges.' }, { t: at + 6, text: 'Traders note the perp oracle is far behind spot.' }],
+        story: `TKN fell ${P(drop)} over three hours from ${hm(at)}, but the oracle averaged the last three hours. Traders shorted the vAMM ahead of it, so the mark was below the oracle and shorts paid funding to longs for being right. Longs were liquidated by the mark while the oracle still showed a small drop.` }; } },
     { key: 'gap', tone: 'bad', title: 'A gap crash and bad debt',
-      blurb: 'SUI drops 25% in 15 minutes and keeper bots fall behind. Positions sink past zero, bad debt drains the insurance fund, and the vault can’t cover every winner.',
+      blurb: 'TKN drops 25% in 15 minutes and keeper bots fall behind. Positions sink past zero, bad debt drains the insurance fund, and the vault can’t cover every winner.',
       tries: ['Stake in the insurance fund before the crash and see who pays for bad debt.', 'Open a 10× short and check whether the vault can still pay your profit.'],
       make: r => { const at = ri(r, 30, 50), drop = 0.23 + 0.05 * r(); return { drop, crashAt: at, crashLen: 1, recover: 0.4, recoverLen: 24, longShare: 0.75, lev: [7, 10], arb: 0.55, keeperCap: { a: at, b: at + 8, usd: 150e3 },
-        plan: `SUI falls ${P(drop)} between ${hm(at)} and ${hm(at + 1)}, then wins back 40% of the fall over six hours. For two hours after the drop, keeper bots can only liquidate $150K of positions every 15 minutes. Three quarters of other traders are long, at 7–10×.`,
-        script: [{ t: at + 1, text: 'SUI crashes on every exchange at once.' }, { t: at + 3, text: 'Sui is congested; keeper transactions are failing.' }],
-        story: `SUI fell ${P(drop)} in 15 minutes at ${hm(at)}. 10× longs were wiped out before keepers could close them, so their losses went past their margin. The insurance fund paid that bad debt until it ran out.` }; } },
+        plan: `TKN falls ${P(drop)} between ${hm(at)} and ${hm(at + 1)}, then wins back 40% of the fall over six hours. For two hours after the drop, keeper bots can only liquidate $150K of positions every 15 minutes. Three quarters of other traders are long, at 7–10×.`,
+        script: [{ t: at + 1, text: 'TKN crashes on every exchange at once.' }, { t: at + 3, text: 'The chain is congested; keeper transactions are failing.' }],
+        story: `TKN fell ${P(drop)} in 15 minutes at ${hm(at)}. 10× longs were wiped out before keepers could close them, so their losses went past their margin. The insurance fund paid that bad debt until it ran out.` }; } },
     { key: 'repeg', tone: 'bad', title: 'Arbitrage dries up and the protocol repegs',
       blurb: 'Arbitrage traders leave, buyers push the vAMM 12% above the oracle, and after three hours the protocol rewrites the vAMM price. Longs lose in one step without any trade.',
       tries: ['Open a long when the gap is wide and see what the repeg does to it.', 'Open a short: you collect high funding until the repeg.'],
       make: r => ({ longShare: 0.5, lev: [2, 8], arb: 0.02, vol: 0.0025, revert: 0.03,
         push: { a: 4, b: 80, gap: 0.13, untilRepeg: true },
-        plan: 'SUI stays around $2. The arbitrage desk barely trades, and from 1:00 other traders keep buying the perp until the vAMM is about 13% above the oracle. After three funding hours in a row above 10%, the protocol repegs: it moves the vAMM price to the oracle plus 5%, and the buyers stop.',
-        script: [{ t: 10, text: 'Arbitrage desks say SUI perp funding isn’t worth the risk.', fake: true }, { t: 30, text: 'The SUI perp trades far above spot.' }],
+        plan: 'TKN stays around $2. The arbitrage desk barely trades, and from 1:00 other traders keep buying the perp until the vAMM is about 13% above the oracle. After three funding hours in a row above 10%, the protocol repegs: it moves the vAMM price to the oracle plus 5%, and the buyers stop.',
+        script: [{ t: 10, text: 'Arbitrage desks say TKN perp funding isn’t worth the risk.', fake: true }, { t: 30, text: 'The TKN perp trades far above spot.' }],
         story: 'Arbitrage dried up, buyers pushed the vAMM more than 10% above the oracle, and longs paid heavy funding. After three funding hours over the limit, the protocol rewrote the vAMM reserves to the oracle plus 5%: longs lost the gap in one step, and some were liquidated without any trade.' }) }
   ];
   function scenario(r, key) {
@@ -580,7 +580,7 @@ const PG = (() => {
           if (win) { total += e; count++; } else lost++;
         }
         S.capMe[S.t] = used;
-        if (!count && capped && !lost) return { ok: false, msg: `Sui is congested: only ${fmt(cap)} of liquidations get through every 15 minutes, and that’s used up. Try again after the next tick.` };
+        if (!count && capped && !lost) return { ok: false, msg: `The chain is congested: only ${fmt(cap)} of liquidations get through every 15 minutes, and that’s used up. Try again after the next tick.` };
         return { ok: true, msg: (count ? `You liquidated ${count} position${count > 1 ? 's' : ''} (${fmt(total)} closed) and earned ${fmt2(m.keeperFees - fee0)} in keeper fees, with no capital: the positions close against the vAMM.` : 'You lost every race this time.') + (lost ? ` Other keepers beat you to ${lost}.` : '') + (capped ? ` Congestion stopped everyone at ${fmt(cap)} this time.` : '') };
       }
     }
@@ -700,8 +700,8 @@ const PG = (() => {
     // headlines
     for (const s of sc.script) if (s.t === t) S.news.push({ t, text: s.text, tone: 'market', src: s.fake ? (s.noise ? 'noise' : 'false') : 'real' });
     const e = M.real[t], ch = t >= 4 ? e / M.real[t - 4] - 1 : 0;
-    if (ch <= -0.04) news(S, `SUI is down ${Math.abs(ch * 100).toFixed(1)}% in an hour, at $${e.toFixed(3)} on exchanges.`, 'market', 'drop', 4);
-    if (ch >= 0.04) news(S, `SUI is up ${(ch * 100).toFixed(1)}% in an hour, at $${e.toFixed(3)} on exchanges.`, 'good', 'rise', 4);
+    if (ch <= -0.04) news(S, `TKN is down ${Math.abs(ch * 100).toFixed(1)}% in an hour, at $${e.toFixed(3)} on exchanges.`, 'market', 'drop', 4);
+    if (ch >= 0.04) news(S, `TKN is up ${(ch * 100).toFixed(1)}% in an hour, at $${e.toFixed(3)} on exchanges.`, 'good', 'rise', 4);
     if (sc.lag && Math.abs(o / e - 1) > 0.04) news(S, `The oracle shows $${o.toFixed(3)}, ${Math.abs((o / e - 1) * 100).toFixed(1)}% ${o > e ? 'above' : 'below'} exchanges: it averages the last three hours.`, 'market', 'lag', 8);
     const gap = mark(S) / o - 1;
     if (Math.abs(gap) >= 0.03) news(S, `The vAMM is ${Math.abs(gap * 100).toFixed(1)}% ${gap > 0 ? 'above' : 'below'} the oracle ($${mark(S).toFixed(3)} vs $${o.toFixed(3)}).`, 'market', 'gap', 8);
@@ -916,7 +916,7 @@ if (typeof module !== 'undefined') module.exports = PG;
     const done = PG.KINDS.filter(k => playedMem[k.key]).length;
     const cardOf = k => { const p = playedMem[k.key]; return `<button type="button" class="sc" data-pick="${k.key}"><span class="tone ${k.tone}">${TONE[k.tone]}</span><b>${k.title}</b><span class="bl">${k.blurb}</span><span class="st${p ? ' done' : ''}">${p ? `Played ${p.n}× · best ${usd0(p.best)} · last ${usd0(p.last)}` : 'Not played yet'}</span></button>`; };
     $('chooser').innerHTML = `<h2>Pick a market to play</h2>
-      <p>Each market is 24 hours of one SUI perpetual, run on a vAMM in the style of Perpetual Protocol v1, with an automatic repeg. You start with $10,000. You see what’s coming before you start, so you can test a position against it and watch the mechanics. Headlines are labeled real, false or noise.</p>
+      <p>Each market is 24 hours of one TKN perpetual, run on a vAMM in the style of Perpetual Protocol v1, with an automatic repeg. You start with $10,000. You see what’s coming before you start, so you can test a position against it and watch the mechanics. Headlines are labeled real, false or noise.</p>
       <p class="d">${done} of ${PG.KINDS.length} played.</p>
       <div class="sc-grid">${PG.KINDS.map(cardOf).join('')}<button type="button" class="sc hide" data-pick=""><span class="tone hidden">Hidden</span><b>Surprise me</b><span class="bl">A random scenario you only learn at the end. Headlines aren’t labeled. Play this once the open ones make sense.</span><span class="st">Tests your instincts</span></button></div>`;
     $('chooser').querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => { chosenKey = b.dataset.pick || null; newGame(randomSeed()); window.scrollTo({ top: 0 }); }));
@@ -957,7 +957,7 @@ if (typeof module !== 'undefined') module.exports = PG;
     if (R[highT] > 2.04 && R[highT] > close * 1.03) path.push(`peaks at $${R[highT].toFixed(3)} (${hm(highT)})`);
     if (R[lowT] < 1.96 && R[lowT] < close * 0.99) path.push(`bottoms at $${R[lowT].toFixed(3)} (${hm(lowT)})`);
     path.push(`closes at $${close.toFixed(3)}`);
-    rows.push(['Buy SUI on an exchange and hold (for comparison)', (W0 * close) / 2, `SUI ${path.join(', ')}. No leverage, no funding, no liquidation.`]);
+    rows.push(['Buy TKN on an exchange and hold (for comparison)', (W0 * close) / 2, `TKN ${path.join(', ')}. No leverage, no funding, no liquidation.`]);
     for (const [sd, l] of [['long', 2], ['long', 10], ['short', 2], ['short', 10]]) {
       const S = run(S => PG.act(S, { type: sd, amt: allIn(l), lev: l }, false));
       rows.push([`Open a ${l}× ${sd} with all $10,000`, tot(S), posNote(S)]);
@@ -1076,7 +1076,7 @@ if (typeof module !== 'undefined') module.exports = PG;
       const n = om * lev, q = PG.quoteOpen(S, side, n), sz = side === 'long' ? q.size : -q.size;
       const same = p && p.side === side;
       const liq = liqFor((same ? p.size : 0) + sz, (same ? p.open : 0) + n, (same ? p.margin : 0) + om, same ? p.funding : 0);
-      set('p-open', `${usd0(n)} position: ≈ ${num(q.size, 0)} vSUI at $${q.avg.toFixed(4)} (${spct(q.avg / mk - 1, 2)} slippage). Fee ${usd(n * RU.spread)}. Liquidated if the vAMM ${side === 'long' ? 'falls' : 'rises'} to ≈ $${liq.toFixed(3)} (${spct(liq / q.after - 1)}).`);
+      set('p-open', `${usd0(n)} position: ≈ ${num(q.size, 0)} vTKN at $${q.avg.toFixed(4)} (${spct(q.avg / mk - 1, 2)} slippage). Fee ${usd(n * RU.spread)}. Liquidated if the vAMM ${side === 'long' ? 'falls' : 'rises'} to ≈ $${liq.toFixed(3)} (${spct(liq / q.after - 1)}).`);
     } else set('p-open', `vAMM $${mk.toFixed(4)} · oracle $${o.toFixed(4)} · ${lev}× max position ${usd0(maxFor('open') * lev)}`);
     if (p) {
       const cv = val('a-close'), f = Math.min(1, cv / 100);
@@ -1121,7 +1121,7 @@ if (typeof module !== 'undefined') module.exports = PG;
     const levNow = p ? PG.exitNotional(S, p.size) / Math.max(1e-9, PG.remain(S, p)) : 0;
     const liqToday = H.liq.reduce((a, b) => a + b, 0), fNext = g / 24;
     $('cards').innerHTML = [
-      card('Your position', p ? `${p.side === 'long' ? 'Long' : 'Short'} ${levNow > 0 && levNow < 100 ? levNow.toFixed(1) + '×' : ''}` : 'None', p ? [['Worth if closed', usd(v.pos)], ['Size', `${num(Math.abs(p.size), 0)} vSUI · ${usd0(PG.exitNotional(S, p.size))}`], ['Entry (average)', '$' + (p.open / Math.abs(p.size)).toFixed(4)], ['Margin ratio', pct(PG.mr(S, p), 2)], ['Liquidation at', '≈ $' + PG.liqMark(S, p).toFixed(3)]] : [['Wallet', usd(m.wallet)], ['Max 10×', usd0(maxFor('open') * 10) + ' position']], p ? mrClass(PG.mr(S, p)) : ''),
+      card('Your position', p ? `${p.side === 'long' ? 'Long' : 'Short'} ${levNow > 0 && levNow < 100 ? levNow.toFixed(1) + '×' : ''}` : 'None', p ? [['Worth if closed', usd(v.pos)], ['Size', `${num(Math.abs(p.size), 0)} vTKN · ${usd0(PG.exitNotional(S, p.size))}`], ['Entry (average)', '$' + (p.open / Math.abs(p.size)).toFixed(4)], ['Margin ratio', pct(PG.mr(S, p), 2)], ['Liquidation at', '≈ $' + PG.liqMark(S, p).toFixed(3)]] : [['Wallet', usd(m.wallet)], ['Max 10×', usd0(maxFor('open') * 10) + ' position']], p ? mrClass(PG.mr(S, p)) : ''),
       card('Funding', Math.abs(fNext) < 0.00005 ? 'About zero' : `${fNext > 0 ? 'Longs' : 'Shorts'} pay ${pct(Math.abs(fNext), 3)}/h`, [['Last hour', S.lastFund ? (S.lastFund.rate >= 0 ? 'longs paid ' : 'shorts paid ') + pct(Math.abs(S.lastFund.rate), 3) : '—'], ['You, so far', Math.abs(fundSoFar) < 0.005 ? '—' : (fundSoFar > 0 ? 'paid ' : 'received ') + usd(Math.abs(fundSoFar))], ['Over the 10% limit', S.flags ? `${S.flags} of ${RU.minFlags} hours` : 'no']], Math.abs(g) >= 0.05 ? 'warn' : ''),
       card('Insurance fund', usd0(S.IF), [['Started at', usd0(M.sc.if0)], ['Your stake', S.myShares > 0 ? usd(v.stake) : '—'], ['Bad debt today', usd0(S.stats.badDebt)], ['Not covered', usd0(S.uncovered)]], S.uncovered > 1 ? 'crit' : S.IF < M.sc.if0 * 0.7 ? 'warn' : ''),
       card('Market', `${spct(g, 1)} gap`, [['Longs open', usdK(oi.long)], ['Shorts open', usdK(oi.short)], ['Liquidated today', usdK(liqToday)], ['Vault short by', '≈ ' + usdK(PG.shortfall(S))]], Math.abs(g) >= 0.05 ? 'warn' : '')
@@ -1179,7 +1179,7 @@ if (typeof module !== 'undefined') module.exports = PG;
     const fMax = Math.max(...H.fund), fMin = Math.min(...H.fund);
     const fund = S.me.fundPaid + (PG.myPos(S) ? PG.myPos(S).funding : 0);
     const facts = [
-      ['SUI', `opened at $2.000, ${H.real[highT] > 2.02 ? `high $${H.real[highT].toFixed(3)} at ${hm(highT)}, ` : ''}low $${H.real[lowT].toFixed(3)} at ${hm(lowT)}, closed at $${H.real[T].toFixed(3)}`],
+      ['TKN', `opened at $2.000, ${H.real[highT] > 2.02 ? `high $${H.real[highT].toFixed(3)} at ${hm(highT)}, ` : ''}low $${H.real[lowT].toFixed(3)} at ${hm(lowT)}, closed at $${H.real[T].toFixed(3)}`],
       ['vAMM vs oracle', `${gMax >= 0.01 ? `up to ${pct(gMax)} above (${hm(gMaxT)})` : ''}${gMax >= 0.01 && gMin <= -0.01 ? '; ' : ''}${gMin <= -0.01 ? `up to ${pct(-gMin)} below (${hm(gMinT)})` : ''}${gMax < 0.01 && gMin > -0.01 ? 'within 1% all day' : ''}`],
       ['Funding', `${fMax >= 0.0005 ? `longs paid up to ${pct(fMax, 3)} an hour` : ''}${fMax >= 0.0005 && fMin <= -0.0005 ? '; ' : ''}${fMin <= -0.0005 ? `shorts paid up to ${pct(-fMin, 3)} an hour` : ''}${fMax < 0.0005 && fMin > -0.0005 ? 'small all day' : ''}`],
       ['Liquidations', S.stats.liqLong + S.stats.liqShort < 1000 ? 'none' : [S.stats.liqLong > 1000 ? `${usdK(S.stats.liqLong)} of longs` : '', S.stats.liqShort > 1000 ? `${usdK(S.stats.liqShort)} of shorts` : ''].filter(Boolean).join(' and ') + ' closed by keepers'],
@@ -1209,7 +1209,7 @@ if (typeof module !== 'undefined') module.exports = PG;
     if (S.me.keeperFees > 0) L.push(`As a keeper you earned ${usd(S.me.keeperFees)} without putting up capital: the liquidated positions close against the vAMM, and you collect half the 1.25% penalty.`);
     const fakes = sc.script.filter(s => s.fake && !s.noise);
     if (fakes.length && S.actions.some(a => a.ok && ['long', 'short', 'close'].includes(a.type) && fakes.some(f => a.t >= f.t && a.t <= f.t + 2))) L.push('You traded within 30 minutes of a headline that turned out to be false. Check the impact column for what that cost.');
-    if (!okActs.length) L.push(`You sat out the whole day. Buying SUI on an exchange at the start would have ended at ${usd(spot)}.`);
+    if (!okActs.length) L.push(`You sat out the whole day. Buying TKN on an exchange at the start would have ended at ${usd(spot)}.`);
     if (impacts.length) {
       const worstI = impacts.reduce((a, x) => (x.d < a.d ? x : a)), bestI = impacts.reduce((a, x) => (x.d > a.d ? x : a));
       if (worstI.d < -1) L.push(`Your costliest move: ${NAMES[worstI.a.type]} (${amtTxt(worstI.a)}) at ${hm(worstI.a.t)}, ${sgn(worstI.d)}.`);
@@ -1224,7 +1224,7 @@ if (typeof module !== 'undefined') module.exports = PG;
           <div class="result ${fin >= W0 ? 'gain' : 'loss'}"><span class="big">${usd(fin)}</span><span class="pp">${spct(fin / W0 - 1, 2)}</span></div>
           <table class="cmp"><tbody>
             <tr><td>Kept $10,000 in USDC</td><td class="n">${usd(W0)}</td></tr>
-            <tr><td>Bought SUI on an exchange and held</td><td class="n">${usd(spot)}</td></tr>
+            <tr><td>Bought TKN on an exchange and held</td><td class="n">${usd(spot)}</td></tr>
             ${handsOff !== null ? `<tr><td>Your first moves, then hands off</td><td class="n">${usd(handsOff)}</td></tr>` : ''}
             <tr class="you"><td>What you actually did</td><td class="n">${usd(fin)}</td></tr>
           </tbody></table>

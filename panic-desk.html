@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<style>/* Layout: a trading desk. A sticky bar carries the clock, controls, SUI price and net worth; below it the moves rail on the left and the board (price, headlines, positions, net worth, your log) on the right. */
+<style>/* Layout: a trading desk. A sticky bar carries the clock, controls, TKN price and net worth; below it the moves rail on the left and the board (price, headlines, positions, net worth, your log) on the right. */
 :root {
   --bg: #EDF1EF; --surface: #FFFFFF; --sunk: #F4F7F5; --ink: #122420; --muted: #56665F; --faint: #85948E; --line: #D2DCD8;
   --accent: #0A6C8A; --accent-ink: #FFFFFF; --accent-soft: #DCEEF3;
@@ -209,7 +209,7 @@ table.outc td.n small { display: block; font-size: 11.5px; }
   <div class="brand"><b>Panic Desk</b><span class="mk">Market <span id="seed"></span></span></div>
   <div class="clockbox"><div class="clk"><span id="clock">Minute 0</span><span class="of">of 120</span></div><div class="prog" aria-hidden="true"><i id="prog"></i></div></div>
   <div class="ctrls"><button type="button" id="play" class="btn primary" aria-pressed="false">Start</button><div class="seg" id="speed" role="group" aria-label="Speed"><button type="button" data-s="0.5">½×</button><button type="button" data-s="1">1×</button><button type="button" data-s="2">2×</button><button type="button" data-s="4">4×</button></div><button type="button" id="sound" class="btn">Sound on</button><button type="button" id="endnow" class="btn">End now</button></div>
-  <div class="ticker"><div class="tk"><span class="lbl">SUI on exchanges</span><span id="px" class="bigv">$2.000</span><span id="pxch" class="chg"></span></div><div class="tk"><span class="lbl">Your net worth</span><span id="nw" class="bigv">$10,000.00</span><span id="nwch" class="chg"></span></div></div>
+  <div class="ticker"><div class="tk"><span class="lbl">TKN on exchanges</span><span id="px" class="bigv">$2.000</span><span id="pxch" class="chg"></span></div><div class="tk"><span class="lbl">Your net worth</span><span id="nw" class="bigv">$10,000.00</span><span id="nwch" class="chg"></span></div></div>
 </div></header>
 <main class="wrap main">
   <div id="alert" class="alerts" aria-live="polite"></div>
@@ -217,29 +217,29 @@ table.outc td.n small { display: block; font-size: 11.5px; }
   <section id="setup" class="panel setup"></section>
   <div id="planbar" class="planbar" hidden></div>
   <div id="desk" class="desk">
-    <aside class="moves panel" aria-label="Your moves"><h3>Your moves</h3><div class="tabs" id="tabs" role="tablist"><button type="button" role="tab" data-tab="trade" aria-selected="true">Trade</button><button type="button" role="tab" data-tab="lend" aria-selected="false">Lend</button><button type="button" role="tab" data-tab="borrow" aria-selected="false">Borrow</button><button type="button" role="tab" data-tab="stake" aria-selected="false">Stake</button><button type="button" role="tab" data-tab="lp" aria-selected="false">Liquidity</button><button type="button" role="tab" data-tab="liq" aria-selected="false">Liquidate</button></div><div class="pane" id="pane-trade" role="tabpanel"><div class="act"><div class="act-h"><span>Buy SUI</span><span class="hint">pay USDC on the DEX</span></div>
-<div class="amt"><input id="a-buy" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Buy SUI amount in USDC"><button type="button" class="fill" data-fill="buy:a-buy:0.25">25%</button><button type="button" class="fill" data-fill="buy:a-buy:0.5">50%</button><button type="button" class="fill" data-fill="buy:a-buy:1">Max</button></div>
-<p class="pv" id="p-buy"></p><button type="button" class="btn go" data-act="buy:a-buy">Buy SUI</button><p class="err" id="a-buy-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Sell SUI</span><span class="hint">receive USDC on the DEX</span></div>
-<div class="amt"><input id="a-sell" type="number" inputmode="decimal" min="0" step="any" placeholder="SUI" aria-label="Sell SUI amount in SUI"><button type="button" class="fill" data-fill="sell:a-sell:0.25">25%</button><button type="button" class="fill" data-fill="sell:a-sell:0.5">50%</button><button type="button" class="fill" data-fill="sell:a-sell:1">Max</button></div>
-<p class="pv" id="p-sell"></p><button type="button" class="btn go" data-act="sell:a-sell">Sell SUI</button><p class="err" id="a-sell-e" role="alert"></p></div></div><div class="pane" id="pane-lend" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Supply USDC</span><span class="hint">earn the lender rate</span></div>
+    <aside class="moves panel" aria-label="Your moves"><h3>Your moves</h3><div class="tabs" id="tabs" role="tablist"><button type="button" role="tab" data-tab="trade" aria-selected="true">Trade</button><button type="button" role="tab" data-tab="lend" aria-selected="false">Lend</button><button type="button" role="tab" data-tab="borrow" aria-selected="false">Borrow</button><button type="button" role="tab" data-tab="stake" aria-selected="false">Stake</button><button type="button" role="tab" data-tab="lp" aria-selected="false">Liquidity</button><button type="button" role="tab" data-tab="liq" aria-selected="false">Liquidate</button></div><div class="pane" id="pane-trade" role="tabpanel"><div class="act"><div class="act-h"><span>Buy TKN</span><span class="hint">pay USDC on the DEX</span></div>
+<div class="amt"><input id="a-buy" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Buy TKN amount in USDC"><button type="button" class="fill" data-fill="buy:a-buy:0.25">25%</button><button type="button" class="fill" data-fill="buy:a-buy:0.5">50%</button><button type="button" class="fill" data-fill="buy:a-buy:1">Max</button></div>
+<p class="pv" id="p-buy"></p><button type="button" class="btn go" data-act="buy:a-buy">Buy TKN</button><p class="err" id="a-buy-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Sell TKN</span><span class="hint">receive USDC on the DEX</span></div>
+<div class="amt"><input id="a-sell" type="number" inputmode="decimal" min="0" step="any" placeholder="TKN" aria-label="Sell TKN amount in TKN"><button type="button" class="fill" data-fill="sell:a-sell:0.25">25%</button><button type="button" class="fill" data-fill="sell:a-sell:0.5">50%</button><button type="button" class="fill" data-fill="sell:a-sell:1">Max</button></div>
+<p class="pv" id="p-sell"></p><button type="button" class="btn go" data-act="sell:a-sell">Sell TKN</button><p class="err" id="a-sell-e" role="alert"></p></div></div><div class="pane" id="pane-lend" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Supply USDC</span><span class="hint">earn the lender rate</span></div>
 <div class="amt"><input id="a-supply" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Supply USDC amount in USDC"><button type="button" class="fill" data-fill="supply:a-supply:0.25">25%</button><button type="button" class="fill" data-fill="supply:a-supply:0.5">50%</button><button type="button" class="fill" data-fill="supply:a-supply:1">Max</button></div>
 <p class="pv" id="p-supply"></p><button type="button" class="btn go" data-act="supply:a-supply">Supply USDC</button><p class="err" id="a-supply-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Withdraw USDC</span><span class="hint">only if the pool has cash</span></div>
 <div class="amt"><input id="a-withdraw" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Withdraw USDC amount in USDC"><button type="button" class="fill" data-fill="withdraw:a-withdraw:0.25">25%</button><button type="button" class="fill" data-fill="withdraw:a-withdraw:0.5">50%</button><button type="button" class="fill" data-fill="withdraw:a-withdraw:1">Max</button></div>
-<p class="pv" id="p-withdraw"></p><button type="button" class="btn go" data-act="withdraw:a-withdraw">Withdraw USDC</button><p class="err" id="a-withdraw-e" role="alert"></p></div></div><div class="pane" id="pane-borrow" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Post collateral</span><span class="hint">from your wallet</span></div><div class="seg mini" role="group" aria-label="Post collateral asset"><button type="button" data-kind="post:sui" aria-pressed="true">SUI</button><button type="button" data-kind="post:lsui" aria-pressed="false">liqSUI</button></div>
+<p class="pv" id="p-withdraw"></p><button type="button" class="btn go" data-act="withdraw:a-withdraw">Withdraw USDC</button><p class="err" id="a-withdraw-e" role="alert"></p></div></div><div class="pane" id="pane-borrow" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Post collateral</span><span class="hint">from your wallet</span></div><div class="seg mini" role="group" aria-label="Post collateral asset"><button type="button" data-kind="post:tkn" aria-pressed="true">TKN</button><button type="button" data-kind="post:ltkn" aria-pressed="false">liqTKN</button></div>
 <div class="amt"><input id="a-post" type="number" inputmode="decimal" min="0" step="any" placeholder="amount" aria-label="Post collateral amount in amount"><button type="button" class="fill" data-fill="post:a-post:0.25">25%</button><button type="button" class="fill" data-fill="post:a-post:0.5">50%</button><button type="button" class="fill" data-fill="post:a-post:1">Max</button></div>
 <p class="pv" id="p-post"></p><button type="button" class="btn go" data-act="post:a-post">Post collateral</button><p class="err" id="a-post-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Borrow USDC</span><span class="hint">against your collateral</span></div>
 <div class="amt"><input id="a-borrow" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Borrow USDC amount in USDC"><button type="button" class="fill" data-fill="borrow:a-borrow:0.25">25%</button><button type="button" class="fill" data-fill="borrow:a-borrow:0.5">50%</button><button type="button" class="fill" data-fill="borrow:a-borrow:1">Max</button></div>
 <p class="pv" id="p-borrow"></p><button type="button" class="btn go" data-act="borrow:a-borrow">Borrow USDC</button><p class="err" id="a-borrow-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Repay</span><span class="hint">from your USDC</span></div>
 <div class="amt"><input id="a-repay" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Repay amount in USDC"><button type="button" class="fill" data-fill="repay:a-repay:0.25">25%</button><button type="button" class="fill" data-fill="repay:a-repay:0.5">50%</button><button type="button" class="fill" data-fill="repay:a-repay:1">Max</button></div>
-<p class="pv" id="p-repay"></p><button type="button" class="btn go" data-act="repay:a-repay">Repay</button><p class="err" id="a-repay-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Withdraw collateral</span><span class="hint">back to your wallet</span></div><div class="seg mini" role="group" aria-label="Withdraw collateral asset"><button type="button" data-kind="wd:sui" aria-pressed="true">SUI</button><button type="button" data-kind="wd:lsui" aria-pressed="false">liqSUI</button></div>
+<p class="pv" id="p-repay"></p><button type="button" class="btn go" data-act="repay:a-repay">Repay</button><p class="err" id="a-repay-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Withdraw collateral</span><span class="hint">back to your wallet</span></div><div class="seg mini" role="group" aria-label="Withdraw collateral asset"><button type="button" data-kind="wd:tkn" aria-pressed="true">TKN</button><button type="button" data-kind="wd:ltkn" aria-pressed="false">liqTKN</button></div>
 <div class="amt"><input id="a-wdcoll" type="number" inputmode="decimal" min="0" step="any" placeholder="amount" aria-label="Withdraw collateral amount in amount"><button type="button" class="fill" data-fill="wdcoll:a-wdcoll:0.25">25%</button><button type="button" class="fill" data-fill="wdcoll:a-wdcoll:0.5">50%</button><button type="button" class="fill" data-fill="wdcoll:a-wdcoll:1">Max</button></div>
-<p class="pv" id="p-wdcoll"></p><button type="button" class="btn go" data-act="wdcoll:a-wdcoll">Withdraw collateral</button><p class="err" id="a-wdcoll-e" role="alert"></p></div></div><div class="pane" id="pane-stake" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Stake SUI</span><span class="hint">mint liqSUI at the redemption rate</span></div>
-<div class="amt"><input id="a-stake" type="number" inputmode="decimal" min="0" step="any" placeholder="SUI" aria-label="Stake SUI amount in SUI"><button type="button" class="fill" data-fill="stake:a-stake:0.25">25%</button><button type="button" class="fill" data-fill="stake:a-stake:0.5">50%</button><button type="button" class="fill" data-fill="stake:a-stake:1">Max</button></div>
-<p class="pv" id="p-stake"></p><button type="button" class="btn go" data-act="stake:a-stake">Stake SUI</button><p class="err" id="a-stake-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Sell liqSUI</span><span class="hint">for SUI on the DEX, right now</span></div>
-<div class="amt"><input id="a-sellL" type="number" inputmode="decimal" min="0" step="any" placeholder="liqSUI" aria-label="Sell liqSUI amount in liqSUI"><button type="button" class="fill" data-fill="sellL:a-sellL:0.25">25%</button><button type="button" class="fill" data-fill="sellL:a-sellL:0.5">50%</button><button type="button" class="fill" data-fill="sellL:a-sellL:1">Max</button></div>
-<p class="pv" id="p-sellL"></p><button type="button" class="btn go" data-act="sellL:a-sellL">Sell liqSUI</button><p class="err" id="a-sellL-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Redeem liqSUI</span><span class="hint">full value, paid later</span></div>
-<div class="amt"><input id="a-redeem" type="number" inputmode="decimal" min="0" step="any" placeholder="liqSUI" aria-label="Redeem liqSUI amount in liqSUI"><button type="button" class="fill" data-fill="redeem:a-redeem:0.25">25%</button><button type="button" class="fill" data-fill="redeem:a-redeem:0.5">50%</button><button type="button" class="fill" data-fill="redeem:a-redeem:1">Max</button></div>
-<p class="pv" id="p-redeem"></p><button type="button" class="btn go" data-act="redeem:a-redeem">Redeem liqSUI</button><p class="err" id="a-redeem-e" role="alert"></p></div></div><div class="pane" id="pane-lp" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Add liquidity</span><span class="hint">half your USDC is swapped to SUI</span></div>
+<p class="pv" id="p-wdcoll"></p><button type="button" class="btn go" data-act="wdcoll:a-wdcoll">Withdraw collateral</button><p class="err" id="a-wdcoll-e" role="alert"></p></div></div><div class="pane" id="pane-stake" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Stake TKN</span><span class="hint">mint liqTKN at the redemption rate</span></div>
+<div class="amt"><input id="a-stake" type="number" inputmode="decimal" min="0" step="any" placeholder="TKN" aria-label="Stake TKN amount in TKN"><button type="button" class="fill" data-fill="stake:a-stake:0.25">25%</button><button type="button" class="fill" data-fill="stake:a-stake:0.5">50%</button><button type="button" class="fill" data-fill="stake:a-stake:1">Max</button></div>
+<p class="pv" id="p-stake"></p><button type="button" class="btn go" data-act="stake:a-stake">Stake TKN</button><p class="err" id="a-stake-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Sell liqTKN</span><span class="hint">for TKN on the DEX, right now</span></div>
+<div class="amt"><input id="a-sellL" type="number" inputmode="decimal" min="0" step="any" placeholder="liqTKN" aria-label="Sell liqTKN amount in liqTKN"><button type="button" class="fill" data-fill="sellL:a-sellL:0.25">25%</button><button type="button" class="fill" data-fill="sellL:a-sellL:0.5">50%</button><button type="button" class="fill" data-fill="sellL:a-sellL:1">Max</button></div>
+<p class="pv" id="p-sellL"></p><button type="button" class="btn go" data-act="sellL:a-sellL">Sell liqTKN</button><p class="err" id="a-sellL-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Redeem liqTKN</span><span class="hint">full value, paid later</span></div>
+<div class="amt"><input id="a-redeem" type="number" inputmode="decimal" min="0" step="any" placeholder="liqTKN" aria-label="Redeem liqTKN amount in liqTKN"><button type="button" class="fill" data-fill="redeem:a-redeem:0.25">25%</button><button type="button" class="fill" data-fill="redeem:a-redeem:0.5">50%</button><button type="button" class="fill" data-fill="redeem:a-redeem:1">Max</button></div>
+<p class="pv" id="p-redeem"></p><button type="button" class="btn go" data-act="redeem:a-redeem">Redeem liqTKN</button><p class="err" id="a-redeem-e" role="alert"></p></div></div><div class="pane" id="pane-lp" role="tabpanel" hidden><div class="act"><div class="act-h"><span>Add liquidity</span><span class="hint">half your USDC is swapped to TKN</span></div>
 <div class="amt"><input id="a-lpadd" type="number" inputmode="decimal" min="0" step="any" placeholder="USDC" aria-label="Add liquidity amount in USDC"><button type="button" class="fill" data-fill="lpadd:a-lpadd:0.25">25%</button><button type="button" class="fill" data-fill="lpadd:a-lpadd:0.5">50%</button><button type="button" class="fill" data-fill="lpadd:a-lpadd:1">Max</button></div>
 <p class="pv" id="p-lpadd"></p><button type="button" class="btn go" data-act="lpAdd:a-lpadd">Add liquidity</button><p class="err" id="a-lpadd-e" role="alert"></p></div><div class="act"><div class="act-h"><span>Remove liquidity</span><span class="hint">percent of your position</span></div>
 <div class="amt"><input id="a-lprm" type="number" inputmode="decimal" min="0" step="any" placeholder="%" aria-label="Remove liquidity amount in %"><button type="button" class="fill" data-fill="lprm:a-lprm:0.25">25%</button><button type="button" class="fill" data-fill="lprm:a-lprm:0.5">50%</button><button type="button" class="fill" data-fill="lprm:a-lprm:1">All</button></div>
@@ -248,7 +248,7 @@ table.outc td.n small { display: block; font-size: 11.5px; }
 <p class="pv" id="p-liq"></p><button type="button" class="btn go" data-act="liquidate:a-liq">Liquidate loans</button><p class="err" id="a-liq-e" role="alert"></p></div></div></aside>
     <div class="board">
       <div class="row2">
-        <section class="panel"><h3>SUI price <small>exchanges, the lending market’s oracle, and the DEX</small></h3><canvas class="chart" id="c-price" role="img" aria-label="SUI price chart"></canvas>
+        <section class="panel"><h3>TKN price <small>exchanges, the lending market’s oracle, and the DEX</small></h3><canvas class="chart" id="c-price" role="img" aria-label="TKN price chart"></canvas>
           <div class="chart-legend"><span><i class="sw" style="background:var(--ink)"></i>Exchanges</span><span><i class="sw" style="background:var(--accent)"></i>Lending market’s price</span><span><i class="sw" style="background:var(--warm)"></i>DEX</span><span id="liqline" hidden><i class="sw dash" style="background:var(--crit);color:var(--crit)"></i>Your liquidation price</span></div></section>
         <section class="panel newsp"><h3>Headlines</h3><ul class="feed" id="news"></ul></section>
       </div>
@@ -261,12 +261,12 @@ table.outc td.n small { display: block; font-size: 11.5px; }
   </div>
   <div id="debrief" class="debrief" hidden></div>
   <details class="panel rules"><summary>How this market works</summary><ul>
-    <li>SUI starts at $2.00. Its exchange price is the truth; the lending market only sees the oracle’s price, and trades happen on one SUI/USDC DEX pool with a 0.3% fee.</li>
-    <li>Collateral: SUI counts at up to 75% LTV and is liquidated past 80%. liqSUI is valued at its redemption rate (1.05 SUI) and counts at up to 70% LTV, liquidated past 75%.</li>
+    <li>TKN starts at $2.00. Its exchange price is the truth; the lending market only sees the oracle’s price, and trades happen on one TKN/USDC DEX pool with a 0.3% fee.</li>
+    <li>Collateral: TKN counts at up to 75% LTV and is liquidated past 80%. liqTKN is valued at its redemption rate (1.05 TKN) and counts at up to 70% LTV, liquidated past 75%.</li>
     <li>Liquidation: bots repay half of an unhealthy loan and take collateral worth the repaid amount plus a 5% bonus. They only do it when selling that collateral on the DEX pays; otherwise loans sit unhealthy.</li>
     <li>The oracle updates on a 0.3% move or every 5 minutes. If its price gets too old, the lending market pauses borrowing, collateral withdrawals, and liquidations, unless it is set to accept old prices.</li>
     <li>Lenders can only withdraw the cash left in the pool. Bad debt is shared by whoever is still lending at the end.</li>
-    <li>Redeeming liqSUI returns full value, but the SUI arrives after this session, so it’s counted at the final SUI price.</li>
+    <li>Redeeming liqTKN returns full value, but the TKN arrives after this session, so it’s counted at the final TKN price.</li>
     <li>Two hours is too short for interest to matter much. This game is about prices, timing, and who gets out first.</li>
   </ul></details>
 </main>
@@ -274,7 +274,7 @@ table.outc td.n small { display: block; font-size: 11.5px; }
 <script>
 const Game = (() => {
   const T = 120, P0 = 2, R0 = 1.05, FEE = 0.003, MPY = 525600;
-  const RULES = { sui: { ltv: 0.75, lt: 0.80 }, lsui: { ltv: 0.70, lt: 0.75 }, bonus: 0.05, cf: 0.5, kink: 0.8, slope1: 0.04, slope2: 0.75, reserve: 0.1, heartbeat: 5, deviation: 0.003 };
+  const RULES = { tkn: { ltv: 0.75, lt: 0.80 }, ltkn: { ltv: 0.70, lt: 0.75 }, bonus: 0.05, cf: 0.5, kink: 0.8, slope1: 0.04, slope2: 0.75, reserve: 0.1, heartbeat: 5, deviation: 0.003 };
   function rng(seed) {
     let a = seed >>> 0;
     return () => {
@@ -289,79 +289,79 @@ const Game = (() => {
   const ri = (r, a, b) => Math.round(a + r() * (b - a));
 
   // ---------- scenarios ----------
-  // tone: good / mixed / bad for someone holding SUI. blurb: what happens, before you pick.
+  // tone: good / mixed / bad for someone holding TKN. blurb: what happens, before you pick.
   // plan: the exact timing for this market, shown once you pick. tries: experiments worth running.
-  const NOISE = ['A whale moved 1.2M SUI between wallets.', 'Social media: “SUI is going to zero.”', 'An analyst calls SUI “oversold”.', 'Funding rates on SUI perps turn slightly negative.', 'A large holder bridges 800K USDC onto Sui.', 'Gas prices on Sui tick up as activity rises.'];
+  const NOISE = ['A whale moved 1.2M TKN between wallets.', 'Social media: “TKN is going to zero.”', 'An analyst calls TKN “oversold”.', 'Funding rates on TKN perps turn slightly negative.', 'A large holder bridges 800K USDC onto the chain.', 'Gas prices on the chain tick up as activity rises.'];
   const P = v => Math.round(v * 100) + '%';
   const KINDS = [
     { key: 'quiet', w: 0.6, tone: 'good', title: 'A quiet day',
-      blurb: 'Nothing happens. SUI drifts around $2. Only fees, slippage and interest move your money.',
-      tries: ['Buy SUI and sell it straight back: the round trip shows what fees and slippage cost.', 'Add liquidity and compare “Your liquidity” with “If you’d held” at the end.'],
-      make: r => ({ plan: 'SUI drifts randomly around $2 for two hours. No crash, no rally, no real headlines; the two headlines that arrive are noise.',
-        story: 'Nothing happened. SUI drifted around $2, so anything you gained or lost came from fees, slippage, interest and timing.' }) },
+      blurb: 'Nothing happens. TKN drifts around $2. Only fees, slippage and interest move your money.',
+      tries: ['Buy TKN and sell it straight back: the round trip shows what fees and slippage cost.', 'Add liquidity and compare “Your liquidity” with “If you’d held” at the end.'],
+      make: r => ({ plan: 'TKN drifts randomly around $2 for two hours. No crash, no rally, no real headlines; the two headlines that arrive are noise.',
+        story: 'Nothing happened. TKN drifted around $2, so anything you gained or lost came from fees, slippage, interest and timing.' }) },
     { key: 'rally', w: 0.8, tone: 'good', title: 'A steady rally',
-      blurb: 'SUI climbs about 25% over an hour. Holding, borrowing to buy more, and providing liquidity all gain, by different amounts.',
-      tries: ['Post SUI, borrow USDC, buy more SUI: leverage multiplies the gain.', 'Add liquidity at the start and compare it with just holding: the gap is impermanent loss.'],
+      blurb: 'TKN climbs about 25% over an hour. Holding, borrowing to buy more, and providing liquidity all gain, by different amounts.',
+      tries: ['Post TKN, borrow USDC, buy more TKN: leverage multiplies the gain.', 'Add liquidity at the start and compare it with just holding: the gap is impermanent loss.'],
       make: r => { const rise = 0.22 + 0.08 * r(), at = ri(r, 10, 20), len = ri(r, 50, 70); return { rise, riseAt: at, riseLen: len,
-        plan: `SUI rises ${P(rise)} between minute ${at} and minute ${at + len}, then holds. A real headline at minute ${at + 3} announces the buying.`,
-        script: [{ t: at + 3, text: 'A large fund announces it is buying SUI.' }],
-        story: `SUI rose ${P(rise)} between minutes ${at} and ${at + len}. Holders gained the full move; leveraged buyers gained more; liquidity providers gained less than holders, because the pool kept selling SUI as it rose.` }; } },
+        plan: `TKN rises ${P(rise)} between minute ${at} and minute ${at + len}, then holds. A real headline at minute ${at + 3} announces the buying.`,
+        script: [{ t: at + 3, text: 'A large fund announces it is buying TKN.' }],
+        story: `TKN rose ${P(rise)} between minutes ${at} and ${at + len}. Holders gained the full move; leveraged buyers gained more; liquidity providers gained less than holders, because the pool kept selling TKN as it rose.` }; } },
     { key: 'calm', w: 1.2, tone: 'mixed', title: 'A calm day with scary rumors',
       blurb: 'Scary rumors and a brief 6% dip that recovers. Nothing real happens.',
       tries: ['Borrow near the limit and do nothing when the rumors hit.', 'Sell on the first rumor, then compare your result with buying and holding.'],
       make: r => { const t1 = ri(r, 20, 40), t2 = ri(r, 55, 85), t3 = ri(r, 90, 110); return { drop: 0.06, crashAt: t2 + 2, crashLen: 4, recover: 0.95, recoverLen: 10,
-        plan: `False rumors arrive at minutes ${t1}, ${t2} and ${t3}. SUI dips 6% from minute ${t2 + 2} and recovers almost all of it by minute ${t2 + 16}.`,
-        script: [{ t: t1, text: 'Rumor: a large Sui validator has been slashed.', fake: true }, { t: t2, text: 'A whale moved 3M SUI to an exchange.', fake: true }, { t: t3, text: 'Social media: “the lending market is insolvent.”', fake: true }],
+        plan: `False rumors arrive at minutes ${t1}, ${t2} and ${t3}. TKN dips 6% from minute ${t2 + 2} and recovers almost all of it by minute ${t2 + 16}.`,
+        script: [{ t: t1, text: 'Rumor: a large validator has been slashed.', fake: true }, { t: t2, text: 'A whale moved 3M TKN to an exchange.', fake: true }, { t: t3, text: 'Social media: “the lending market is insolvent.”', fake: true }],
         story: 'Nothing real happened. Two scary rumors and a brief 6% dip that recovered. The test was whether you sold or deleveraged into noise.' }; } },
     { key: 'flash', w: 1, tone: 'mixed', title: 'A flash crash that recovers',
-      blurb: 'SUI drops about 30% in three minutes, then wins back three quarters of the fall.',
-      tries: ['Borrow near the limit and watch how fast a three-minute crash liquidates you.', 'Keep USDC ready and buy SUI, or liquidate others, at the bottom.'],
+      blurb: 'TKN drops about 30% in three minutes, then wins back three quarters of the fall.',
+      tries: ['Borrow near the limit and watch how fast a three-minute crash liquidates you.', 'Keep USDC ready and buy TKN, or liquidate others, at the bottom.'],
       make: r => { const drop = 0.28 + 0.1 * r(), at = ri(r, 30, 60); return { drop, crashAt: at, crashLen: 3, recover: 0.75, recoverLen: 20,
-        plan: `SUI falls ${P(drop)} between minute ${at} and minute ${at + 3}, then wins back three quarters of the fall by minute ${at + 23}.`,
-        script: [{ t: at + 1, text: 'A large holder market-sells SUI across exchanges.' }, { t: at + 6, text: 'Buyers step in; SUI bounces off the lows.' }],
-        story: `SUI dropped ${P(drop)} in three minutes at minute ${at}, then won back three quarters of the fall over the next 20 minutes. Selling at the bottom locked in the loss; loans liquidated at the bottom stayed liquidated.` }; } },
+        plan: `TKN falls ${P(drop)} between minute ${at} and minute ${at + 3}, then wins back three quarters of the fall by minute ${at + 23}.`,
+        script: [{ t: at + 1, text: 'A large holder market-sells TKN across exchanges.' }, { t: at + 6, text: 'Buyers step in; TKN bounces off the lows.' }],
+        story: `TKN dropped ${P(drop)} in three minutes at minute ${at}, then won back three quarters of the fall over the next 20 minutes. Selling at the bottom locked in the loss; loans liquidated at the bottom stayed liquidated.` }; } },
     { key: 'orderly', w: 1, tone: 'bad', title: 'An orderly crash',
-      blurb: 'SUI falls 25–37% over 12–25 minutes. The oracle and liquidators keep up, so the system works as designed.',
+      blurb: 'TKN falls 25–37% over 12–25 minutes. The oracle and liquidators keep up, so the system works as designed.',
       tries: ['Borrow at a health factor around 1.5, then repay part of the loan when it drops below 1.25.', 'Supply USDC as a lender: do lenders lose anything when liquidations work?'],
       make: r => { const drop = 0.25 + 0.12 * r(), at = ri(r, 25, 55), len = ri(r, 12, 25), warn = ri(r, 2, 6); return { drop, crashAt: at, crashLen: len,
-        plan: `SUI falls ${P(drop)} between minute ${at} and minute ${at + len} and does not recover. A real warning headline comes at minute ${at - warn}.`,
-        script: [{ t: at - warn, text: 'Large SUI sell orders appear on major exchanges.' }],
-        story: `SUI fell ${P(drop)} between minutes ${at} and ${at + len}. The oracle kept up and liquidators mostly cleared loans as they broke.` }; } },
+        plan: `TKN falls ${P(drop)} between minute ${at} and minute ${at + len} and does not recover. A real warning headline comes at minute ${at - warn}.`,
+        script: [{ t: at - warn, text: 'Large TKN sell orders appear on major exchanges.' }],
+        story: `TKN fell ${P(drop)} between minutes ${at} and ${at + len}. The oracle kept up and liquidators mostly cleared loans as they broke.` }; } },
     { key: 'oracle', w: 1, tone: 'bad', title: 'An oracle outage during a crash',
       blurb: 'The oracle goes silent just before a ~30% crash, and the lending market keeps using the stale price.',
       tries: ['During the outage, borrow against the stale price and see who ends up paying.', 'Supply USDC and watch the bad-debt haircut when the oracle comes back.'],
       make: r => { const at = ri(r, 35, 55), drop = 0.28 + 0.1 * r(), out = ri(r, 30, 40); return { drop, crashAt: at, crashLen: 15, outageAt: at - 5, outageLen: out, maxAge: 60,
-        plan: `The oracle stops updating at minute ${at - 5}. SUI falls ${P(drop)} between minute ${at} and minute ${at + 15}. The oracle comes back at minute ${at - 5 + out}, and the lending market’s price jumps down all at once.`,
+        plan: `The oracle stops updating at minute ${at - 5}. TKN falls ${P(drop)} between minute ${at} and minute ${at + 15}. The oracle comes back at minute ${at - 5 + out}, and the lending market’s price jumps down all at once.`,
         script: [{ t: at + 6, text: 'Oracle node operators report connectivity issues.' }],
         story: `The oracle went silent at minute ${at - 5}, five minutes before a ${P(drop)} crash. The lending market kept accepting the stale price, so liquidations waited and bad debt piled up. Borrowing against the stale price was possible, and lenders paid for it.` }; } },
     { key: 'depeg', w: 1, tone: 'bad', title: 'An LST depeg',
-      blurb: 'liqSUI redemptions slow to 14 days, holders dump it on the DEX, and it trades well below its value.',
-      tries: ['Stake SUI, post the liqSUI as collateral and borrow: the lending market values it at the redemption rate, not the DEX price.', 'Compare selling liqSUI on the DEX with redeeming it.'],
+      blurb: 'liqTKN redemptions slow to 14 days, holders dump it on the DEX, and it trades well below its value.',
+      tries: ['Stake TKN, post the liqTKN as collateral and borrow: the lending market values it at the redemption rate, not the DEX price.', 'Compare selling liqTKN on the DEX with redeeming it.'],
       make: r => { const at = ri(r, 30, 50); return { drop: 0.12, crashAt: at, crashLen: 20, lstPanic: 0.035, lstWait: 14,
-        plan: `At minute ${at - 4} redemptions slow to 14 days. From minute ${at} SUI falls 12% over 20 minutes while holders sell liqSUI on the DEX for the next 50 minutes.`,
-        script: [{ t: at - 4, text: 'liqSUI redemption queue grows to 14 days.' }, { t: at + 8, text: 'Holders rush to exit liqSUI on the DEX.' }],
-        story: `Redemptions slowed to 14 days at minute ${at - 4}, then holders panic-sold liqSUI and it slid well below its redemption value while SUI fell only 12%. Selling liqSUI locked in the discount; redeeming meant waiting two weeks.` }; } },
+        plan: `At minute ${at - 4} redemptions slow to 14 days. From minute ${at} TKN falls 12% over 20 minutes while holders sell liqTKN on the DEX for the next 50 minutes.`,
+        script: [{ t: at - 4, text: 'liqTKN redemption queue grows to 14 days.' }, { t: at + 8, text: 'Holders rush to exit liqTKN on the DEX.' }],
+        story: `Redemptions slowed to 14 days at minute ${at - 4}, then holders panic-sold liqTKN and it slid well below its redemption value while TKN fell only 12%. Selling liqTKN locked in the discount; redeeming meant waiting two weeks.` }; } },
     { key: 'drain', w: 1, tone: 'bad', title: 'LPs drain the DEX during a crash',
-      blurb: 'SUI crashes while LPs pull 60% of the DEX liquidity. Liquidations stall and the DEX price falls below exchanges.',
-      tries: ['Liquidate during the crash and check the DEX price against exchanges before you sell.', 'Sell SUI during the crash and compare the price you get with exchanges.'],
+      blurb: 'TKN crashes while LPs pull 60% of the DEX liquidity. Liquidations stall and the DEX price falls below exchanges.',
+      tries: ['Liquidate during the crash and check the DEX price against exchanges before you sell.', 'Sell TKN during the crash and compare the price you get with exchanges.'],
       make: r => { const at = ri(r, 30, 60), drop = 0.25 + 0.1 * r(); return { drop, crashAt: at, crashLen: 15, drain: 0.6, arb: 0.15,
-        plan: `SUI falls ${P(drop)} between minute ${at} and minute ${at + 15}. Over the same stretch, plus ten minutes, LPs pull 60% of the DEX liquidity, and arbitrage is slow all day.`,
-        script: [{ t: at + 3, text: 'LPs pull liquidity from SUI pools.' }],
-        story: `SUI fell ${P(drop)} from minute ${at} while LPs pulled 60% of the DEX liquidity and arbitrage slowed. Liquidations stalled because selling seized SUI lost money, and the DEX price traded far below exchanges.` }; } },
+        plan: `TKN falls ${P(drop)} between minute ${at} and minute ${at + 15}. Over the same stretch, plus ten minutes, LPs pull 60% of the DEX liquidity, and arbitrage is slow all day.`,
+        script: [{ t: at + 3, text: 'LPs pull liquidity from TKN pools.' }],
+        story: `TKN fell ${P(drop)} from minute ${at} while LPs pulled 60% of the DEX liquidity and arbitrage slowed. Liquidations stalled because selling seized TKN lost money, and the DEX price traded far below exchanges.` }; } },
     { key: 'bleed', w: 0.8, tone: 'bad', title: 'A slow bleed and a lender run',
-      blurb: 'SUI bleeds 24% over 95 minutes and other lenders run for the exit.',
-      tries: ['Supply USDC, then try to withdraw it after SUI is down 10%.', 'Borrow, then repay step by step as it bleeds.'],
+      blurb: 'TKN bleeds 24% over 95 minutes and other lenders run for the exit.',
+      tries: ['Supply USDC, then try to withdraw it after TKN is down 10%.', 'Borrow, then repay step by step as it bleeds.'],
       make: r => ({ drop: 0.24, crashAt: 10, crashLen: 95, run: true,
-        plan: 'SUI falls 24% steadily from minute 10 to minute 105. Once it is down 10% (around minute 47), other lenders start withdrawing USDC every minute.',
-        script: [{ t: 25, text: 'Steady selling pressure on SUI all morning.' }],
-        story: 'SUI bled 24% over 95 minutes. Once it was down 10%, other lenders began withdrawing, utilization climbed, and late withdrawals failed.' }) },
+        plan: 'TKN falls 24% steadily from minute 10 to minute 105. Once it is down 10% (around minute 47), other lenders start withdrawing USDC every minute.',
+        script: [{ t: 25, text: 'Steady selling pressure on TKN all morning.' }],
+        story: 'TKN bled 24% over 95 minutes. Once it was down 10%, other lenders began withdrawing, utilization climbed, and late withdrawals failed.' }) },
     { key: 'pumpdump', w: 0.8, tone: 'bad', title: 'A pump and dump',
-      blurb: 'SUI rallies 18% on a rumor, then falls 38% when the rumor is denied.',
+      blurb: 'TKN rallies 18% on a rumor, then falls 38% when the rumor is denied.',
       tries: ['Buy the rally with borrowed USDC and see where liquidation catches you.', 'Sell into the rally, then buy back after the crash.'],
       make: r => { const at = ri(r, 55, 75); return { rise: 0.18, riseAt: 12, riseLen: 30, drop: 0.38, crashAt: at, crashLen: 8,
-        plan: `SUI rises 18% from minute 12 to minute 42 on a rumor at minute 17. The rumor is denied at minute ${at} and SUI falls 38% by minute ${at + 8}.`,
-        script: [{ t: 17, text: 'SUI rallies on a partnership rumor.' }, { t: at, text: 'The partnership rumor is denied.' }],
-        story: `SUI rallied 18% on a rumor, then fell 38% in eight minutes from minute ${at} when it was denied. Buying the rally or borrowing at the top was the trap.` }; } }
+        plan: `TKN rises 18% from minute 12 to minute 42 on a rumor at minute 17. The rumor is denied at minute ${at} and TKN falls 38% by minute ${at + 8}.`,
+        script: [{ t: 17, text: 'TKN rallies on a partnership rumor.' }, { t: at, text: 'The partnership rumor is denied.' }],
+        story: `TKN rallied 18% on a rumor, then fell 38% in eight minutes from minute ${at} when it was denied. Buying the rally or borrowing at the top was the trap.` }; } }
   ];
   function scenario(r, key) {
     let k = KINDS.find(kk => kk.key === key);
@@ -405,7 +405,7 @@ const Game = (() => {
     const sum = sizes.reduce((a, b) => a + b, 0);
     const borrowers = [];
     for (let i = 0; i < n; i++) {
-      const lst = rb() < 0.3, cap = lst ? RULES.lsui.ltv : RULES.sui.ltv;
+      const lst = rb() < 0.3, cap = lst ? RULES.ltkn.ltv : RULES.tkn.ltv;
       const ltv = Math.min(cap, Math.max(0.05, 0.55 + 0.12 * gauss(rb)));
       const usd = (50e6 * sizes[i]) / sum;
       borrowers.push({ lst, units: lst ? usd / (R0 * P0) : usd / P0, debt: usd * ltv });
@@ -422,7 +422,7 @@ const Game = (() => {
     return {
       t: 0, M, over: false, pool, lst, npc, lstSupply: npcLst * 2,
       lend: { npcSupply: 40e6, mySupply: 0 },
-      me: { usdc: 10000, sui: 0, lsui: 0, pending: 0, collSui: 0, collL: 0, debt: 0, lpX: 0, lpY: 0 },
+      me: { usdc: 10000, tkn: 0, ltkn: 0, pending: 0, collTkn: 0, collL: 0, debt: 0, lpX: 0, lpY: 0 },
       actions: [], news: [], flags: {}, liqMe: [], lpFactor: 1,
       hist: { ext: [M.ext[0]], pp: [M.rep[0]], dex: [P0], peg: [1], nw: [10000], hf: [Infinity], hfPre: [Infinity], util: [0], bad: [0], liqMin: [0] },
       stats: { npcRepaid: 0, myLiqBonus: 0, bonusEarned: 0 }
@@ -444,11 +444,11 @@ const Game = (() => {
   const peg = S => S.lst.s / S.lst.l / R0;
   function myLimits(S) {
     const p = pp(S), m = S.me;
-    const limit = m.collSui * p * RULES.sui.ltv + m.collL * R0 * p * RULES.lsui.ltv;
-    const liqLine = m.collSui * p * RULES.sui.lt + m.collL * R0 * p * RULES.lsui.lt;
+    const limit = m.collTkn * p * RULES.tkn.ltv + m.collL * R0 * p * RULES.ltkn.ltv;
+    const liqLine = m.collTkn * p * RULES.tkn.lt + m.collL * R0 * p * RULES.ltkn.lt;
     const hf = m.debt > 0.005 ? liqLine / m.debt : Infinity;
     // price at which HF hits 1
-    const per = m.collSui * RULES.sui.lt + m.collL * R0 * RULES.lsui.lt;
+    const per = m.collTkn * RULES.tkn.lt + m.collL * R0 * RULES.ltkn.lt;
     const liqPrice = m.debt > 0.005 && per > 0 ? m.debt / per : 0;
     return { limit, hf, liqPrice };
   }
@@ -457,16 +457,16 @@ const Game = (() => {
     let bd = 0;
     for (const b of S.npc) bd += Math.max(0, b.debt - b.units * (b.lst ? g * R0 * e : e));
     const m = S.me;
-    bd += Math.max(0, m.debt - (m.collSui * e + m.collL * R0 * g * e));
+    bd += Math.max(0, m.debt - (m.collTkn * e + m.collL * R0 * g * e));
     return bd;
   }
   function value(S) {
     const e = extP(S), g = peg(S), m = S.me;
-    const wallet = m.usdc + m.sui * e + m.lsui * R0 * g * e + m.pending * e;
+    const wallet = m.usdc + m.tkn * e + m.ltkn * R0 * g * e + m.pending * e;
     const bd = badDebt(S), ts = totSupply(S);
     const hair = ts > 0 ? Math.min(1, bd / ts) : 0;
     const supply = S.lend.mySupply * (1 - hair);
-    const coll = m.collSui * e + m.collL * R0 * g * e;
+    const coll = m.collTkn * e + m.collL * R0 * g * e;
     const loan = coll - m.debt;
     const lp = S.pool.sh > 0 ? (S.pool.mine / S.pool.sh) * (S.pool.x * e + S.pool.y) : 0;
     return { wallet, supply, supplyPar: S.lend.mySupply, coll, debt: m.debt, loan, lp, hair, total: wallet + supply + Math.max(0, loan) + lp };
@@ -487,22 +487,22 @@ const Game = (() => {
     if (!(amt > 0)) return { ok: false, msg: 'Enter an amount above zero.' };
     const lim = () => myLimits(S);
     switch (a.type) {
-      case 'buy': { if (amt > m.usdc + 1e-9) return { ok: false, msg: 'Not enough USDC in your wallet.' }; const out = sellOut(P.y, P.x, amt); P.y += amt; P.x -= out; m.usdc -= amt; m.sui += out; return { ok: true, msg: `Bought ${fs(out)} SUI for ${fmt(amt)} at $${(amt / out).toFixed(3)} each.` }; }
-      case 'sell': { if (amt > m.sui + 1e-9) return { ok: false, msg: 'Not enough SUI in your wallet.' }; const out = sellOut(P.x, P.y, amt); P.x += amt; P.y -= out; m.sui -= amt; m.usdc += out; return { ok: true, msg: `Sold ${fs(amt)} SUI for ${fmt(out)} at $${(out / amt).toFixed(3)} each.` }; }
-      case 'stake': { if (amt > m.sui + 1e-9) return { ok: false, msg: 'Not enough SUI in your wallet.' }; m.sui -= amt; m.lsui += amt / R0; S.lstSupply += amt / R0; return { ok: true, msg: `Staked ${fs(amt)} SUI for ${fs(amt / R0)} liqSUI.` }; }
-      case 'sellL': { if (amt > m.lsui + 1e-9) return { ok: false, msg: 'Not enough liqSUI in your wallet.' }; const out = sellOut(L.l, L.s, amt); L.l += amt; L.s -= out; m.lsui -= amt; m.sui += out; return { ok: true, msg: `Sold ${fs(amt)} liqSUI for ${fs(out)} SUI (${((out / (amt * R0)) * 100).toFixed(1)}% of redemption value).` }; }
-      case 'redeem': { if (amt > m.lsui + 1e-9) return { ok: false, msg: 'Not enough liqSUI in your wallet.' }; m.lsui -= amt; m.pending += amt * R0; S.lstSupply -= amt; return { ok: true, msg: `Redeeming ${fs(amt)} liqSUI for ${fs(amt * R0)} SUI. It arrives after ${S.M.sc.lstWait > 1 ? S.M.sc.lstWait + ' days' : 'the next epoch'}, so it stays exposed to the SUI price.` }; }
+      case 'buy': { if (amt > m.usdc + 1e-9) return { ok: false, msg: 'Not enough USDC in your wallet.' }; const out = sellOut(P.y, P.x, amt); P.y += amt; P.x -= out; m.usdc -= amt; m.tkn += out; return { ok: true, msg: `Bought ${fs(out)} TKN for ${fmt(amt)} at $${(amt / out).toFixed(3)} each.` }; }
+      case 'sell': { if (amt > m.tkn + 1e-9) return { ok: false, msg: 'Not enough TKN in your wallet.' }; const out = sellOut(P.x, P.y, amt); P.x += amt; P.y -= out; m.tkn -= amt; m.usdc += out; return { ok: true, msg: `Sold ${fs(amt)} TKN for ${fmt(out)} at $${(out / amt).toFixed(3)} each.` }; }
+      case 'stake': { if (amt > m.tkn + 1e-9) return { ok: false, msg: 'Not enough TKN in your wallet.' }; m.tkn -= amt; m.ltkn += amt / R0; S.lstSupply += amt / R0; return { ok: true, msg: `Staked ${fs(amt)} TKN for ${fs(amt / R0)} liqTKN.` }; }
+      case 'sellL': { if (amt > m.ltkn + 1e-9) return { ok: false, msg: 'Not enough liqTKN in your wallet.' }; const out = sellOut(L.l, L.s, amt); L.l += amt; L.s -= out; m.ltkn -= amt; m.tkn += out; return { ok: true, msg: `Sold ${fs(amt)} liqTKN for ${fs(out)} TKN (${((out / (amt * R0)) * 100).toFixed(1)}% of redemption value).` }; }
+      case 'redeem': { if (amt > m.ltkn + 1e-9) return { ok: false, msg: 'Not enough liqTKN in your wallet.' }; m.ltkn -= amt; m.pending += amt * R0; S.lstSupply -= amt; return { ok: true, msg: `Redeeming ${fs(amt)} liqTKN for ${fs(amt * R0)} TKN. It arrives after ${S.M.sc.lstWait > 1 ? S.M.sc.lstWait + ' days' : 'the next epoch'}, so it stays exposed to the TKN price.` }; }
       case 'supply': { if (amt > m.usdc + 1e-9) return { ok: false, msg: 'Not enough USDC in your wallet.' }; m.usdc -= amt; S.lend.mySupply += amt; return { ok: true, msg: `Supplied ${fmt(amt)} USDC to the lending market.` }; }
       case 'withdraw': { const w = Math.min(amt, S.lend.mySupply); const c = cash(S); if (w > c + 1e-6) return { ok: false, msg: `Withdrawal failed: only ${fmt(c)} of USDC is left in the pool (utilization ${(util(S) * 100).toFixed(1)}%).` }; S.lend.mySupply -= w; m.usdc += w; return { ok: true, msg: `Withdrew ${fmt(w)} USDC from the lending market.` }; }
-      case 'depSui': { if (amt > m.sui + 1e-9) return { ok: false, msg: 'Not enough SUI in your wallet.' }; m.sui -= amt; m.collSui += amt; return { ok: true, msg: `Posted ${fs(amt)} SUI as collateral.` }; }
-      case 'depL': { if (amt > m.lsui + 1e-9) return { ok: false, msg: 'Not enough liqSUI in your wallet.' }; m.lsui -= amt; m.collL += amt; return { ok: true, msg: `Posted ${fs(amt)} liqSUI as collateral.` }; }
-      case 'wdSui': case 'wdL': {
+      case 'depTkn': { if (amt > m.tkn + 1e-9) return { ok: false, msg: 'Not enough TKN in your wallet.' }; m.tkn -= amt; m.collTkn += amt; return { ok: true, msg: `Posted ${fs(amt)} TKN as collateral.` }; }
+      case 'depL': { if (amt > m.ltkn + 1e-9) return { ok: false, msg: 'Not enough liqTKN in your wallet.' }; m.ltkn -= amt; m.collL += amt; return { ok: true, msg: `Posted ${fs(amt)} liqTKN as collateral.` }; }
+      case 'wdTkn': case 'wdL': {
         if (!accepted(S)) return { ok: false, msg: 'Collateral withdrawals are paused: the oracle price is too old.' };
-        const k = a.type === 'wdSui' ? 'collSui' : 'collL';
+        const k = a.type === 'wdTkn' ? 'collTkn' : 'collL';
         const w = Math.min(amt, m[k]); m[k] -= w;
         if (m.debt > 0.005 && lim().limit < m.debt) { m[k] += w; return { ok: false, msg: 'That withdrawal would put your loan over the max LTV.' }; }
-        if (k === 'collSui') m.sui += w; else m.lsui += w;
-        return { ok: true, msg: `Withdrew ${fs(w)} ${k === 'collSui' ? 'SUI' : 'liqSUI'} of collateral.` };
+        if (k === 'collTkn') m.tkn += w; else m.ltkn += w;
+        return { ok: true, msg: `Withdrew ${fs(w)} ${k === 'collTkn' ? 'TKN' : 'liqTKN'} of collateral.` };
       }
       case 'borrow': {
         if (!accepted(S)) return { ok: false, msg: 'Borrowing is paused: the oracle price is too old.' };
@@ -514,20 +514,20 @@ const Game = (() => {
       case 'repay': { const r = Math.min(amt, m.debt, m.usdc); if (r <= 0) return { ok: false, msg: m.debt <= 0 ? 'You have no debt to repay.' : 'Not enough USDC in your wallet.' }; m.debt -= r; m.usdc -= r; if (m.debt < 0.005) m.debt = 0; const h = lim().hf; return { ok: true, msg: `Repaid ${fmt(r)}. ${m.debt > 0 ? 'Health factor now ' + h.toFixed(2) + '.' : 'Your loan is fully repaid.'}` }; }
       case 'lpAdd': {
         if (amt > m.usdc + 1e-9) return { ok: false, msg: 'Not enough USDC in your wallet.' };
-        const half = amt / 2; const sui = sellOut(P.y, P.x, half); P.y += half; P.x -= sui;
-        m.usdc -= half; m.sui += sui;
-        const f = Math.min(sui / P.x, half / P.y);
+        const half = amt / 2; const tkn = sellOut(P.y, P.x, half); P.y += half; P.x -= tkn;
+        m.usdc -= half; m.tkn += tkn;
+        const f = Math.min(tkn / P.x, half / P.y);
         const useX = P.x * f, useY = P.y * f, minted = P.sh * f;
         P.x += useX; P.y += useY; P.sh += minted; P.mine += minted;
-        m.sui -= useX; m.usdc -= useY; m.lpX += useX; m.lpY += useY;
-        return { ok: true, msg: `Added liquidity: ${fmt(useY)} USDC and ${fs(useX)} SUI (half of your USDC was swapped into SUI first).` };
+        m.tkn -= useX; m.usdc -= useY; m.lpX += useX; m.lpY += useY;
+        return { ok: true, msg: `Added liquidity: ${fmt(useY)} USDC and ${fs(useX)} TKN (half of your USDC was swapped into TKN first).` };
       }
       case 'lpRemove': {
         if (P.mine <= 0) return { ok: false, msg: 'You have no liquidity in the pool.' };
         const pct = Math.min(1, amt / 100), burn = P.mine * pct, f = burn / P.sh;
         const ox = P.x * f, oy = P.y * f; P.x -= ox; P.y -= oy; P.sh -= burn; P.mine -= burn;
         m.lpX *= 1 - pct; m.lpY *= 1 - pct;
-        m.sui += ox; m.usdc += oy; return { ok: true, msg: `Removed ${Math.round(pct * 100)}% of your liquidity: ${fs(ox)} SUI and ${fmt(oy)} USDC.` };
+        m.tkn += ox; m.usdc += oy; return { ok: true, msg: `Removed ${Math.round(pct * 100)}% of your liquidity: ${fs(ox)} TKN and ${fmt(oy)} USDC.` };
       }
       case 'liquidate': {
         if (!accepted(S)) return { ok: false, msg: 'Liquidations are paused: the oracle price is too old.' };
@@ -546,25 +546,25 @@ const Game = (() => {
           if (left <= 0.01) break;
         }
         if (repaid <= 0) return { ok: false, msg: 'No loans are liquidatable right now.' };
-        m.usdc -= repaid; m.sui += gotS; m.lsui += gotL; S.stats.bonusEarned += repaid * RULES.bonus;
-        return { ok: true, msg: `Liquidated ${fmt(repaid)} of debt and received ${gotS > 0 ? fs(gotS) + ' SUI' : ''}${gotS > 0 && gotL > 0 ? ' and ' : ''}${gotL > 0 ? fs(gotL) + ' liqSUI' : ''}, valued at the oracle price with a 5% bonus. Sell it before the price moves.` };
+        m.usdc -= repaid; m.tkn += gotS; m.ltkn += gotL; S.stats.bonusEarned += repaid * RULES.bonus;
+        return { ok: true, msg: `Liquidated ${fmt(repaid)} of debt and received ${gotS > 0 ? fs(gotS) + ' TKN' : ''}${gotS > 0 && gotL > 0 ? ' and ' : ''}${gotL > 0 ? fs(gotL) + ' liqTKN' : ''}, valued at the oracle price with a 5% bonus. Sell it before the price moves.` };
       }
     }
     return { ok: false, msg: 'Unknown action.' };
   }
   const up = (b, p) => (b.lst ? R0 * p : p);
-  const lt = b => (b.lst ? RULES.lsui.lt : RULES.sui.lt);
+  const lt = b => (b.lst ? RULES.ltkn.lt : RULES.tkn.lt);
 
   // ---------- one minute of market ----------
   function news(S, text, tone, key, cooldown) {
     if (key) { const last = S.flags['n_' + key]; if (last !== undefined && (cooldown === undefined || S.t - last < cooldown)) return; S.flags['n_' + key] = S.t; }
     S.news.push({ t: S.t, text, tone: tone || 'market' });
   }
-  // What a liquidator gets for selling seized collateral (SUI on the DEX; liqSUI sold or redeemed, whichever pays more).
+  // What a liquidator gets for selling seized collateral (TKN on the DEX; liqTKN sold or redeemed, whichever pays more).
   function proceeds(S, sUnits, lUnits, wait) {
-    let px = S.pool.x, py = S.pool.y, ll = S.lst.l, ls = S.lst.s, sui = sUnits;
-    if (lUnits > 0) { const vp = sellOut(ll, ls, lUnits), vr = lUnits * R0 * (1 - 0.002 * wait); if (vp >= vr) { ll += lUnits; ls -= vp; sui += vp; } else sui += vr; }
-    const usdc = sui > 0 ? sellOut(px, py, sui) : 0; px += sui; py -= usdc;
+    let px = S.pool.x, py = S.pool.y, ll = S.lst.l, ls = S.lst.s, tkn = sUnits;
+    if (lUnits > 0) { const vp = sellOut(ll, ls, lUnits), vr = lUnits * R0 * (1 - 0.002 * wait); if (vp >= vr) { ll += lUnits; ls -= vp; tkn += vp; } else tkn += vr; }
+    const usdc = tkn > 0 ? sellOut(px, py, tkn) : 0; px += tkn; py -= usdc;
     return { usdc, commit: () => { S.pool.x = px; S.pool.y = py; S.lst.l = ll; S.lst.s = ls; } };
   }
   function step(S) {
@@ -581,7 +581,7 @@ const Game = (() => {
       if (nf < S.lpFactor) {
         const npcSh = P.sh - P.mine, newNpc = npcSh * (nf / S.lpFactor), keep = (P.mine + newNpc) / P.sh;
         P.x *= keep; P.y *= keep; P.sh = P.mine + newNpc; S.lpFactor = nf;
-        if (prog > 0 && !S.flags.drainNews) { S.flags.drainNews = 1; news(S, 'Liquidity is leaving the SUI/USDC pool as LPs withdraw.', 'market'); }
+        if (prog > 0 && !S.flags.drainNews) { S.flags.drainNews = 1; news(S, 'Liquidity is leaving the TKN/USDC pool as LPs withdraw.', 'market'); }
       }
     }
     // background trading fees
@@ -624,15 +624,15 @@ const Game = (() => {
       const m = S.me;
       let rounds = 0, myRep = 0, myS = 0, myL = 0;
       while (m.debt > 0.005 && myLimits(S).hf < 1 && rounds++ < 30) {
-        const collVal = m.collSui * p + m.collL * R0 * p;
+        const collVal = m.collTkn * p + m.collL * R0 * p;
         let R = Math.min(RULES.cf * m.debt, collVal / (1 + RULES.bonus)), done = false;
         for (let k = 0; k < 4 && !done; k++) {
-          let need = R * (1 + RULES.bonus); const takeS = Math.min(m.collSui, need / p); need -= takeS * p;
+          let need = R * (1 + RULES.bonus); const takeS = Math.min(m.collTkn, need / p); need -= takeS * p;
           const takeL = Math.min(m.collL, need / (R0 * p));
           const pr = proceeds(S, takeS, takeL, sc.lstWait);
           if (pr.usdc < R) { R /= 4; continue; }
           pr.commit();
-          m.collSui -= takeS; m.collL -= takeL; m.debt -= R; repaidNow += R;
+          m.collTkn -= takeS; m.collL -= takeL; m.debt -= R; repaidNow += R;
           S.stats.myLiqBonus += R * RULES.bonus;
           S.liqMe.push({ t, repaid: R, takeS, takeL, price: p });
           myRep += R; myS += takeS; myL += takeL;
@@ -641,7 +641,7 @@ const Game = (() => {
         if (!done) break;
       }
       if (m.debt < 0.005) m.debt = 0;
-      if (myRep > 0) news(S, `You were liquidated: bots repaid $${Math.round(myRep).toLocaleString('en-US')} of your debt and took ${myS > 0 ? myS.toFixed(1) + ' SUI' : ''}${myS > 0 && myL > 0 ? ' and ' : ''}${myL > 0 ? myL.toFixed(1) + ' liqSUI' : ''} of your collateral, bonus included.`, 'you');
+      if (myRep > 0) news(S, `You were liquidated: bots repaid $${Math.round(myRep).toLocaleString('en-US')} of your debt and took ${myS > 0 ? myS.toFixed(1) + ' TKN' : ''}${myS > 0 && myL > 0 ? ' and ' : ''}${myL > 0 ? myL.toFixed(1) + ' liqTKN' : ''} of your collateral, bonus included.`, 'you');
     }
     S.stats.npcRepaid += repaidNow;
     // history
@@ -650,8 +650,8 @@ const Game = (() => {
     // headlines
     for (const s of sc.script) if (s.t === t) S.news.push({ t, text: s.text, tone: 'market', src: s.fake ? (s.noise ? 'noise' : 'false') : 'real' });
     const ch5 = t >= 5 ? e / M.ext[t - 5] - 1 : 0;
-    if (ch5 <= -0.04) news(S, `SUI is down ${Math.abs(ch5 * 100).toFixed(1)}% in five minutes, at $${e.toFixed(3)}.`, 'market', 'drop', 6);
-    if (ch5 >= 0.04) news(S, `SUI is up ${(ch5 * 100).toFixed(1)}% in five minutes, at $${e.toFixed(3)}.`, 'good', 'rise', 6);
+    if (ch5 <= -0.04) news(S, `TKN is down ${Math.abs(ch5 * 100).toFixed(1)}% in five minutes, at $${e.toFixed(3)}.`, 'market', 'drop', 6);
+    if (ch5 >= 0.04) news(S, `TKN is up ${(ch5 * 100).toFixed(1)}% in five minutes, at $${e.toFixed(3)}.`, 'good', 'rise', 6);
     const age = M.age[t];
     if (age >= 8) {
       if (ok) news(S, `The oracle hasn’t updated for ${age} minutes. The lending market is still using its last price, $${p.toFixed(3)}.`, 'market', 'stale', 10);
@@ -661,7 +661,7 @@ const Game = (() => {
     const dg = P.y / P.x / e - 1;
     if (dg <= -0.03) news(S, `The DEX price is ${Math.abs(dg * 100).toFixed(1)}% below exchanges as liquidations hit the pool.`, 'market', 'dexgap', 8);
     const g = peg(S);
-    for (const [lvl, key] of [[0.985, 'peg1'], [0.95, 'peg2'], [0.9, 'peg3'], [0.8, 'peg4']]) if (g < lvl && !S.flags[key]) { S.flags[key] = 1; news(S, `liqSUI trades at ${(g * 100).toFixed(1)}% of its redemption value on the DEX.`, 'market'); }
+    for (const [lvl, key] of [[0.985, 'peg1'], [0.95, 'peg2'], [0.9, 'peg3'], [0.8, 'peg4']]) if (g < lvl && !S.flags[key]) { S.flags[key] = 1; news(S, `liqTKN trades at ${(g * 100).toFixed(1)}% of its redemption value on the DEX.`, 'market'); }
     if (repaidNow > 500e3) news(S, `Liquidations: $${(repaidNow / 1e6).toFixed(2)}M of loans liquidated in the last minute.`, 'market', 'liq', 5);
     if (stalled) { const stuck = S.npc.filter(b => b.debt > 1 && b.units * up(b, p) * lt(b) < b.debt).reduce((a, b) => a + b.debt, 0); if (stuck > 1e6) news(S, `Liquidators are holding back: selling seized collateral now loses money. $${(stuck / 1e6).toFixed(1)}M of loans are unhealthy.`, 'market', 'stall', 10); }
     const U = util(S);
@@ -675,8 +675,8 @@ const Game = (() => {
     const prevLvl = S.flags.hfLvl || 0;
     if (lvl > prevLvl) {
       if (lvl === 3) news(S, `Your loan is liquidatable: health factor ${hf.toFixed(2)}.${ok ? '' : ' Liquidations are paused only because the oracle is stale.'}`, 'you');
-      else if (lvl === 2) news(S, `Your health factor is ${hf.toFixed(2)}. Liquidation starts at SUI $${lim.liqPrice.toFixed(3)}.`, 'you');
-      else news(S, `Your health factor fell to ${hf.toFixed(2)}. Liquidation starts at SUI $${lim.liqPrice.toFixed(3)}.`, 'you');
+      else if (lvl === 2) news(S, `Your health factor is ${hf.toFixed(2)}. Liquidation starts at TKN $${lim.liqPrice.toFixed(3)}.`, 'you');
+      else news(S, `Your health factor fell to ${hf.toFixed(2)}. Liquidation starts at TKN $${lim.liqPrice.toFixed(3)}.`, 'you');
       S.flags.hfLvl = lvl;
     } else if (lvl < prevLvl) {
       const back = [Infinity, 1.25, 1.1, 1][prevLvl] + 0.05;
@@ -699,14 +699,14 @@ const Game = (() => {
 
   // quotes for previews (no state change)
   function hfWith(S, d) {
-    const p = pp(S), m = S.me, debt = m.debt + (d.debt || 0), cs = m.collSui + (d.collSui || 0), cl = m.collL + (d.collL || 0);
+    const p = pp(S), m = S.me, debt = m.debt + (d.debt || 0), cs = m.collTkn + (d.collTkn || 0), cl = m.collL + (d.collL || 0);
     if (debt <= 0.005) return Infinity;
-    return (cs * p * RULES.sui.lt + cl * R0 * p * RULES.lsui.lt) / debt;
+    return (cs * p * RULES.tkn.lt + cl * R0 * p * RULES.ltkn.lt) / debt;
   }
   function unhealthy(S) { const p = pp(S); return S.npc.filter(b => b.debt > 1 && b.units * up(b, p) * lt(b) < b.debt).reduce((a, b) => a + b.debt, 0); }
   const quote = {
     buy: (S, usdc) => sellOut(S.pool.y, S.pool.x, usdc),
-    sell: (S, sui) => sellOut(S.pool.x, S.pool.y, sui),
+    sell: (S, tkn) => sellOut(S.pool.x, S.pool.y, tkn),
     sellL: (S, l) => sellOut(S.lst.l, S.lst.s, l)
   };
   return { T, P0, R0, RULES, quote, hfWith, unhealthy, market, init, act, step, value, myLimits, rates, cash, util, badDebt, peg, replay, KINDS };
@@ -928,22 +928,22 @@ if (typeof module !== 'undefined') module.exports = Game;
       return S;
     }
     const tot = S => Game.value(S).total;
-    const buyAll = S => { Game.act(S, { type: 'buy', amt: 10000 }, false); return S.me.sui; };
+    const buyAll = S => { Game.act(S, { type: 'buy', amt: 10000 }, false); return S.me.tkn; };
     const rows = [];
     const H0 = run(() => {}).hist;
     let lowT = 0, highT = 0; H0.ext.forEach((p, i) => { if (p < H0.ext[lowT]) lowT = i; if (p > H0.ext[highT]) highT = i; });
     const close = H0.ext[T0], low = H0.ext[lowT], high = H0.ext[highT];
-    // 1. hold SUI
+    // 1. hold TKN
     const hold = run(buyAll), vh = tot(hold);
     const path = [];
     if (high > 2.04 && high > close * 1.03) path.push(`peaks at $${high.toFixed(3)} (minute ${highT})`);
     if (low < 1.98 && low < close * 0.99) path.push(`bottoms at $${low.toFixed(3)} (minute ${lowT})`);
     path.push(`closes at $${close.toFixed(3)}`);
-    rows.push(['Buy SUI and hold', vh, `SUI ${path.join(', ')}.`]);
-    // 2/3. borrow against SUI: at the max, and to a health factor of 1.5
+    rows.push(['Buy TKN and hold', vh, `TKN ${path.join(', ')}.`]);
+    // 2/3. borrow against TKN: at the max, and to a health factor of 1.5
     const borrowRun = hfTarget => {
       let minHf = Infinity, minT = 0;
-      const S = run(S => { const s = buyAll(S); Game.act(S, { type: 'depSui', amt: s }, false); const p = M.rep[0]; const debt = hfTarget ? (s * p * R.sui.lt) / hfTarget : s * p * R.sui.ltv * 0.999; Game.act(S, { type: 'borrow', amt: debt }, false); },
+      const S = run(S => { const s = buyAll(S); Game.act(S, { type: 'depTkn', amt: s }, false); const p = M.rep[0]; const debt = hfTarget ? (s * p * R.tkn.lt) / hfTarget : s * p * R.tkn.ltv * 0.999; Game.act(S, { type: 'borrow', amt: debt }, false); },
         S => { const h = S.hist.hfPre[S.t]; if (h < minHf) { minHf = h; minT = S.t; } });
       const lq = S.liqMe, under = S.hist.hfPre.findIndex(h => h < 1), v = Game.value(S);
       const sunk = S.me.debt > 0.01 && v.coll < v.debt; // the loan ended worth less than its debt
@@ -952,18 +952,18 @@ if (typeof module !== 'undefined') module.exports = Game;
       if (lq.length) {
         const bonus = usd0(S.stats.myLiqBonus);
         note = under >= 0 && under < lq[0].t - 1
-          ? `Liquidatable from minute ${under}, but bots waited until minute ${lq[0].t}, because selling your SUI on the DEX didn’t pay until then. They took ${bonus} in bonuses.`
+          ? `Liquidatable from minute ${under}, but bots waited until minute ${lq[0].t}, because selling your TKN on the DEX didn’t pay until then. They took ${bonus} in bonuses.`
           : `Liquidated at minute ${lq[0].t} (lending price $${lq[0].price.toFixed(3)}), paying ${bonus} in bonuses.`;
         if (sunk) note += sunkTxt;
-        else if (tot(S) > vh + 20) note += ' The liquidation sold your SUI early, like an expensive stop-loss, so you end above simply holding.';
+        else if (tot(S) > vh + 20) note += ' The liquidation sold your TKN early, like an expensive stop-loss, so you end above simply holding.';
       } else if (under >= 0) {
-        note = `Liquidatable from minute ${under} (health factor down to ${minHf.toFixed(2)}), but no bot liquidated it: selling your SUI on the DEX didn’t pay.` + (sunk ? sunkTxt : Game.myLimits(S).hf >= 1 ? ' SUI recovered before they acted.' : ' It was still liquidatable at the end.');
+        note = `Liquidatable from minute ${under} (health factor down to ${minHf.toFixed(2)}), but no bot liquidated it: selling your TKN on the DEX didn’t pay.` + (sunk ? sunkTxt : Game.myLimits(S).hf >= 1 ? ' TKN recovered before they acted.' : ' It was still liquidatable at the end.');
       } else note = `Never liquidatable; the health factor bottomed at ${minHf.toFixed(2)} at minute ${minT}.`;
       return [tot(S), note];
     };
     const bm = borrowRun(0), bs = borrowRun(1.5);
-    rows.push(['Buy SUI, borrow the max (75% LTV), keep the USDC', bm[0], bm[1]]);
-    rows.push(['Buy SUI, borrow to a health factor of 1.5', bs[0], bs[1]]);
+    rows.push(['Buy TKN, borrow the max (75% LTV), keep the USDC', bm[0], bm[1]]);
+    rows.push(['Buy TKN, borrow to a health factor of 1.5', bs[0], bs[1]]);
     // 4. lend USDC
     let blockT = -1, maxU = 0;
     const L = run(S => Game.act(S, { type: 'supply', amt: 10000 }, false), S => { if (blockT < 0 && Game.cash(S) + 1e-6 < S.lend.mySupply) blockT = S.t; maxU = Math.max(maxU, Game.util(S)); });
@@ -971,13 +971,13 @@ if (typeof module !== 'undefined') module.exports = Game;
     rows.push(['Supply USDC as a lender', tot(L), (blockT >= 0 ? `Withdrawals blocked from minute ${blockT}: the pool’s cash ran out (utilization ${pct(maxU, 0)}).` : `You could withdraw all session (peak utilization ${pct(maxU, 0)}).`) + (hair > 0.0001 ? ` Bad debt took ${pct(hair, 2)} of your deposit.` : peakBad > 1000 ? ` Bad debt peaked at ${usd0(peakBad)} but was gone by the end.` : ' No bad debt.')]);
     // 5. liquidity
     const LP = run(S => Game.act(S, { type: 'lpAdd', amt: 10000 }, false));
-    const held = LP.me.lpX * M.ext[T0] + LP.me.lpY + LP.me.usdc + LP.me.sui * M.ext[T0], vlp = tot(LP);
-    rows.push(['Add liquidity to the SUI/USDC pool', vlp, `Holding the same SUI and USDC outside the pool would end at ${usd0(held)}: the pool ${vlp >= held ? 'beat' : 'lost to'} holding by ${usd0(Math.abs(vlp - held))}.`]);
+    const held = LP.me.lpX * M.ext[T0] + LP.me.lpY + LP.me.usdc + LP.me.tkn * M.ext[T0], vlp = tot(LP);
+    rows.push(['Add liquidity to the TKN/USDC pool', vlp, `Holding the same TKN and USDC outside the pool would end at ${usd0(held)}: the pool ${vlp >= held ? 'beat' : 'lost to'} holding by ${usd0(Math.abs(vlp - held))}.`]);
     // 6. liquid staking
     const ST = run(S => { const s = buyAll(S); Game.act(S, { type: 'stake', amt: s }, false); });
     let pT = 0; ST.hist.peg.forEach((g, i) => { if (g < ST.hist.peg[pT]) pT = i; });
     const gMin = ST.hist.peg[pT];
-    rows.push(['Buy SUI and stake it for liqSUI', tot(ST), gMin < 0.985 ? `liqSUI fell to ${pct(gMin)} of its redemption value at minute ${pT}${ST.hist.peg[T0] < 0.985 ? ` and ended at ${pct(ST.hist.peg[T0])}` : ', then recovered'}. Versus holding SUI: ${sgn(tot(ST) - vh)}.` : `liqSUI held its peg, so it ends the same as holding SUI${Math.abs(tot(ST) - vh) >= 5 ? ` (${sgn(tot(ST) - vh)})` : ''}.`]);
+    rows.push(['Buy TKN and stake it for liqTKN', tot(ST), gMin < 0.985 ? `liqTKN fell to ${pct(gMin)} of its redemption value at minute ${pT}${ST.hist.peg[T0] < 0.985 ? ` and ended at ${pct(ST.hist.peg[T0])}` : ', then recovered'}. Versus holding TKN: ${sgn(tot(ST) - vh)}.` : `liqTKN held its peg, so it ends the same as holding TKN${Math.abs(tot(ST) - vh) >= 5 ? ` (${sgn(tot(ST) - vh)})` : ''}.`]);
     // market-wide facts
     const facts = [];
     const maxAge = Math.max(...M.age); if (maxAge >= 8) facts.push(`the oracle goes ${maxAge} minutes without an update`);
@@ -1064,33 +1064,33 @@ if (typeof module !== 'undefined') module.exports = Game;
     const m = S.me, lim = Game.myLimits(S);
     switch (key) {
       case 'buy': case 'supply': case 'lpadd': case 'liq': return m.usdc;
-      case 'sell': case 'stake': return m.sui;
-      case 'sellL': case 'redeem': return m.lsui;
+      case 'sell': case 'stake': return m.tkn;
+      case 'sellL': case 'redeem': return m.ltkn;
       case 'withdraw': return S.lend.mySupply;
-      case 'post': return postKind === 'sui' ? m.sui : m.lsui;
-      case 'wdcoll': return wdKind === 'sui' ? m.collSui : m.collL;
+      case 'post': return postKind === 'tkn' ? m.tkn : m.ltkn;
+      case 'wdcoll': return wdKind === 'tkn' ? m.collTkn : m.collL;
       case 'borrow': return Math.max(0, Math.min(lim.limit - m.debt, Game.cash(S)));
       case 'repay': return Math.min(m.usdc, m.debt);
       case 'lprm': return 100;
     }
     return 0;
   }
-  let postKind = 'sui', wdKind = 'sui';
+  let postKind = 'tkn', wdKind = 'tkn';
   function previews() {
     const val = id => parseFloat($(id).value) || 0;
     const e = S.M.ext[S.t], dex = S.pool.y / S.pool.x, g = Game.peg(S), lim = Game.myLimits(S);
     const set = (id, txt) => { const el = $(id); if (el) el.textContent = txt; };
-    const b = val('a-buy'); set('p-buy', b > 0 ? (() => { const o = Game.quote.buy(S, b); return `≈ ${num(o)} SUI at $${(b / o).toFixed(3)} (${spct(b / o / e - 1, 2)} vs exchanges)`; })() : `DEX $${dex.toFixed(3)} · exchanges $${e.toFixed(3)}`);
-    const sl = val('a-sell'); set('p-sell', sl > 0 ? (() => { const o = Game.quote.sell(S, sl); return `≈ ${usd(o)} at $${(o / sl).toFixed(3)} (${spct(o / sl / e - 1, 2)} vs exchanges)`; })() : `You hold ${num(S.me.sui)} SUI`);
+    const b = val('a-buy'); set('p-buy', b > 0 ? (() => { const o = Game.quote.buy(S, b); return `≈ ${num(o)} TKN at $${(b / o).toFixed(3)} (${spct(b / o / e - 1, 2)} vs exchanges)`; })() : `DEX $${dex.toFixed(3)} · exchanges $${e.toFixed(3)}`);
+    const sl = val('a-sell'); set('p-sell', sl > 0 ? (() => { const o = Game.quote.sell(S, sl); return `≈ ${usd(o)} at $${(o / sl).toFixed(3)} (${spct(o / sl / e - 1, 2)} vs exchanges)`; })() : `You hold ${num(S.me.tkn)} TKN`);
     const sp = val('a-supply'); set('p-supply', `Lender rate ${pct(Game.rates(S).supply, 2)} a year · utilization ${pct(Game.util(S))}`);
     set('p-withdraw', `${usd0(Game.cash(S))} of USDC is in the pool to withdraw`);
-    const po = val('a-post'); set('p-post', po > 0 ? `Health factor after: ${fmtHf(Game.hfWith(S, postKind === 'sui' ? { collSui: po } : { collL: po }))}` : `Counts at ${postKind === 'sui' ? '75% LTV, liquidated at 80%' : 'redemption value: 70% LTV, liquidated at 75%'}`);
-    const wd = val('a-wdcoll'); set('p-wdcoll', wd > 0 ? `Health factor after: ${fmtHf(Game.hfWith(S, wdKind === 'sui' ? { collSui: -wd } : { collL: -wd }))}` : `Posted: ${num(S.me.collSui)} SUI, ${num(S.me.collL)} liqSUI`);
+    const po = val('a-post'); set('p-post', po > 0 ? `Health factor after: ${fmtHf(Game.hfWith(S, postKind === 'tkn' ? { collTkn: po } : { collL: po }))}` : `Counts at ${postKind === 'tkn' ? '75% LTV, liquidated at 80%' : 'redemption value: 70% LTV, liquidated at 75%'}`);
+    const wd = val('a-wdcoll'); set('p-wdcoll', wd > 0 ? `Health factor after: ${fmtHf(Game.hfWith(S, wdKind === 'tkn' ? { collTkn: -wd } : { collL: -wd }))}` : `Posted: ${num(S.me.collTkn)} TKN, ${num(S.me.collL)} liqTKN`);
     const bo = val('a-borrow'); set('p-borrow', bo > 0 ? `Health factor after: ${fmtHf(Game.hfWith(S, { debt: bo }))}` : `Room to borrow: ${usd0(Math.max(0, lim.limit - S.me.debt))} · rate ${pct(Game.rates(S).borrow, 2)} a year`);
     const rp = val('a-repay'); set('p-repay', rp > 0 ? `Health factor after: ${fmtHf(Game.hfWith(S, { debt: -Math.min(rp, S.me.debt) }))}` : `You owe ${usd(S.me.debt)}`);
-    set('p-stake', `1 liqSUI redeems for ${Game.R0} SUI · market ${pct(g)} of that`);
-    const sL = val('a-sellL'); set('p-sellL', sL > 0 ? (() => { const o = Game.quote.sellL(S, sL); return `≈ ${num(o)} SUI, ${pct(o / (sL * Game.R0))} of redemption value`; })() : `liqSUI trades at ${pct(g)} of redemption value`);
-    const rd = val('a-redeem'); set('p-redeem', rd > 0 ? `${num(rd * Game.R0)} SUI, arriving after ${S.M.sc.lstWait > 1 ? S.M.sc.lstWait + ' days' : 'the next epoch'} (after this session)` : 'Full value, but locked until it arrives');
+    set('p-stake', `1 liqTKN redeems for ${Game.R0} TKN · market ${pct(g)} of that`);
+    const sL = val('a-sellL'); set('p-sellL', sL > 0 ? (() => { const o = Game.quote.sellL(S, sL); return `≈ ${num(o)} TKN, ${pct(o / (sL * Game.R0))} of redemption value`; })() : `liqTKN trades at ${pct(g)} of redemption value`);
+    const rd = val('a-redeem'); set('p-redeem', rd > 0 ? `${num(rd * Game.R0)} TKN, arriving after ${S.M.sc.lstWait > 1 ? S.M.sc.lstWait + ' days' : 'the next epoch'} (after this session)` : 'Full value, but locked until it arrives');
     const lpv = Game.value(S).lp; set('p-lpadd', `Pool: ${usd0(S.pool.y)} USDC side · your share ${pct(S.pool.sh > 0 ? S.pool.mine / S.pool.sh : 0, 3)}`);
     set('p-lprm', S.pool.mine > 0 ? `Your liquidity is worth ${usd(lpv)} at exchange prices` : 'You have no liquidity in the pool');
     const uh = Game.unhealthy(S);
@@ -1113,8 +1113,8 @@ if (typeof module !== 'undefined') module.exports = Game;
     // alert
     const al = [];
     if (m.debt > 0 && lim.hf < 1) al.push({ c: 'crit', t: `Your loan is liquidatable (health factor ${lim.hf.toFixed(2)}). Repay or add collateral now.` });
-    else if (m.debt > 0 && lim.hf < 1.15) al.push({ c: 'crit', t: `Health factor ${lim.hf.toFixed(2)}. Liquidation at SUI $${lim.liqPrice.toFixed(3)} (by the lending market’s price).` });
-    else if (m.debt > 0 && lim.hf < 1.3) al.push({ c: 'warn', t: `Health factor ${lim.hf.toFixed(2)}. Liquidation at SUI $${lim.liqPrice.toFixed(3)}.` });
+    else if (m.debt > 0 && lim.hf < 1.15) al.push({ c: 'crit', t: `Health factor ${lim.hf.toFixed(2)}. Liquidation at TKN $${lim.liqPrice.toFixed(3)} (by the lending market’s price).` });
+    else if (m.debt > 0 && lim.hf < 1.3) al.push({ c: 'warn', t: `Health factor ${lim.hf.toFixed(2)}. Liquidation at TKN $${lim.liqPrice.toFixed(3)}.` });
     if (M.age[t] >= 8) al.push({ c: 'warn', t: `The lending market’s price is ${M.age[t]} minutes old ($${M.rep[t].toFixed(3)} vs $${e.toFixed(3)} on exchanges).` });
     if (S.lend.mySupply > 1 && Game.cash(S) < S.lend.mySupply) al.push({ c: 'crit', t: `Only ${usd0(Game.cash(S))} is left in the lending pool. You can’t withdraw your full ${usd0(S.lend.mySupply)}.` });
     $('alert').innerHTML = al.map(a => `<div class="al ${a.c}" role="status">${a.t}</div>`).join('');
@@ -1123,9 +1123,9 @@ if (typeof module !== 'undefined') module.exports = Game;
     const g = Game.peg(S), hair = v.hair;
     const lpHold = m.lpX * e + m.lpY;
     $('cards').innerHTML = [
-      card('Wallet', usd(v.wallet), [['USDC', usd(m.usdc)], ['SUI', num(m.sui) + ' · ' + usd(m.sui * e)], ['liqSUI', num(m.lsui) + ' · ' + usd(m.lsui * Game.R0 * g * e)], m.pending > 0 ? ['Redeeming', num(m.pending) + ' SUI · ' + usd(m.pending * e)] : null]),
+      card('Wallet', usd(v.wallet), [['USDC', usd(m.usdc)], ['TKN', num(m.tkn) + ' · ' + usd(m.tkn * e)], ['liqTKN', num(m.ltkn) + ' · ' + usd(m.ltkn * Game.R0 * g * e)], m.pending > 0 ? ['Redeeming', num(m.pending) + ' TKN · ' + usd(m.pending * e)] : null]),
       card('Lending', usd(v.supply), [['Supplied', usd(v.supplyPar)], ['Lender rate', pct(Game.rates(S).supply, 2)], ['Pool cash', usd0(Game.cash(S))], hair > 0 ? ['Bad-debt haircut', pct(hair, 2)] : ['Utilization', pct(Game.util(S))]], hair > 0.0001 ? 'warn' : ''),
-      card('Loan', m.debt > 0 ? 'HF ' + lim.hf.toFixed(2) : m.collSui + m.collL > 0 ? 'No debt' : 'None', [['Collateral', usd(v.coll)], ['Debt', usd(m.debt)], ['Borrow limit', usd0(lim.limit)], ['Liquidation at', m.debt > 0 ? '$' + lim.liqPrice.toFixed(3) : '—']], m.debt > 0 ? hfClass(lim.hf) : ''),
+      card('Loan', m.debt > 0 ? 'HF ' + lim.hf.toFixed(2) : m.collTkn + m.collL > 0 ? 'No debt' : 'None', [['Collateral', usd(v.coll)], ['Debt', usd(m.debt)], ['Borrow limit', usd0(lim.limit)], ['Liquidation at', m.debt > 0 ? '$' + lim.liqPrice.toFixed(3) : '—']], m.debt > 0 ? hfClass(lim.hf) : ''),
       card('Liquidity', usd(v.lp), [['Your share', pct(S.pool.sh > 0 ? S.pool.mine / S.pool.sh : 0, 3)], ['If you’d held', usd(lpHold)], ['Difference', m.lpX + m.lpY > 0 ? sgn(v.lp - lpHold) : '—']])
     ].join('');
     previews();
@@ -1158,16 +1158,16 @@ if (typeof module !== 'undefined') module.exports = Game;
   }
 
   // ---------- debrief ----------
-  const NAMES = { buy: 'Bought SUI', sell: 'Sold SUI', stake: 'Staked SUI', sellL: 'Sold liqSUI', redeem: 'Redeemed liqSUI', supply: 'Supplied USDC', withdraw: 'Withdrew USDC', depSui: 'Posted SUI collateral', depL: 'Posted liqSUI collateral', wdSui: 'Withdrew SUI collateral', wdL: 'Withdrew liqSUI collateral', borrow: 'Borrowed USDC', repay: 'Repaid', lpAdd: 'Added liquidity', lpRemove: 'Removed liquidity', liquidate: 'Liquidated loans' };
-  const UNIT = { buy: 'usd', sell: 'sui', stake: 'sui', sellL: 'l', redeem: 'l', supply: 'usd', withdraw: 'usd', depSui: 'sui', depL: 'l', wdSui: 'sui', wdL: 'l', borrow: 'usd', repay: 'usd', lpAdd: 'usd', lpRemove: 'pct', liquidate: 'usd' };
-  function amtTxt(a) { const u = UNIT[a.type]; return u === 'usd' ? usd0(a.amt) : u === 'sui' ? num(a.amt) + ' SUI' : u === 'l' ? num(a.amt) + ' liqSUI' : Math.round(a.amt) + '%'; }
+  const NAMES = { buy: 'Bought TKN', sell: 'Sold TKN', stake: 'Staked TKN', sellL: 'Sold liqTKN', redeem: 'Redeemed liqTKN', supply: 'Supplied USDC', withdraw: 'Withdrew USDC', depTkn: 'Posted TKN collateral', depL: 'Posted liqTKN collateral', wdTkn: 'Withdrew TKN collateral', wdL: 'Withdrew liqTKN collateral', borrow: 'Borrowed USDC', repay: 'Repaid', lpAdd: 'Added liquidity', lpRemove: 'Removed liquidity', liquidate: 'Liquidated loans' };
+  const UNIT = { buy: 'usd', sell: 'tkn', stake: 'tkn', sellL: 'l', redeem: 'l', supply: 'usd', withdraw: 'usd', depTkn: 'tkn', depL: 'l', wdTkn: 'tkn', wdL: 'l', borrow: 'usd', repay: 'usd', lpAdd: 'usd', lpRemove: 'pct', liquidate: 'usd' };
+  function amtTxt(a) { const u = UNIT[a.type]; return u === 'usd' ? usd0(a.amt) : u === 'tkn' ? num(a.amt) + ' TKN' : u === 'l' ? num(a.amt) + ' liqTKN' : Math.round(a.amt) + '%'; }
   function debrief() {
     const sc = M.sc, H = S.hist, fin = Game.value(S).total;
     if (!S.saved) { S.saved = true; if (M.open) savePlayed(M.key, fin); }
     const nk = M.open ? nextKey(M.key) : null;
     const acts = S.actions.map(a => ({ t: a.t, type: a.type, amt: a.amt }));
     const okActs = S.actions.map((a, i) => ({ a, i })).filter(x => x.a.ok);
-    const holdSui = Game.value(Game.replay(M, [{ t: 0, type: 'buy', amt: 10000 }])).total;
+    const holdTkn = Game.value(Game.replay(M, [{ t: 0, type: 'buy', amt: 10000 }])).total;
     let handsOff = null;
     if (okActs.length) { const t1 = okActs[0].a.t; handsOff = Game.value(Game.replay(M, acts.filter(a => a.t <= t1))).total; }
     // Sequential scoring: what each move added if you had stopped right after it instead of right before it.
@@ -1186,9 +1186,9 @@ if (typeof module !== 'undefined') module.exports = Game;
     let lowT = 0; H.ext.forEach((p, i) => { if (p < H.ext[lowT]) lowT = i; });
     const maxAge = Math.max(...M.age), maxU = Math.max(...H.util), peakBad = Math.max(...H.bad), minPeg = Math.min(...H.peg);
     const facts = [
-      ['SUI', `opened at $2.000, low $${H.ext[lowT].toFixed(3)} at minute ${lowT}, closed at $${H.ext[T].toFixed(3)}`],
+      ['TKN', `opened at $2.000, low $${H.ext[lowT].toFixed(3)} at minute ${lowT}, closed at $${H.ext[T].toFixed(3)}`],
       ['Oracle', maxAge >= 8 ? `went silent for up to ${maxAge} minutes${sc.maxAge >= maxAge ? ' and the lending market kept using the stale price' : '; the lending market paused when it got too old'}` : 'kept up with the market all session'],
-      ['liqSUI', minPeg < 0.985 ? `fell to ${pct(minPeg)} of its redemption value` : 'held its peg'],
+      ['liqTKN', minPeg < 0.985 ? `fell to ${pct(minPeg)} of its redemption value` : 'held its peg'],
       ['Lending market', `peak utilization ${pct(maxU)}, peak bad debt ${usd0(peakBad)}`],
       ['You', S.liqMe.length ? `were liquidated ${S.liqMe.length} time${S.liqMe.length > 1 ? 's' : ''}, paying ${usd(S.stats.myLiqBonus)} in liquidation bonuses` : 'were never liquidated']
     ];
@@ -1197,30 +1197,30 @@ if (typeof module !== 'undefined') module.exports = Game;
     const firstBorrowIdx = S.actions.findIndex(a => a.ok && a.type === 'borrow');
     if (firstBorrowIdx >= 0) {
       const hb = Game.myLimits(stateAfter(firstBorrowIdx)).hf;
-      if (hb < 1.15) L.push(`You borrowed close to the limit: your health factor was ${hb.toFixed(2)} right after borrowing, so a ${pct(1 - 1 / hb, 1)} drop in SUI was enough to liquidate you. Borrowing half as much would have survived a ${pct(1 - 1 / (hb * 2), 0)} drop.`);
+      if (hb < 1.15) L.push(`You borrowed close to the limit: your health factor was ${hb.toFixed(2)} right after borrowing, so a ${pct(1 - 1 / hb, 1)} drop in TKN was enough to liquidate you. Borrowing half as much would have survived a ${pct(1 - 1 / (hb * 2), 0)} drop.`);
     }
     const borrowGain = impacts.filter(x => x.a.type === 'borrow').reduce((s, x) => s + x.d, 0);
-    if (S.liqMe.length && borrowGain > 1) L.push(`Your borrowing scored ${sgn(borrowGain)} only because the liquidation sold your SUI on the way down, like a stop-loss that charged you ${usd(S.stats.myLiqBonus)} in bonuses. Selling the SUI yourself would have done the same job for free.`);
+    if (S.liqMe.length && borrowGain > 1) L.push(`Your borrowing scored ${sgn(borrowGain)} only because the liquidation sold your TKN on the way down, like a stop-loss that charged you ${usd(S.stats.myLiqBonus)} in bonuses. Selling the TKN yourself would have done the same job for free.`);
     if (S.liqMe.length) {
       const firstLiq = S.liqMe[0].t, firstUnder = H.hfPre.findIndex(h => h < 1), warnT = H.hfPre.findIndex(h => h < 1.25);
       if (firstUnder >= 0 && firstUnder < firstLiq) L.push(`Your loan became liquidatable at minute ${firstUnder}, but bots only liquidated it at minute ${firstLiq} because selling your collateral didn’t pay until then. Repaying part of the debt or adding collateral in those ${firstLiq - firstUnder} minutes would have saved the ${usd(S.stats.myLiqBonus)} in bonuses.`);
-      else L.push(`Bots liquidated you at minute ${firstLiq}, the same minute your health factor crossed 1, and charged ${usd(S.stats.myLiqBonus)} in bonuses. The time to act was earlier: it first fell below 1.25 at minute ${warnT} (SUI at $${H.ext[warnT].toFixed(3)}).`);
+      else L.push(`Bots liquidated you at minute ${firstLiq}, the same minute your health factor crossed 1, and charged ${usd(S.stats.myLiqBonus)} in bonuses. The time to act was earlier: it first fell below 1.25 at minute ${warnT} (TKN at $${H.ext[warnT].toFixed(3)}).`);
     }
     const sells = S.actions.filter(a => a.ok && a.type === 'sell');
-    for (const s of sells) if (Math.abs(s.t - lowT) <= 4 && H.ext[T] > H.ext[lowT] * 1.08) { L.push(`You sold SUI at minute ${s.t}, within minutes of the day’s low ($${H.ext[lowT].toFixed(3)}). It closed at $${H.ext[T].toFixed(3)}.`); break; }
+    for (const s of sells) if (Math.abs(s.t - lowT) <= 4 && H.ext[T] > H.ext[lowT] * 1.08) { L.push(`You sold TKN at minute ${s.t}, within minutes of the day’s low ($${H.ext[lowT].toFixed(3)}). It closed at $${H.ext[T].toFixed(3)}.`); break; }
     const sellLs = S.actions.filter(a => a.ok && a.type === 'sellL' && H.peg[a.t] < 0.97);
-    if (sellLs.length) L.push(`You sold liqSUI at ${pct(H.peg[sellLs[0].t])} of its value. Redeeming returns full value, but only after ${sc.lstWait > 1 ? sc.lstWait + ' days' : 'the next epoch'}: you trade price for time.`);
+    if (sellLs.length) L.push(`You sold liqTKN at ${pct(H.peg[sellLs[0].t])} of its value. Redeeming returns full value, but only after ${sc.lstWait > 1 ? sc.lstWait + ' days' : 'the next epoch'}: you trade price for time.`);
     const failW = S.actions.find(a => !a.ok && a.type === 'withdraw');
     if (failW) L.push(`Your withdrawal failed at minute ${failW.t} because the pool ran out of cash. Lenders who withdrew earlier got out at full value; the ones left behind share the bad debt.`);
     const hair = Game.value(S).hair;
     if (S.lend.mySupply > 1 && hair > 0.0005) L.push(`Bad debt cost lenders ${pct(hair, 2)} of what they had in the pool at the end, ${usd(S.lend.mySupply * hair)} of yours.`);
     const staleBorrow = S.actions.find(a => a.ok && a.type === 'borrow' && M.age[a.t] >= 8);
-    if (staleBorrow) L.push(`You borrowed at minute ${staleBorrow.t} while the oracle was ${M.age[staleBorrow.t]} minutes stale: the lending market priced SUI at $${M.rep[staleBorrow.t].toFixed(3)} while it really traded at $${M.ext[staleBorrow.t].toFixed(3)}. Lenders carry that gap.`);
+    if (staleBorrow) L.push(`You borrowed at minute ${staleBorrow.t} while the oracle was ${M.age[staleBorrow.t]} minutes stale: the lending market priced TKN at $${M.rep[staleBorrow.t].toFixed(3)} while it really traded at $${M.ext[staleBorrow.t].toFixed(3)}. Lenders carry that gap.`);
     const liqs = S.actions.filter(a => a.ok && a.type === 'liquidate');
     if (liqs.length) L.push(`You liquidated other borrowers and earned ${usd(S.stats.bonusEarned)} in bonuses before selling the collateral. What you kept depended on how fast you sold, and at what DEX price.`);
     const fakes = sc.script.filter(s => s.fake && !s.noise);
     if (fakes.length && S.actions.some(a => a.ok && ['sell', 'repay', 'withdraw', 'sellL'].includes(a.type) && fakes.some(f => a.t >= f.t && a.t <= f.t + 5))) L.push('You reacted within minutes of a headline that turned out to be false. Check the impact column for what that move cost.');
-    if (!okActs.length) L.push(`You sat out the whole session. Buying SUI at the start and holding would have ended at ${usd(holdSui)}.`);
+    if (!okActs.length) L.push(`You sat out the whole session. Buying TKN at the start and holding would have ended at ${usd(holdTkn)}.`);
     if (impacts.length) {
       const worstI = impacts.reduce((a, x) => (x.d < a.d ? x : a)), bestI = impacts.reduce((a, x) => (x.d > a.d ? x : a));
       if (worstI.d < -1) L.push(`Your costliest move: ${NAMES[worstI.a.type]} (${amtTxt(worstI.a)}) at minute ${worstI.a.t}, ${sgn(worstI.d)} compared with making no more moves before it, holding to minute 120.`);
@@ -1235,7 +1235,7 @@ if (typeof module !== 'undefined') module.exports = Game;
           <div class="result ${fin >= 10000 ? 'gain' : 'loss'}"><span class="big">${usd(fin)}</span><span class="pp">${spct(fin / 10000 - 1, 2)}</span></div>
           <table class="cmp"><tbody>
             <tr><td>Kept $10,000 in USDC</td><td class="n">${usd(10000)}</td></tr>
-            <tr><td>Bought SUI at the start and held</td><td class="n">${usd(holdSui)}</td></tr>
+            <tr><td>Bought TKN at the start and held</td><td class="n">${usd(holdTkn)}</td></tr>
             ${handsOff !== null ? `<tr><td>Your first moves, then hands off</td><td class="n">${usd(handsOff)}</td></tr>` : ''}
             <tr class="you"><td>What you actually did</td><td class="n">${usd(fin)}</td></tr>
           </tbody></table>
@@ -1279,8 +1279,8 @@ if (typeof module !== 'undefined') module.exports = Game;
   document.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
     const [type, input] = b.dataset.act.split(':');
     let ty = type;
-    if (type === 'post') ty = postKind === 'sui' ? 'depSui' : 'depL';
-    if (type === 'wdcoll') ty = wdKind === 'sui' ? 'wdSui' : 'wdL';
+    if (type === 'post') ty = postKind === 'tkn' ? 'depTkn' : 'depL';
+    if (type === 'wdcoll') ty = wdKind === 'tkn' ? 'wdTkn' : 'wdL';
     doAction(ty, input);
   }));
   document.querySelectorAll('[data-fill]').forEach(b => b.addEventListener('click', () => {

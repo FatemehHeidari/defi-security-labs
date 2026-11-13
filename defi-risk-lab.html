@@ -423,10 +423,10 @@ const Sim = (() => {
     const marketRate = rate * (1 - d);
     const arbReturn = d / (1 - d);
     const arbAnnual = arbReturn * (365 / Math.max(1, p.wait));
-    const collSUI = p.collUnits * rate;
-    const debt = collSUI * p.ltv;
-    const hfRedeem = (collSUI * p.lt) / debt;
-    const hfMarket = (collSUI * (1 - d) * p.lt) / debt;
+    const collTKN = p.collUnits * rate;
+    const debt = collTKN * p.ltv;
+    const hfRedeem = (collTKN * p.lt) / debt;
+    const hfMarket = (collTKN * (1 - d) * p.lt) / debt;
     const oracleToMarket = p.oracle === 'market' ? 1 : (1 - d);
     const liqProfit = (1 + p.bonus) * oracleToMarket * (1 - p.dexSlip) - 1;
     const loops = p.loops;
@@ -575,7 +575,7 @@ const Roles = (() => {
     if (unit === 'usd') return s + '$' + num(v, Math.abs(v) >= 1e5 ? 0 : 2);
     if (unit === 'usdc') return s + num(v, Math.abs(v) >= 1e5 ? 0 : 2) + ' USDC';
     if (unit === 'eth') return s + num(v, 3) + ' ETH';
-    if (unit === 'sui') return s + num(v, 2) + ' SUI';
+    if (unit === 'tkn') return s + num(v, 2) + ' TKN';
     return s + num(v);
   };
   const pct = (v, d = 1) => (v < 0 ? MINUS : '') + Math.abs(v * 100).toFixed(d) + '%';
@@ -605,7 +605,7 @@ const Roles = (() => {
     const under = q.debt > collVal + 1e-9;
     const bEnd = D + Math.max(0, collVal - q.debt);
     const hold = A * (1 - s);
-    const bSteps = [['SUI price drop (same as just holding)', -A * s]];
+    const bSteps = [['TKN price drop (same as just holding)', -A * s]];
     const bonusPaid = run.repaid * b, earlyEffect = bEnd - hold + bonusPaid;
     if (q.liq && under) bSteps.push(['Debt you walk away from (lenders absorb it)', bEnd - hold]);
     else if (q.liq) {
@@ -616,13 +616,13 @@ const Roles = (() => {
     const capNote = you.yLtv > st.maxLTV ? `Max LTV is ${pct(st.maxLTV, 0)}, so that is all you can borrow. ` : '';
     roles.push({
       key: 'borrower', name: 'Borrower', unit: 'usd', start: A,
-      who: `Posts ${$(A)} of SUI and borrows ${$(D)} of USDC (${pct(L, 0)} LTV), keeping the USDC in the wallet.`,
+      who: `Posts ${$(A)} of TKN and borrows ${$(D)} of USDC (${pct(L, 0)} LTV), keeping the USDC in the wallet.`,
       steps: bSteps, end: bEnd,
       verdict: capNote + (!q.liq
-        ? `Health factor ${hf0.toFixed(2)} → ${hf1.toFixed(2)}. You’re never liquidated, so you lose only what SUI lost.`
+        ? `Health factor ${hf0.toFixed(2)} → ${hf1.toFixed(2)}. You’re never liquidated, so you lose only what TKN lost.`
         : under
           ? `Your loan ended underwater: the collateral left is worth less than the debt. You keep the ${$(D)} you borrowed, and lenders absorb ${$(q.debt - collVal)}.`
-          : `Liquidators took ${num(A / P0 - q.coll, 0)} SUI of your collateral and charged ${$(bonusPaid)} in bonuses. Repaying or adding collateral before your health factor hit 1 would have avoided that.` + (earlyEffect > 0.005 ? ` Because they sold part of your SUI on the way down, you still end above someone who just held.` : ''))
+          : `Liquidators took ${num(A / P0 - q.coll, 0)} TKN of your collateral and charged ${$(bonusPaid)} in bonuses. Repaying or adding collateral before your health factor hit 1 would have avoided that.` + (earlyEffect > 0.005 ? ` Because they sold part of your TKN on the way down, you still end above someone who just held.` : ''))
     });
     const depth = st.depth, out = X => (X * depth) / (depth + X);
     if (r.demand <= 0) {
@@ -632,13 +632,13 @@ const Roles = (() => {
       const Uq = Math.max(0, Math.min(r.demand, r.capacity) - V);
       const oF = out(V), oL = out(Uq + V) - out(Uq);
       roles.push({ key: 'liq-first', name: 'Liquidator, first in line', unit: 'usd', start: A, who: `Holds ${$(A)} of USDC and wins the race to liquidate.`,
-        steps: [['Repays borrowers’ debt', -R], ['Receives SUI worth (debt + bonus)', V], ['Slippage selling that SUI', oF - V]], end: A - R + oF,
-        verdict: `You sell ${$(V)} of SUI into an untouched market at ${pct(1 - oF / V, 2)} slippage, under the ${pct(b, 1)} bonus.` });
-      roles.push({ key: 'liq-last', name: 'Liquidator, last in line', unit: 'usd', start: A, who: `Same capital, but ${$(Uq)} of seized SUI was sold ahead of you.`,
-        steps: [['Repays borrowers’ debt', -R], ['Receives SUI worth (debt + bonus)', V], ['Slippage selling that SUI', oL - V]], end: A - R + oL,
+        steps: [['Repays borrowers’ debt', -R], ['Receives TKN worth (debt + bonus)', V], ['Slippage selling that TKN', oF - V]], end: A - R + oF,
+        verdict: `You sell ${$(V)} of TKN into an untouched market at ${pct(1 - oF / V, 2)} slippage, under the ${pct(b, 1)} bonus.` });
+      roles.push({ key: 'liq-last', name: 'Liquidator, last in line', unit: 'usd', start: A, who: `Same capital, but ${$(Uq)} of seized TKN was sold ahead of you.`,
+        steps: [['Repays borrowers’ debt', -R], ['Receives TKN worth (debt + bonus)', V], ['Slippage selling that TKN', oL - V]], end: A - R + oL,
         verdict: oL - R < 0 ? `By the time you sell, slippage is ${pct(1 - oL / V, 2)}, more than the bonus. Rational liquidators stop here, which is how positions get stuck.` : `Even last in line, slippage of ${pct(1 - oL / V, 2)} stays under the bonus.` });
     }
-    roles.push({ key: 'holder', name: 'Just holds SUI', unit: 'usd', start: A, who: `Owns ${$(A)} of SUI and does nothing.`, steps: [['SUI price drop', -A * s]], end: hold, verdict: 'The baseline: no DeFi, only the price move.' });
+    roles.push({ key: 'holder', name: 'Just holds TKN', unit: 'usd', start: A, who: `Owns ${$(A)} of TKN and does nothing.`, steps: [['TKN price drop', -A * s]], end: hold, verdict: 'The baseline: no DeFi, only the price move.' });
     return roles;
   }
 
@@ -649,19 +649,19 @@ const Roles = (() => {
     const Pa = P * (1 - st.range), Pb = P * (1 + st.range);
     const roles = [];
     const oCP = S.cpSell(x, y, A / P, fee);
-    roles.push({ key: 'seller', name: 'Seller, full-range pool', unit: 'usd', start: A, who: `Sells ${$(A)} of SUI into the $${(st.tvl / 1e6).toFixed(1)}M pool.`,
+    roles.push({ key: 'seller', name: 'Seller, full-range pool', unit: 'usd', start: A, who: `Sells ${$(A)} of TKN into the $${(st.tvl / 1e6).toFixed(1)}M pool.`,
       steps: [['Price impact and fee', oCP - A]], end: oCP, verdict: `You receive ${$(oCP)}, ${pct(1 - oCP / A, 2)} below the $2.00 price.` });
     const Lp = S.clLiquidity(st.tvl, P, Pa, Pb);
     const cl = S.clSell(Lp, P, Pa, A / P, fee);
     const unsold = Math.max(0, A / P - cl.filledIn) * P;
     roles.push({ key: 'seller-cl', name: 'Seller, concentrated pool', unit: 'usd', start: A, who: `Sells the same ${$(A)} into the same capital concentrated in ±${pct(st.range, 0)}.`,
-      steps: [['Price impact and fee', cl.out + unsold - A]].concat(unsold > 0 ? [['(SUI left unsold, valued at $2.00)', unsold, 'info']] : []), end: cl.out + unsold,
-      verdict: cl.exhausted ? `The price hits the bottom of the range at $${Pa.toFixed(2)}. Only ${$(cl.filledIn * P)} sells; you keep ${$(unsold)} of SUI.` : `Same capital, ${(model.r.efficiency).toFixed(1)}× deeper near the price: ${pct(1 - cl.out / A, 2)} slippage.` });
+      steps: [['Price impact and fee', cl.out + unsold - A]].concat(unsold > 0 ? [['(TKN left unsold, valued at $2.00)', unsold, 'info']] : []), end: cl.out + unsold,
+      verdict: cl.exhausted ? `The price hits the bottom of the range at $${Pa.toFixed(2)}. Only ${$(cl.filledIn * P)} sells; you keep ${$(unsold)} of TKN.` : `Same capital, ${(model.r.efficiency).toFixed(1)}× deeper near the price: ${pct(1 - cl.out / A, 2)} slippage.` });
     const rr = 1 + you.yMove, P2 = P * rr;
     const v2 = A * Math.sqrt(rr), hodl2 = (A * (1 + rr)) / 2, fees2 = you.yVol * fee * A;
-    roles.push({ key: 'lp', name: 'LP, full range', unit: 'usd', start: A, who: `Deposits ${$(A)} half SUI, half USDC across all prices.`,
-      steps: [[`SUI moves ${spct(you.yMove, 0)}: position value change`, v2 - A], [`Fees on ${you.yVol}× the pool in volume`, fees2]], end: v2 + fees2,
-      verdict: `Holding the same SUI and USDC instead would be worth ${$(hodl2)}. Impermanent loss: ${$(v2 - hodl2)}${fees2 + v2 - hodl2 >= 0 ? ', which the fees cover.' : ', more than the fees earned.'}` });
+    roles.push({ key: 'lp', name: 'LP, full range', unit: 'usd', start: A, who: `Deposits ${$(A)} half TKN, half USDC across all prices.`,
+      steps: [[`TKN moves ${spct(you.yMove, 0)}: position value change`, v2 - A], [`Fees on ${you.yVol}× the pool in volume`, fees2]], end: v2 + fees2,
+      verdict: `Holding the same TKN and USDC instead would be worth ${$(hodl2)}. Impermanent loss: ${$(v2 - hodl2)}${fees2 + v2 - hodl2 >= 0 ? ', which the fees cover.' : ', more than the fees earned.'}` });
     const Lc = S.clLiquidity(A, P, Pa, Pb), sa = Math.sqrt(Pa), sb = Math.sqrt(Pb), s0 = Math.sqrt(P), s2 = Math.sqrt(P2);
     const amt = sp => sp <= sa ? [Lc * (1 / sa - 1 / sb), 0] : sp >= sb ? [0, Lc * (sb - sa)] : [Lc * (1 / sp - 1 / sb), Lc * (sp - sa)];
     const [x0, y0] = amt(s0), [x2, y2] = amt(s2);
@@ -670,14 +670,14 @@ const Roles = (() => {
     const inRange = Math.abs(you.yMove) <= st.range ? 1 : st.range / Math.abs(you.yMove);
     const feesC = you.yVol * fee * A * eff * inRange;
     roles.push({ key: 'lp-cl', name: `LP, ±${pct(st.range, 0)} range`, unit: 'usd', start: A, who: `Deposits ${$(A)} concentrated between $${Pa.toFixed(2)} and $${Pb.toFixed(2)}.`,
-      steps: [[`SUI moves ${spct(you.yMove, 0)}: position value change`, vCL - A], [`Fees (${eff.toFixed(1)}× a full-range share${inRange < 1 ? `, in range ${pct(inRange, 0)} of the way` : ''})`, feesC]], end: vCL + feesC,
-      verdict: (P2 < Pa || P2 > Pb ? `The price left your range, so the position is now all ${P2 < Pa ? 'SUI' : 'USDC'} and earns nothing more. ` : '') + `Holding instead: ${$(hodlC)}. Impermanent loss: ${$(vCL - hodlC)}.` });
+      steps: [[`TKN moves ${spct(you.yMove, 0)}: position value change`, vCL - A], [`Fees (${eff.toFixed(1)}× a full-range share${inRange < 1 ? `, in range ${pct(inRange, 0)} of the way` : ''})`, feesC]], end: vCL + feesC,
+      verdict: (P2 < Pa || P2 > Pb ? `The price left your range, so the position is now all ${P2 < Pa ? 'TKN' : 'USDC'} and earns nothing more. ` : '') + `Holding instead: ${$(hodlC)}. Impermanent loss: ${$(vCL - hodlC)}.` });
     const sw = S.sandwich({ price: P, tvl: st.tvl, victim: A, tol: st.tol, fee });
     const got = sw.profitable ? sw.best.victimOut : sw.expected;
-    roles.push({ key: 'victim', name: 'Buyer (sandwich victim)', unit: 'usd', start: A, who: `Buys SUI with ${$(A)} at ${pct(st.tol, 1)} slippage tolerance.`,
+    roles.push({ key: 'victim', name: 'Buyer (sandwich victim)', unit: 'usd', start: A, who: `Buys TKN with ${$(A)} at ${pct(st.tol, 1)} slippage tolerance.`,
       steps: [['Normal price impact and fee', sw.expected * P - A], ['Taken by a sandwich bot', (got - sw.expected) * P]], end: got * P,
       verdict: sw.profitable ? `A bot front-runs with ${$(sw.best.A)} and pushes you to your minimum. Tighter tolerance or a private transaction route prevents it.` : `At this tolerance a sandwich doesn’t pay, so you only pay normal price impact.` });
-    roles.push({ key: 'bot', name: 'Sandwich bot', unit: 'usd', start: sw.profitable ? sw.best.A : 0, who: sw.profitable ? `Buys ${$(sw.best.A)} of SUI just before the victim and sells right after.` : 'Watches the mempool for loose slippage settings.',
+    roles.push({ key: 'bot', name: 'Sandwich bot', unit: 'usd', start: sw.profitable ? sw.best.A : 0, who: sw.profitable ? `Buys ${$(sw.best.A)} of TKN just before the victim and sells right after.` : 'Watches the mempool for loose slippage settings.',
       steps: sw.profitable ? [['Front-run, victim trade, back-run', sw.best.profit]] : [], end: sw.profitable ? sw.best.A + sw.best.profit : 0,
       verdict: sw.profitable ? `Risk-free inside one block, paid for by the victim.` : 'No profitable sandwich on this trade, so the bot stays out.' });
     return roles;
@@ -737,13 +737,13 @@ const Roles = (() => {
 
   // ---------- Liquid staking ----------
   function lst(st, model, you) {
-    const { r } = model, A = you.yAmount, d = st.discount, b = st.bonus, s = v => money('sui', v);
+    const { r } = model, A = you.yAmount, d = st.discount, b = st.bonus, s = v => money('tkn', v);
     const roles = [];
-    roles.push({ key: 'sell', name: 'LST holder, sells today', unit: 'sui', start: A, who: `Stakes ${s(A)} for ${(A / r.rate).toFixed(2)} LST, then needs to exit now.`,
+    roles.push({ key: 'sell', name: 'LST holder, sells today', unit: 'tkn', start: A, who: `Stakes ${s(A)} for ${(A / r.rate).toFixed(2)} LST, then needs to exit now.`,
       steps: [[`Market discount of ${pct(d, 1)}`, -A * d]], end: A * (1 - d), verdict: d > 0 ? `Selling now costs ${s(A * d)}. Redeeming avoids that but takes ${st.wait} day${st.wait > 1 ? 's' : ''}.` : 'At peg, selling costs nothing beyond slippage.' });
     const wr = Math.pow(1 + st.apr / 365, st.wait) - 1;
-    roles.push({ key: 'redeem', name: 'LST holder, redeems', unit: 'sui', start: A, who: `Same position, but waits ${st.wait} day${st.wait > 1 ? 's' : ''} to redeem for SUI.`,
-      steps: [['Staking rewards during the wait', A * wr]], end: A * (1 + wr), verdict: 'Full value back, at the cost of having the SUI locked for the wait.' });
+    roles.push({ key: 'redeem', name: 'LST holder, redeems', unit: 'tkn', start: A, who: `Same position, but waits ${st.wait} day${st.wait > 1 ? 's' : ''} to redeem for TKN.`,
+      steps: [['Staking rewards during the wait', A * wr]], end: A * (1 + wr), verdict: 'Full value back, at the cost of having the TKN locked for the wait.' });
     const lev = r.lev, mk = st.oracle === 'market';
     let C = A * lev * (1 - d), D = A * (lev - 1), pen = 0, liq = false;
     if (mk && D > 0) {
@@ -751,14 +751,14 @@ const Roles = (() => {
     }
     const loopSteps = [[`Depeg on ${lev.toFixed(2)}× exposure (at market price)`, -A * lev * d]];
     if (liq) loopSteps.push(['Liquidation bonus paid', -pen]);
-    roles.push({ key: 'looper', name: `Looper ${lev.toFixed(2)}×`, unit: 'sui', start: A, who: `Deposits ${s(A)} and loops ${st.loops} time${st.loops === 1 ? '' : 's'} at ${pct(st.ltv, 0)} LTV. Shown at market value today.`,
+    roles.push({ key: 'looper', name: `Looper ${lev.toFixed(2)}×`, unit: 'tkn', start: A, who: `Deposits ${s(A)} and loops ${st.loops} time${st.loops === 1 ? '' : 's'} at ${pct(st.ltv, 0)} LTV. Shown at market value today.`,
       steps: loopSteps, end: C - D,
       verdict: (mk ? (liq ? `The market-price oracle marked the position down and liquidators took ${s(pen)} in bonuses.` : `Not liquidated yet; that happens past a ${pct(r.loopLiqDiscount, 1)} discount.`) : 'The redemption-rate oracle never marks the position down, so it isn’t liquidated, and it’s worth the full amount at redemption value.') + ` In a normal year, looping earns ${pct(r.netApr, 2)}.` });
-    roles.push({ key: 'arb', name: 'Arbitrageur', unit: 'sui', start: A, who: `Buys LST on the market with ${s(A)} and redeems it.`, steps: [['Discount captured', (A * d) / (1 - d)]], end: A / (1 - d),
+    roles.push({ key: 'arb', name: 'Arbitrageur', unit: 'tkn', start: A, who: `Buys LST on the market with ${s(A)} and redeems it.`, steps: [['Discount captured', (A * d) / (1 - d)]], end: A / (1 - d),
       verdict: d > 0 ? `${pct(d / (1 - d), 2)} over ${st.wait} day${st.wait > 1 ? 's' : ''}, ${r.arbAnnual > 10 ? 'over 1,000%' : pct(r.arbAnnual, 0)} a year. This trade is what pulls the price back to peg.` : 'No discount, no trade.' });
-    roles.push({ key: 'liq', name: 'Liquidator', unit: 'sui', start: A, who: `Repays ${s(A)} of a borrower’s SUI debt and sells the seized LST.`, steps: [['Bonus minus discount and slippage', A * r.liqProfit]], end: A * (1 + r.liqProfit),
+    roles.push({ key: 'liq', name: 'Liquidator', unit: 'tkn', start: A, who: `Repays ${s(A)} of a borrower’s TKN debt and sells the seized LST.`, steps: [['Bonus minus discount and slippage', A * r.liqProfit]], end: A * (1 + r.liqProfit),
       verdict: r.liqProfit < 0 ? 'A loss on every liquidation, so liquidators stay away and unhealthy loans pile up.' : 'Profitable, so unhealthy loans get cleared.' });
-    roles.push({ key: 'sui', name: 'Just holds SUI', unit: 'sui', start: A, who: `Keeps ${s(A)} unstaked.`, steps: [], end: A, verdict: 'No yield and no depeg risk.' });
+    roles.push({ key: 'tkn', name: 'Just holds TKN', unit: 'tkn', start: A, who: `Keeps ${s(A)} unstaked.`, steps: [], end: A, verdict: 'No yield and no depeg risk.' });
     return roles;
   }
 
@@ -777,18 +777,18 @@ const Roles = (() => {
     const P0 = 2, coll = A / P0, D = A * (1 - st.trigger) * 0.8;
     const endPrice = o.truth[o.T];
     if (o.tTrue < 0) {
-      roles.push({ key: 'borrower', name: 'Borrower near the trigger', unit: 'usd', start: A, who: `Posts ${$(A)} of SUI, borrowed so the loan hits health factor 1 after a ${pct(st.trigger, 0)} drop.`, steps: [['SUI price change over four hours', A * (endPrice / P0 - 1)]], end: A * endPrice / P0, verdict: 'The market never reached your liquidation price.' });
+      roles.push({ key: 'borrower', name: 'Borrower near the trigger', unit: 'usd', start: A, who: `Posts ${$(A)} of TKN, borrowed so the loan hits health factor 1 after a ${pct(st.trigger, 0)} drop.`, steps: [['TKN price change over four hours', A * (endPrice / P0 - 1)]], end: A * endPrice / P0, verdict: 'The market never reached your liquidation price.' });
       roles.push({ key: 'liq', name: 'Liquidator', unit: 'usd', start: A, who: `Holds ${$(A)} to liquidate that loan.`, steps: [], end: A, verdict: 'Nothing to liquidate.' });
     } else if (o.tProt < 0) {
-      roles.push({ key: 'borrower', name: 'Borrower near the trigger', unit: 'usd', start: A, who: `Posts ${$(A)} of SUI, borrowed so the loan hits health factor 1 after a ${pct(st.trigger, 0)} drop.`, steps: [['SUI price change over four hours', A * (endPrice / P0 - 1)]], end: A * endPrice / P0,
+      roles.push({ key: 'borrower', name: 'Borrower near the trigger', unit: 'usd', start: A, who: `Posts ${$(A)} of TKN, borrowed so the loan hits health factor 1 after a ${pct(st.trigger, 0)} drop.`, steps: [['TKN price change over four hours', A * (endPrice / P0 - 1)]], end: A * endPrice / P0,
         verdict: `The market crossed your liquidation price at minute ${o.tTrue}, but the protocol never liquidated you. The loan keeps sinking and lenders carry the risk.` });
       roles.push({ key: 'liq', name: 'Liquidator', unit: 'usd', start: A, who: `Holds ${$(A)} to liquidate that loan.`, steps: [], end: A, verdict: 'The protocol never accepted a price low enough to allow a liquidation.' });
     } else {
       const pp = o.source[o.tProt], m = o.truth[o.tProt], R = 0.5 * D, seized = (R * 1.05) / pp;
       const end = (coll - seized) * m + R, fair = (coll - (R * 1.05) / m) * m + R;
-      roles.push({ key: 'borrower', name: 'Borrower near the trigger', unit: 'usd', start: A, who: `Posts ${$(A)} of SUI, borrowed so the loan hits health factor 1 after a ${pct(st.trigger, 0)} drop. Bonus 5%, close factor 50%.`,
-        steps: [[`SUI at $${m.toFixed(3)} when you’re liquidated (minute ${o.tProt})`, A * (m / P0 - 1)], [`Liquidation, priced at the protocol’s $${pp.toFixed(3)}`, end - (A * m) / P0]], end,
-        verdict: (o.tProt - o.tTrue > 2 ? `Liquidated at minute ${o.tProt}, ${o.tProt - o.tTrue} minutes after the market crossed your liquidation price. ` : '') + (pp > m * 1.001 ? `The protocol valued your SUI above the market, so liquidators took fewer SUI than a fair liquidation would: you keep ${$(end - fair)} more. Liquidators and lenders carry that.` : 'The protocol price matched the market at that moment, so the liquidation itself was fair.') });
+      roles.push({ key: 'borrower', name: 'Borrower near the trigger', unit: 'usd', start: A, who: `Posts ${$(A)} of TKN, borrowed so the loan hits health factor 1 after a ${pct(st.trigger, 0)} drop. Bonus 5%, close factor 50%.`,
+        steps: [[`TKN at $${m.toFixed(3)} when you’re liquidated (minute ${o.tProt})`, A * (m / P0 - 1)], [`Liquidation, priced at the protocol’s $${pp.toFixed(3)}`, end - (A * m) / P0]], end,
+        verdict: (o.tProt - o.tTrue > 2 ? `Liquidated at minute ${o.tProt}, ${o.tProt - o.tTrue} minutes after the market crossed your liquidation price. ` : '') + (pp > m * 1.001 ? `The protocol valued your TKN above the market, so liquidators took fewer TKN than a fair liquidation would: you keep ${$(end - fair)} more. Liquidators and lenders carry that.` : 'The protocol price matched the market at that moment, so the liquidation itself was fair.') });
       const lp = A * ((1.05 * m) / pp - 1);
       roles.push({ key: 'liq', name: 'Liquidator', unit: 'usd', start: A, who: `Repays ${$(A)} of that kind of debt at minute ${o.tProt}.`, steps: [['Bonus, minus the gap between protocol and market price', lp]], end: A + lp,
         verdict: lp < 0 ? `The protocol price sits ${pct(pp / m - 1, 1)} above the market, more than the 5% bonus. Rational liquidators wait, and loans go bad in the meantime.` : `The protocol price is close enough to the market that the bonus still pays.` });
@@ -976,8 +976,8 @@ if (typeof module !== 'undefined') module.exports = Roles;
   // ===== Lending =====
   LABS.push({
     key: 'lending', name: 'Lending',
-    title: 'Lending market: SUI collateral, USDC debt',
-    blurb: '300 borrowers post SUI and borrow USDC. Set the risk parameters, crash SUI, and see whether liquidators can sell the collateral fast enough to keep lenders whole.',
+    title: 'Lending market: TKN collateral, USDC debt',
+    blurb: '300 borrowers post TKN and borrow USDC. Set the risk parameters, crash TKN, and see whether liquidators can sell the collateral fast enough to keep lenders whole.',
     you: [
       { id: 'yAmount', label: 'Your amount', type: 'log', min: 100, max: 10e6, value: 10000, fmt: F.usd },
       { id: 'yLtv', label: 'Your LTV if you borrow', min: 5, max: 95, step: 1, value: 60, scale: 0.01, fmt: v => v + '%' }
@@ -985,12 +985,12 @@ if (typeof module !== 'undefined') module.exports = Roles;
     youNotes: [
       'Your amount is used for every role, so the rows compare like for like.',
       'Lender: one year of interest at today’s lender rate, plus a share of the crash’s bad debt in proportion to deposits, assuming the protocol’s reserves are empty.',
-      'Borrower: posts SUI, borrows USDC at your LTV (capped at max LTV), and keeps the USDC. Liquidations follow this lab’s close factor, bonus, and price path. Loans are non-recourse: an underwater borrower walks away.',
-      'Liquidators: repay up to your amount of debt and sell the seized SUI into the crash liquidity. “Last in line” sells after the other liquidators, up to the capacity limit.'
+      'Borrower: posts TKN, borrows USDC at your LTV (capped at max LTV), and keeps the USDC. Liquidations follow this lab’s close factor, bonus, and price path. Loans are non-recourse: an underwater borrower walks away.',
+      'Liquidators: repay up to your amount of debt and sell the seized TKN into the crash liquidity. “Last in line” sells after the other liquidators, up to the capacity limit.'
     ],
     controls: [
       { grp: 'Market' },
-      { id: 'coll', label: 'SUI collateral deposited', min: 10, max: 200, step: 5, value: 50, scale: 1e6, fmt: v => '$' + v + 'M' },
+      { id: 'coll', label: 'TKN collateral deposited', min: 10, max: 200, step: 5, value: 50, scale: 1e6, fmt: v => '$' + v + 'M' },
       { id: 'avgLTV', label: 'Average borrower LTV', min: 20, max: 74, step: 1, value: 55, scale: 0.01, fmt: v => v + '%' },
       { id: 'whale', label: 'Largest borrower’s share of collateral', min: 0, max: 50, step: 1, value: 0, scale: 0.01, fmt: v => v + '%' },
       { id: 'supply', label: 'USDC supplied by lenders', min: 25, max: 200, step: 1, value: 40, scale: 1e6, fmt: v => '$' + v + 'M' },
@@ -1000,9 +1000,9 @@ if (typeof module !== 'undefined') module.exports = Roles;
       { id: 'bonus', label: 'Liquidation bonus', min: 1, max: 15, step: 0.5, value: 5, scale: 0.01, fmt: v => v + '%' },
       { id: 'cf', label: 'Close factor', min: 10, max: 100, step: 5, value: 50, scale: 0.01, fmt: v => v + '%' },
       { grp: 'Stress test' },
-      { id: 'shock', label: 'SUI price drop', min: 0, max: 80, step: 1, value: 10, scale: 0.01, fmt: v => v + '%' },
+      { id: 'shock', label: 'TKN price drop', min: 0, max: 80, step: 1, value: 10, scale: 0.01, fmt: v => v + '%' },
       { id: 'mode', label: 'Price path', type: 'seg', options: [['gradual', 'Gradual'], ['gap', 'Gap down']], value: 'gradual' },
-      { id: 'depth', label: 'Liquidity to sell SUI into during the crash', min: 1, max: 200, step: 1, value: 60, scale: 1e6, fmt: v => '$' + v + 'M' },
+      { id: 'depth', label: 'Liquidity to sell TKN into during the crash', min: 1, max: 200, step: 1, value: 60, scale: 1e6, fmt: v => '$' + v + 'M' },
       { grp: 'Interest rate curve' },
       { id: 'kink', label: 'Kink (target utilization)', min: 50, max: 95, step: 1, value: 80, scale: 0.01, fmt: v => v + '%' },
       { id: 'slope1', label: 'Borrow rate at the kink', min: 0, max: 20, step: 0.5, value: 4, scale: 0.01, fmt: v => v + '%' },
@@ -1010,7 +1010,7 @@ if (typeof module !== 'undefined') module.exports = Roles;
       { id: 'rf', label: 'Reserve factor (protocol’s cut)', min: 0, max: 50, step: 1, value: 10, scale: 0.01, fmt: v => v + '%' }
     ],
     presets: [
-      { name: 'Healthy market', note: '<b>Start here.</b> A 10% drop needs about $2.3M of SUI sold, under the $3M the market absorbs before slippage passes the 5% bonus. Drag the price drop up and watch which monitor turns first.', set: {} },
+      { name: 'Healthy market', note: '<b>Start here.</b> A 10% drop needs about $2.3M of TKN sold, under the $3M the market absorbs before slippage passes the 5% bonus. Drag the price drop up and watch which monitor turns first.', set: {} },
       { name: 'Thin liquidity', note: 'Only $15M of liquidity and a 20% drop. Liquidations stall while every loan is still above water: <b>stuck positions show up before bad debt does.</b>', set: { depth: 15, shock: 20 } },
       { name: 'Gap crash', note: 'A 35% gap down. Switch the price path to <b>Gradual</b> at the same drop and compare the bad debt: in a gap, liquidators never get to act on the way down.', set: { shock: 35, mode: 'gap' } },
       { name: 'Whale borrower', note: 'One borrower holds 30% of the collateral near max LTV, the shape of the CRV position on Aave in November 2022. Check how much of the bad debt is theirs.', set: { whale: 30, shock: 35 } },
@@ -1032,8 +1032,8 @@ if (typeof module !== 'undefined') module.exports = Roles;
         ? { lv: 'ok', t: 'Threshold leaves room for the bonus', d: `${st.lt.toFixed(2)} × (1 + ${st.bonus.toFixed(3).replace(/0+$/, '')}) = ${prod.toFixed(3)}, below 1. At health factor 1, the collateral still covers the debt plus the liquidator’s bonus.` }
         : { lv: 'crit', t: 'Threshold leaves no room for the bonus', d: `${st.lt.toFixed(2)} × (1 + ${st.bonus.toFixed(3).replace(/0+$/, '')}) = ${prod.toFixed(3)}, at or above 1. At health factor 1 the collateral can’t pay the debt plus the bonus, so each liquidation pushes the loan further under.` });
       if (r.demand <= 0) rows.push({ lv: 'ok', t: 'Liquidation capacity', d: `No loan reaches health factor 1 at a ${F.pct(st.shock, 0)} drop.` });
-      else if (r.stuckCount === 0) rows.push({ lv: 'ok', t: 'Liquidation capacity', d: `Liquidators need to sell ${F.usd(r.demand)} of SUI. The market absorbs ${F.usd(r.capacity)} before slippage passes the ${F.pct(st.bonus)} bonus.` });
-      else rows.push({ lv: r.badDebt > 0 ? 'crit' : 'warn', t: 'Liquidation capacity exceeded', d: `Liquidations need ${F.usd(r.demand)} of SUI sold, but only ${F.usd(r.capacity)} sells before slippage eats the ${F.pct(st.bonus)} bonus. ${r.stuckCount} position${r.stuckCount > 1 ? 's are' : ' is'} left unliquidated with ${F.usd(r.stuckDebt)} of debt.` });
+      else if (r.stuckCount === 0) rows.push({ lv: 'ok', t: 'Liquidation capacity', d: `Liquidators need to sell ${F.usd(r.demand)} of TKN. The market absorbs ${F.usd(r.capacity)} before slippage passes the ${F.pct(st.bonus)} bonus.` });
+      else rows.push({ lv: r.badDebt > 0 ? 'crit' : 'warn', t: 'Liquidation capacity exceeded', d: `Liquidations need ${F.usd(r.demand)} of TKN sold, but only ${F.usd(r.capacity)} sells before slippage eats the ${F.pct(st.bonus)} bonus. ${r.stuckCount} position${r.stuckCount > 1 ? 's are' : ' is'} left unliquidated with ${F.usd(r.stuckDebt)} of debt.` });
       const bdShare = r.badDebt / r.totalBorrowed;
       if (r.badDebt < 1) rows.push({ lv: 'ok', t: 'Bad debt', d: `None at a ${F.pct(st.shock, 0)} drop${st.mode === 'gap' ? ' with a gap down' : ''}.` });
       else rows.push({ lv: bdShare < 0.01 ? 'warn' : 'crit', t: 'Bad debt', d: `${F.usd(r.badDebt)} of debt has no collateral behind it, ${F.pct(bdShare, 2)} of everything lent. Reserves pay first, then lenders take the loss.` });
@@ -1044,7 +1044,7 @@ if (typeof module !== 'undefined') module.exports = Roles;
       if (st.whale > 0) rows.push({ lv: st.whale >= 0.25 ? 'crit' : st.whale >= 0.1 ? 'warn' : 'ok', t: 'Concentration', d: `One borrower holds ${F.pct(st.whale, 0)} of the collateral at ${F.pct(r.whaleLTV, 0)} LTV.${r.badDebt >= 1 ? ` ${F.usd(r.whaleBad)} of the bad debt is theirs.` : ''}` });
       const curveMax = Math.max(...r.curve.map(p => p[1]));
       const charts = [
-        { id: 'c-lend-bd', spec: { x: { min: 0, max: 0.8, fmt: pctFmt0, label: 'SUI price drop' }, y: { min: 0, max: niceMax(Math.max(curveMax, 1e6)), fmt: usdAxis },
+        { id: 'c-lend-bd', spec: { x: { min: 0, max: 0.8, fmt: pctFmt0, label: 'TKN price drop' }, y: { min: 0, max: niceMax(Math.max(curveMax, 1e6)), fmt: usdAxis },
           series: [{ pts: r.curve, color: '--crit', fill: true }], vlines: [{ x: st.shock, color: '--accent', label: 'now ' + F.pct(st.shock, 0), dash: true }],
           points: [{ x: st.shock, y: r.badDebt, color: '--accent' }] } },
         { id: 'c-lend-rate', spec: (() => {
@@ -1060,18 +1060,18 @@ if (typeof module !== 'undefined') module.exports = Roles;
       const html = monitor(rows) + metrics([
         { l: 'Total borrowed', v: F.usd(r.totalBorrowed), s: `${r.n} borrowers` },
         { l: 'Utilization', v: r.U >= 1 ? '>100%' : F.pct(r.U), s: `borrow ${F.pct(r.bRate, 2)} · supply ${F.pct(r.sRate, 2)}` },
-        { l: 'SUI after the drop', v: '$' + r.P1.toFixed(2), s: `${MINUS}${F.pct(st.shock, 0)} from $2.00` },
+        { l: 'TKN after the drop', v: '$' + r.P1.toFixed(2), s: `${MINUS}${F.pct(st.shock, 0)} from $2.00` },
         { l: 'Liquidatable loans', v: String(r.liqCount), s: `${F.usd(r.liqDebt)} of debt` },
-        { l: 'SUI liquidators must sell', v: F.usd(r.demand), s: `capacity ${F.usd(r.capacity)}` },
+        { l: 'TKN liquidators must sell', v: F.usd(r.demand), s: `capacity ${F.usd(r.capacity)}` },
         { l: 'Slippage if sold at once', v: F.pct(r.slipAll), s: `bonus ${F.pct(st.bonus)}`, cls: r.slipAll > st.bonus / (1 + st.bonus) ? 'bad' : '' },
         { l: 'Bad debt', v: F.usd(r.badDebt), s: F.pct(bdShare, 2) + ' of borrowed', cls: r.badDebt >= 1 ? 'bad' : 'good' }
-      ]) + `<div class="charts two">${chartPanel('c-lend-bd', 'Bad debt vs SUI price drop', 'same market, every drop from 0 to 80%', [{ label: 'Bad debt', color: '--crit' }, { label: 'Current drop', color: '--accent', dash: true }])}${chartPanel('c-lend-rate', 'Interest rate curve', 'set by utilization', [{ label: 'Borrow rate', color: '--accent' }, { label: 'Lender rate', color: '--violet' }])}</div>` + notes([
+      ]) + `<div class="charts two">${chartPanel('c-lend-bd', 'Bad debt vs TKN price drop', 'same market, every drop from 0 to 80%', [{ label: 'Bad debt', color: '--crit' }, { label: 'Current drop', color: '--accent', dash: true }])}${chartPanel('c-lend-rate', 'Interest rate curve', 'set by utilization', [{ label: 'Borrow rate', color: '--accent' }, { label: 'Lender rate', color: '--violet' }])}</div>` + notes([
         'Borrowers: 300 positions with heavy-tailed sizes; LTVs spread around the average (standard deviation 12 points) and capped at max LTV. The optional whale sits 2 points under max LTV.',
-        'Each liquidation round repays close factor × debt and seizes repay × (1 + bonus) of SUI at the oracle price, repeating until the loan is healthy or the collateral runs out.',
+        'Each liquidation round repays close factor × debt and seizes repay × (1 + bonus) of TKN at the oracle price, repeating until the loan is healthy or the collateral runs out.',
         'Capacity: a liquidator breaks even when slippage equals bonus ÷ (1 + bonus). On a constant-product market that caps profitable selling at bonus × depth. “Depth” means all liquidity reachable during the crash window; arbitrage refills are not modeled.',
         'Gradual: the price falls in 60 steps and liquidators act at each one, riskiest loans first. Gap: the price jumps straight to the shocked level.',
         'Bad debt = debt left with no collateral behind it at the final price.',
-        'Left out: gas costs, oracle delay (see the Oracles lab), lenders withdrawing during the crash, and the pool’s USD depth shrinking as SUI falls.'
+        'Left out: gas costs, oracle delay (see the Oracles lab), lenders withdrawing during the crash, and the pool’s USD depth shrinking as TKN falls.'
       ]);
       return { html, charts, level: worst(rows), model: r };
     },
@@ -1082,27 +1082,27 @@ if (typeof module !== 'undefined') module.exports = Roles;
   LABS.push({
     key: 'amm', name: 'AMM and MEV',
     title: 'AMMs: slippage, concentrated liquidity, sandwiches',
-    blurb: 'A SUI/USDC pool at $2.00. Sell into it, spread the same capital over a narrow range, then see what a sandwich bot can take from a buyer with loose slippage settings.',
+    blurb: 'A TKN/USDC pool at $2.00. Sell into it, spread the same capital over a narrow range, then see what a sandwich bot can take from a buyer with loose slippage settings.',
     you: [
       { id: 'yAmount', label: 'Your amount', type: 'log', min: 100, max: 10e6, value: 10000, fmt: F.usd },
-      { id: 'yMove', label: 'SUI price move (for LPs)', min: -60, max: 60, step: 1, value: -20, scale: 0.01, fmt: v => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v) + '%' },
+      { id: 'yMove', label: 'TKN price move (for LPs)', min: -60, max: 60, step: 1, value: -20, scale: 0.01, fmt: v => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v) + '%' },
       { id: 'yVol', label: 'Volume while you provide (× pool size)', min: 0, max: 50, step: 1, value: 5, fmt: v => v + '×' }
     ],
     youNotes: [
-      'Sellers sell your amount of SUI at $2.00; the buyer spends your amount of USDC.',
-      'LPs: the market moves by “SUI price move” and arbitrage brings the pool to that price. Fees = fee tier × volume × your share. A concentrated position earns its depth multiple in fees while in range, prorated by how much of the move stayed inside the range.',
+      'Sellers sell your amount of TKN at $2.00; the buyer spends your amount of USDC.',
+      'LPs: the market moves by “TKN price move” and arbitrage brings the pool to that price. Fees = fee tier × volume × your share. A concentrated position earns its depth multiple in fees while in range, prorated by how much of the move stayed inside the range.',
       'Victim and bot: the same sandwich search as the engineer view, run on your amount.'
     ],
     controls: [
-      { grp: 'Pool (SUI at $2.00)' },
+      { grp: 'Pool (TKN at $2.00)' },
       { id: 'tvl', label: 'Pool liquidity (both sides)', type: 'log', min: 0.2e6, max: 200e6, value: 10e6, fmt: F.usd },
       { id: 'fee', label: 'Fee tier', type: 'seg', options: [[0.0005, '0.05%'], [0.003, '0.3%'], [0.01, '1%']], value: 0.003 },
       { grp: 'Your trade' },
-      { id: 'trade', label: 'Sell SUI worth', type: 'log', min: 1e3, max: 10e6, value: 50e3, fmt: F.usd },
+      { id: 'trade', label: 'Sell TKN worth', type: 'log', min: 1e3, max: 10e6, value: 50e3, fmt: F.usd },
       { grp: 'Concentrated liquidity' },
       { id: 'range', label: 'Same capital in a price range of', min: 1, max: 90, step: 1, value: 10, scale: 0.01, fmt: v => '±' + v + '%' },
       { grp: 'Sandwich attack' },
-      { id: 'victim', label: 'Victim buys SUI with', type: 'log', min: 1e3, max: 2e6, value: 50e3, fmt: F.usd },
+      { id: 'victim', label: 'Victim buys TKN with', type: 'log', min: 1e3, max: 2e6, value: 50e3, fmt: F.usd },
       { id: 'tol', label: 'Victim’s slippage tolerance', min: 0, max: 10, step: 0.1, value: 0.5, scale: 0.01, fmt: v => v.toFixed(1) + '%' }
     ],
     presets: [
@@ -1115,12 +1115,12 @@ if (typeof module !== 'undefined') module.exports = Roles;
       const r = Sim.amm({ price: 2, tvl: st.tvl, trade: st.trade, range: st.range, fee: st.fee });
       const sw = Sim.sandwich({ price: 2, tvl: st.tvl, victim: st.victim, tol: st.tol, fee: st.fee });
       const rows = [];
-      rows.push({ lv: r.cpSlip < 0.03 ? 'ok' : r.cpSlip < 0.1 ? 'warn' : 'crit', t: 'Slippage on a full-range pool', d: `Selling ${F.usd(st.trade)} of SUI returns ${F.usd(r.cpOut)}, ${F.pct(r.cpSlip, 2)} below $2.00 (fee included).` });
+      rows.push({ lv: r.cpSlip < 0.03 ? 'ok' : r.cpSlip < 0.1 ? 'warn' : 'crit', t: 'Slippage on a full-range pool', d: `Selling ${F.usd(st.trade)} of TKN returns ${F.usd(r.cpOut)}, ${F.pct(r.cpSlip, 2)} below $2.00 (fee included).` });
       if (r.cl.exhausted) rows.push({ lv: 'crit', t: 'Order runs out of the range', d: `The price hits the range’s lower edge at $${r.Pa.toFixed(2)}. Only ${F.usd(r.cl.filledIn * 2)} of the ${F.usd(st.trade)} order sells into this position; the rest needs other liquidity.` });
       else rows.push({ lv: 'ok', t: 'Concentrated position holds', d: `The trade stays inside ±${F.pct(st.range, 0)}. The same capital behaves like a full-range pool ${r.efficiency.toFixed(1)}× bigger: slippage ${F.pct(r.clSlip, 2)}.` });
       const move = r.cpNewP / 2 - 1;
-      rows.push({ lv: Math.abs(move) < 0.03 ? 'ok' : Math.abs(move) < 0.1 ? 'warn' : 'crit', t: 'Spot price after the trade', d: `Right after this one trade the pool quotes SUI at $${r.cpNewP.toFixed(3)} (${F.spct(move)}). A protocol using this pool’s spot price as its oracle would read that number.` });
-      if (sw.profitable) rows.push({ lv: 'crit', t: 'Sandwich is profitable', ref: 'MEV', d: `A bot buys ${F.usd(sw.best.A)} first, the victim receives ${F.pct(sw.victimLossPct, 2)} fewer SUI (worth ${F.usd(sw.victimLossUSD)}), and the bot sells back for ${F.usd(sw.best.profit)} profit after fees.` });
+      rows.push({ lv: Math.abs(move) < 0.03 ? 'ok' : Math.abs(move) < 0.1 ? 'warn' : 'crit', t: 'Spot price after the trade', d: `Right after this one trade the pool quotes TKN at $${r.cpNewP.toFixed(3)} (${F.spct(move)}). A protocol using this pool’s spot price as its oracle would read that number.` });
+      if (sw.profitable) rows.push({ lv: 'crit', t: 'Sandwich is profitable', ref: 'MEV', d: `A bot buys ${F.usd(sw.best.A)} first, the victim receives ${F.pct(sw.victimLossPct, 2)} fewer TKN (worth ${F.usd(sw.victimLossUSD)}), and the bot sells back for ${F.usd(sw.best.profit)} profit after fees.` });
       else rows.push({ lv: 'ok', t: 'No profitable sandwich', ref: 'MEV', d: `With ${F.pct(st.tol, 1)} tolerance on a ${F.usd(st.victim)} buy, fees cost a bot more than it could squeeze out.` });
       const near = r.curveCP.concat(r.curveCL).filter(p => p[0] <= st.trade * 10).map(p => p[1]);
       const ymax = niceMax(Math.min(60, Math.max(1, ...near)));
@@ -1234,36 +1234,36 @@ if (typeof module !== 'undefined') module.exports = Roles;
   LABS.push({
     key: 'lst', name: 'Liquid staking',
     title: 'Liquid staking tokens as collateral',
-    blurb: 'An LST like haSUI or afSUI grows against SUI as staking rewards accrue. Use it as collateral for a SUI loan, loop it, then let it trade below its redemption value.',
+    blurb: 'A liquid staking token (LST) grows against TKN as staking rewards accrue. Use it as collateral for a TKN loan, loop it, then let it trade below its redemption value.',
     you: [
-      { id: 'yAmount', label: 'Your amount', type: 'log', min: 1, max: 1e6, value: 1000, fmt: v => v.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' SUI' }
+      { id: 'yAmount', label: 'Your amount', type: 'log', min: 1, max: 1e6, value: 1000, fmt: v => v.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' TKN' }
     ],
     youNotes: [
-      'Amounts are in SUI. Debt and collateral are both SUI, so the SUI/USD price cancels out.',
+      'Amounts are in TKN. Debt and collateral are both TKN, so the TKN/USD price cancels out.',
       'The looper is shown at market value today. Liquidation follows this lab’s oracle choice, with a 50% close factor.',
-      'The liquidator repays your amount of SUI debt and sells the seized LST at market price minus slippage.'
+      'The liquidator repays your amount of TKN debt and sells the seized LST at market price minus slippage.'
     ],
     controls: [
       { grp: 'Liquid staking token' },
       { id: 'apr', label: 'Staking APR', min: 0, max: 8, step: 0.1, value: 2.5, scale: 0.01, fmt: v => v.toFixed(1) + '%' },
       { id: 'days', label: 'Days since launch', min: 0, max: 1460, step: 5, value: 365, fmt: v => v + ' days' },
       { id: 'discount', label: 'Market discount to redemption value', min: 0, max: 25, step: 0.1, value: 0.3, scale: 0.01, fmt: v => v.toFixed(1) + '%' },
-      { id: 'wait', label: 'Time to redeem for SUI', min: 1, max: 120, step: 1, value: 1, fmt: v => v + (v === 1 ? ' day' : ' days') },
-      { grp: 'Lending market (debt in SUI)' },
+      { id: 'wait', label: 'Time to redeem for TKN', min: 1, max: 120, step: 1, value: 1, fmt: v => v + (v === 1 ? ' day' : ' days') },
+      { grp: 'Lending market (debt in TKN)' },
       { id: 'oracle', label: 'Collateral is priced at', type: 'seg', options: [['redemption', 'Redemption rate'], ['market', 'Market price']], value: 'redemption' },
       { id: 'ltv', label: 'Loan LTV', min: 10, max: 90, step: 1, value: 70, scale: 0.01, fmt: v => v + '%' },
       { id: 'lt', label: 'Liquidation threshold', min: 50, max: 97, step: 1, value: 85, scale: 0.01, fmt: v => v + '%' },
       { id: 'bonus', label: 'Liquidation bonus', min: 1, max: 15, step: 0.5, value: 5, scale: 0.01, fmt: v => v + '%' },
       { id: 'dexSlip', label: 'Slippage selling seized LST', min: 0, max: 10, step: 0.1, value: 1, scale: 0.01, fmt: v => v.toFixed(1) + '%' },
       { grp: 'Looping' },
-      { id: 'loops', label: 'Loops (borrow SUI, stake, redeposit)', min: 0, max: 10, step: 1, value: 3, fmt: v => String(v) },
-      { id: 'borrowApr', label: 'SUI borrow APR', min: 0, max: 15, step: 0.1, value: 2, scale: 0.01, fmt: v => v.toFixed(1) + '%' }
+      { id: 'loops', label: 'Loops (borrow TKN, stake, redeposit)', min: 0, max: 10, step: 1, value: 3, fmt: v => String(v) },
+      { id: 'borrowApr', label: 'TKN borrow APR', min: 0, max: 15, step: 0.1, value: 2, scale: 0.01, fmt: v => v.toFixed(1) + '%' }
     ],
     presets: [
       { name: 'Normal', note: '<b>Start here.</b> The LST trades within 0.3% of its redemption value and redeems in a day. Three loops at 70% LTV earn more than plain staking.', set: {} },
       { name: 'stETH, June 2022', note: 'Withdrawals weren’t open yet, so stETH traded near 0.94 ETH for weeks. With a redemption-rate oracle, loans stay “healthy” while seized collateral is worth 6% less on the market.', set: { discount: 6, wait: 120 } },
       { name: 'Depeg, market oracle', note: 'Price collateral at the market and a 12% depeg pushes loopers under. Their liquidations sell more LST and deepen the discount: a cascade.', set: { discount: 12, oracle: 'market' } },
-      { name: 'Negative carry', note: 'Borrowing SUI costs 4% while staking pays 2.5%. Every extra loop loses money and adds liquidation risk.', set: { loops: 8, borrowApr: 4 } }
+      { name: 'Negative carry', note: 'Borrowing TKN costs 4% while staking pays 2.5%. Every extra loop loses money and adds liquidation risk.', set: { loops: 8, borrowApr: 4 } }
     ],
     render(st) {
       const r = Sim.lst({ apr: st.apr, days: st.days, discount: st.discount, wait: st.wait, collUnits: 1000, ltv: st.ltv, lt: st.lt, bonus: st.bonus, oracle: st.oracle, dexSlip: st.dexSlip, loops: st.loops, borrowApr: st.borrowApr });
@@ -1278,9 +1278,9 @@ if (typeof module !== 'undefined') module.exports = Roles;
       rows.push(r.liqProfit >= 0
         ? { lv: 'ok', t: 'Liquidations pay', d: `A liquidator seizing LST and selling it makes ${F.pct(r.liqProfit, 2)} per liquidation.` }
         : { lv: 'crit', t: 'Liquidations lose money', d: `A liquidator loses ${F.pct(-r.liqProfit, 2)} per liquidation: the ${F.pct(st.bonus, 1)} bonus can’t cover ${mk ? '' : `the ${F.pct(st.discount, 1)} discount and `}${F.pct(st.dexSlip, 1)} slippage. Unhealthy loans would sit unliquidated unless liquidators wait ${st.wait} day${st.wait > 1 ? 's' : ''} to redeem.` });
-      if (st.loops === 0) rows.push({ lv: 'ok', t: 'Looped position', d: 'No loops: this position carries no SUI debt, so it cannot be liquidated.' });
+      if (st.loops === 0) rows.push({ lv: 'ok', t: 'Looped position', d: 'No loops: this position carries no TKN debt, so it cannot be liquidated.' });
       else rows.push({ lv: loopHf >= 1.1 ? 'ok' : loopHf >= 1 ? 'warn' : 'crit', t: `Looped position (${r.lev.toFixed(2)}×)`, d: `Health factor ${loopHf.toFixed(3)} under the ${mk ? 'market-price' : 'redemption-rate'} oracle.${mk ? ` It is liquidated once the discount passes ${F.pct(r.loopLiqDiscount, 1)}.` : ` Under a market-price oracle it would be liquidated past a ${F.pct(r.loopLiqDiscount, 1)} discount.`}` });
-      if (st.loops > 0) rows.push({ lv: r.netApr < 0 ? 'crit' : r.netApr < st.apr ? 'warn' : 'ok', t: 'Loop carry', d: `Looping ${r.lev.toFixed(2)}× earns ${F.pct(r.netApr, 2)} vs ${F.pct(st.apr, 2)} for plain staking${r.netApr < st.apr ? `, because borrowing SUI costs ${F.pct(st.borrowApr, 1)}` : ''}.` });
+      if (st.loops > 0) rows.push({ lv: r.netApr < 0 ? 'crit' : r.netApr < st.apr ? 'warn' : 'ok', t: 'Loop carry', d: `Looping ${r.lev.toFixed(2)}× earns ${F.pct(r.netApr, 2)} vs ${F.pct(st.apr, 2)} for plain staking${r.netApr < st.apr ? `, because borrowing TKN costs ${F.pct(st.borrowApr, 1)}` : ''}.` });
       const hfR = [], hfM = [];
       for (let d = 0; d <= 0.3001; d += 0.005) { hfM.push([d, ((1 - d) * st.lt) / r.leff]); hfR.push([d, st.lt / r.leff]); }
       const ymax = Math.max(2, Math.ceil((st.lt / r.leff) * 1.15 * 4) / 4);
@@ -1288,8 +1288,8 @@ if (typeof module !== 'undefined') module.exports = Roles;
         series: [{ pts: hfR, color: '--accent' }, { pts: hfM, color: '--warm' }], hlines: [{ y: 1, color: '--crit', dash: true }], vlines: [{ x: st.discount, color: '--muted', dash: true, label: 'now ' + F.pct(st.discount, 1) }],
         points: [{ x: st.discount, y: loopHf, color: mk ? '--warm' : '--accent' }] } }];
       const html = monitor(rows) + metrics([
-        { l: 'Exchange rate', v: r.rate.toFixed(4), s: 'SUI per LST at redemption' },
-        { l: 'Market price', v: r.marketRate.toFixed(4), s: 'SUI per LST on the market' },
+        { l: 'Exchange rate', v: r.rate.toFixed(4), s: 'TKN per LST at redemption' },
+        { l: 'Market price', v: r.marketRate.toFixed(4), s: 'TKN per LST on the market' },
         { l: 'Arbitrage yield', v: F.pct(r.arbAnnual, 0), s: 'per year, buy and redeem' },
         { l: 'Single loan health factor', v: hf.toFixed(3), s: `at ${F.pct(st.ltv, 0)} LTV`, cls: hf < 1 ? 'bad' : '' },
         { l: 'Liquidator P/L', v: F.spct(r.liqProfit, 2), s: 'if a liquidation happened now', cls: r.liqProfit < 0 ? 'bad' : '' },
@@ -1297,9 +1297,9 @@ if (typeof module !== 'undefined') module.exports = Roles;
         { l: 'Loop net APR', v: F.pct(r.netApr, 2), s: 'plain staking ' + F.pct(st.apr, 2), cls: r.netApr < st.apr ? 'bad' : '' },
         { l: 'Loop liquidated at a discount of', v: F.pct(r.loopLiqDiscount, 1), s: 'under a market-price oracle' }
       ]) + chartPanel('c-lst', 'Looped position: health factor vs depeg', 'liquidatable below 1', [{ label: 'Redemption-rate oracle', color: '--accent' }, { label: 'Market-price oracle', color: '--warm' }, { label: 'Health factor 1', color: '--crit', dash: true }]) + notes([
-        'The exchange rate compounds daily at the staking APR. Redeeming takes the chosen wait; on Sui, unstaking completes at the end of an epoch (about a day).',
-        'Debt and collateral are both in SUI, so the SUI/USD price cancels out. Only the LST/SUI ratio moves health factors.',
-        'Looping: deposit, borrow SUI at the loan LTV, stake it, redeposit. Leverage = (1 − LTV^(loops + 1)) ÷ (1 − LTV).',
+        'The exchange rate compounds daily at the staking APR. Redeeming takes the chosen wait; on many proof-of-stake chains, unstaking completes at the end of an epoch (here, about a day).',
+        'Debt and collateral are both in TKN, so the TKN/USD price cancels out. Only the LST/TKN ratio moves health factors.',
+        'Looping: deposit, borrow TKN at the loan LTV, stake it, redeposit. Leverage = (1 − LTV^(loops + 1)) ÷ (1 − LTV).',
         'Liquidator P/L = (1 + bonus) × (market price ÷ oracle price) × (1 − slippage) − 1. Redeeming instead avoids the discount but locks capital for the wait.',
         'Left out: validator slashing, redemption queues that grow in a panic, and the liquidation cascade’s own effect on the discount.'
       ]);
@@ -1312,18 +1312,18 @@ if (typeof module !== 'undefined') module.exports = Roles;
   LABS.push({
     key: 'oracle', name: 'Oracles',
     title: 'Oracles: staleness, confidence, TWAP, manipulation',
-    blurb: 'Four hours of SUI price with a crash in the middle. Tune how the feed updates and what the protocol accepts, then see when liquidations actually fire. Below it: a flash-loan attack on a market priced from a DEX.',
+    blurb: 'Four hours of TKN price with a crash in the middle. Tune how the feed updates and what the protocol accepts, then see when liquidations actually fire. Below it: a flash-loan attack on a market priced from a DEX.',
     you: [
       { id: 'yAmount', label: 'Your amount', type: 'log', min: 100, max: 10e6, value: 10000, fmt: F.usd },
       { id: 'yPool', label: 'Deposits in the attacked market', type: 'log', min: 1e6, max: 500e6, value: 20e6, fmt: F.usd }
     ],
     youNotes: [
       'Lender: shares the attacker’s hole (what was borrowed minus the abandoned collateral) in proportion to deposits.',
-      'Borrower: posts your amount of SUI with debt set so the health factor hits 1 at the liquidation trigger (threshold 80%, bonus 5%, close factor 50%). Liquidated when the protocol first accepts a price below the trigger.',
-      'Liquidator: repays your amount of that debt and is paid in SUI valued at the protocol’s price, then values it at the real market price.'
+      'Borrower: posts your amount of TKN with debt set so the health factor hits 1 at the liquidation trigger (threshold 80%, bonus 5%, close factor 50%). Liquidated when the protocol first accepts a price below the trigger.',
+      'Liquidator: repays your amount of that debt and is paid in TKN valued at the protocol’s price, then values it at the real market price.'
     ],
     controls: [
-      { grp: 'Market (SUI starts at $2.00)' },
+      { grp: 'Market (TKN starts at $2.00)' },
       { id: 'vol', label: 'Volatility per minute', min: 0.05, max: 1, step: 0.05, value: 0.2, scale: 0.01, fmt: v => v.toFixed(2) + '%' },
       { id: 'crash', label: 'Crash size', min: 0, max: 50, step: 1, value: 20, scale: 0.01, fmt: v => v + '%' },
       { id: 'crashAt', label: 'Crash starts at minute', min: 20, max: 200, step: 5, value: 120, fmt: v => String(v) },
@@ -1407,7 +1407,7 @@ if (typeof module !== 'undefined') module.exports = Roles;
         { l: 'Pumped spot price', v: '×' + fa.m.toFixed(2), s: 'after the flash-loan buy' },
         { l: 'TWAP moves', v: '×' + fa.twapM.toFixed(4), s: `held ${st.aHold < 60 ? Math.round(st.aHold) + ' s' : (st.aHold / 60).toFixed(1) + ' min'} of ${st.twap} min` },
         { l: 'Attacker’s profit', v: F.usd(Math.max(0, prof)), s: spot ? 'market reads spot' : 'market reads TWAP', cls: prof > 0 ? 'bad' : 'good' }
-      ]) + chartPanel('c-orc', 'Four hours of SUI price', 'shaded minutes: the protocol rejected the price', [{ label: 'Market', color: '--faint' }, { label: 'Oracle reported', color: '--accent' }, { label: `TWAP (${st.twap} min)`, color: '--warm', dash: true }, { label: 'Liquidation trigger', color: '--muted', dash: true }, { label: 'Rejected', color: '--crit-soft', band: true }]) + notes([
+      ]) + chartPanel('c-orc', 'Four hours of TKN price', 'shaded minutes: the protocol rejected the price', [{ label: 'Market', color: '--faint' }, { label: 'Oracle reported', color: '--accent' }, { label: `TWAP (${st.twap} min)`, color: '--warm', dash: true }, { label: 'Liquidation trigger', color: '--muted', dash: true }, { label: 'Rejected', color: '--crit-soft', band: true }]) + notes([
         'Market price: a random walk with the chosen per-minute volatility, plus a crash spread evenly over its duration. The path is seeded so runs repeat; the button draws a new one.',
         'Feed: pushes a new price when the market moves more than the deviation threshold or the heartbeat runs out, and nothing during an outage. Confidence widens with recent volatility, like a Pyth confidence interval.',
         'Protocol: rejects prices older than the age limit or with confidence wider than the limit. A rejected minute means no liquidations that minute.',
@@ -1448,7 +1448,7 @@ if (typeof module !== 'undefined') module.exports = Roles;
       { name: 'Inflation attack', note: '<b>Start here.</b> An empty vault. The attacker deposits 1 raw unit, sends 10,000 USDC straight to the vault, and the victim’s 10,000 USDC deposit rounds down to 0 shares.', set: {} },
       { name: 'OpenZeppelin defense', note: 'Virtual shares and assets with offset 3. The same attack now costs the attacker about half the donation, and the victim loses dust.', set: { defense: 'offset', offset: 3 } },
       { name: 'Offset 0', note: 'Offset 0 already makes the attack unprofitable, but the victim still loses a third. The attack turns into pure griefing.', set: { defense: 'offset', offset: 0 } },
-      { name: 'Rounding-up bug', note: 'A busy vault where one share is worth 1,000 USDC. Rounding up on deposit mints a whole share for 1 raw unit. This is what the Sui Prover spec catches.', set: { A0: 1e6, S0: 1000, att: 1, donation: 0, victim: 0, round: 'up' } }
+      { name: 'Rounding-up bug', note: 'A busy vault where one share is worth 1,000 USDC. Rounding up on deposit mints a whole share for 1 raw unit. This is what a share-price invariant catches.', set: { A0: 1e6, S0: 1000, att: 1, donation: 0, victim: 0, round: 'up' } }
     ],
     render(st) {
       const u = x => BigInt(Math.round(x * 1e6));
@@ -1467,8 +1467,8 @@ if (typeof module !== 'undefined') module.exports = Roles;
         : { lv: 'ok', t: 'Attack doesn’t pay', d: `The attacker spent ${F.units(BigInt(Math.round(st.att)) + u(st.donation))} and redeemed ${F.units(r.a4)}: a ${F.units(-r.attProfit)} loss.` });
       const failed = r.log.filter(x => x.check === 'fail');
       rows.push(failed.length
-        ? { lv: 'crit', t: 'Share price fell', ref: 'Sui Prover spec', d: `Step ${failed.map(x => x.step).join(', ')} lowered the value of a share. The spec <code>new_shares × old_assets ≤ old_shares × new_assets</code> rejects this code.` }
-        : { lv: 'ok', t: 'Share price never fell', ref: 'Sui Prover spec', d: 'Every deposit and redeem kept <code>new_shares × old_assets ≤ old_shares × new_assets</code>.' });
+        ? { lv: 'crit', t: 'Share price fell', ref: 'Share-price invariant', d: `Step ${failed.map(x => x.step).join(', ')} lowered the value of a share. The spec <code>new_shares × old_assets ≤ old_shares × new_assets</code> rejects this code.` }
+        : { lv: 'ok', t: 'Share price never fell', ref: 'Share-price invariant', d: 'Every deposit and redeem kept <code>new_shares × old_assets ≤ old_shares × new_assets</code>.' });
       if (r.leftover > 0n) rows.push({ lv: 'ok', t: 'Left in the vault', d: `${F.units(r.leftover)} stays behind after everyone redeems${st.defense === 'offset' ? ', owned by the virtual shares' : ''}.` });
       const price = x => { if (x.vsh === 0n) return '—'; const v = Number(x.vas) / Number(x.vsh); return v >= 1e4 ? v.toExponential(3) : v.toPrecision(5); };
       const table = `<section class="panel"><h3>Step by step <small>raw integer state after each step</small></h3><div class="tbl-wrap"><table class="log"><thead><tr><th>Step</th><th>Action</th><th class="n">Total assets</th><th class="n">Total shares (raw)</th><th class="n">Assets per share (raw)</th><th>Price check</th></tr></thead><tbody>${r.log.map(x =>
@@ -1483,7 +1483,7 @@ if (typeof module !== 'undefined') module.exports = Roles;
         'Naive math: the first deposit mints shares 1:1; after that, shares = assets × total shares ÷ total assets.',
         'Virtual offset (OpenZeppelin ERC-4626): shares = assets × (total shares + 10^offset) ÷ (total assets + 1), and the reverse for redeeming.',
         'A direct transfer (the “donation”) raises total assets without minting shares, which is what inflates the share price.',
-        'The price check is the spec from the Sui Prover README, cross-multiplied to avoid division: after a deposit or redeem, new_shares × old_assets ≤ old_shares × new_assets.'
+        'The price check is a share-price invariant, cross-multiplied to avoid division: after a deposit or redeem, new_shares × old_assets ≤ old_shares × new_assets.'
       ]);
       return { html, charts: [], level: worst(rows), model: { r } };
     },

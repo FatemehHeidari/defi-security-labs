@@ -161,7 +161,7 @@ details.rules ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px;
 <div class="row"><button type="button" class="btn" id="long-eve">Long</button><button type="button" class="btn" id="short-eve">Short</button><button type="button" class="btn" id="close-eve">Close</button><button type="button" class="btn" id="add-eve">+$500 margin</button><button type="button" class="btn danger" id="liq-eve">Liquidate</button></div></div>
       </details>
       <details class="panel rules"><summary>The rules in this lab</summary><ul>
-        <li>One market, SUI. The vAMM starts at 100,000 vSUI and $200,000 of virtual USDC (x × y = k), price $2.</li>
+        <li>One market, TKN. The vAMM starts at 100,000 vTKN and $200,000 of virtual USDC (x × y = k), price $2.</li>
         <li>Initial margin 10% (max 10×). Maintenance margin 6.25%. Fee: 0.1% of each trade to the insurance fund.</li>
         <li>Funding each hour = position size × (vAMM − oracle) ÷ 24. Longs pay when the vAMM is above the oracle. The insurance fund pays or keeps whatever longs and shorts don’t cancel. Real v1 uses one-hour averages (TWAPs); this lab uses the prices at that moment.</li>
         <li>Liquidation below 6.25%: if the margin ratio is still above 1.25%, close 25% and charge 1.25% of it (half keeper, half fund). Otherwise close it all: the keeper gets half of 1.25%, the rest of the margin goes to the fund, and any loss beyond the margin is bad debt the fund pays.</li>
@@ -246,7 +246,7 @@ const Perp = (() => {
     else t.pos = { side, size, open: notional, margin, funding: 0, entry: notional / Math.abs(size), lev };
     ev(S, 'trade', `${t.name} ${adding ? 'adds to her' : 'opens a'} ${lev}× ${side}: $${fmt(margin)} margin, $${fmt(notional)} position`,
       [[t.name, 'Vault', margin, 'margin'], [t.name, 'Insurance fund', fee, '0.1% spread fee']],
-      `${side === 'long' ? 'Buying' : 'Selling'} ${fmtN(Math.abs(size))} vSUI from the vAMM moves its price from $${p0.toFixed(4)} to $${price(S).toFixed(4)} (average $${(notional / Math.abs(size)).toFixed(4)}). The oracle didn’t move; only this trade did.`);
+      `${side === 'long' ? 'Buying' : 'Selling'} ${fmtN(Math.abs(size))} vTKN from the vAMM moves its price from $${p0.toFixed(4)} to $${price(S).toFixed(4)} (average $${(notional / Math.abs(size)).toFixed(4)}). The oracle didn’t move; only this trade did.`);
     snap(S, `${t.name} ${side}`);
     return { ok: true };
   }
@@ -316,9 +316,9 @@ const Perp = (() => {
     if (amm > 0.0001) { S.vault -= amm; S.IF += amm; flows.push(['Vault', 'Insurance fund', amm, 'funding surplus']); }
     else if (amm < -0.0001) { const c = Math.min(-amm, S.IF); S.IF -= c; S.vault += c; flows.push(['Insurance fund', 'Vault', c, 'funding shortfall']); }
     ev(S, 'funding', `Hour ${S.hour}: funding ${Math.abs(prem) < 1e-6 ? 'is zero' : prem > 0 ? '(longs pay shorts)' : '(shorts pay longs)'}`, flows,
-      `vAMM $${mark.toFixed(4)} − oracle $${idx.toFixed(4)} = ${sgnD(prem)} per vSUI; one hour is 1/24 of that: ${sgnD(frac, 5)} per vSUI. ` +
+      `vAMM $${mark.toFixed(4)} − oracle $${idx.toFixed(4)} = ${sgnD(prem)} per vTKN; one hour is 1/24 of that: ${sgnD(frac, 5)} per vTKN. ` +
       (lines.length ? lines.join('; ') + '. ' : netSize(S) === 0 && !Object.values(S.traders).some(t => t.pos) ? 'No open positions. ' : 'Nobody pays this hour. ') +
-      (Math.abs(amm) > 0.0001 ? `Longs and shorts don’t cancel (net ${net > 0 ? 'long' : 'short'} ${fmtN(Math.abs(net))} vSUI), so the insurance fund ${amm > 0 ? 'keeps' : 'pays'} the difference, $${fmt(Math.abs(amm))}.` : ''));
+      (Math.abs(amm) > 0.0001 ? `Longs and shorts don’t cancel (net ${net > 0 ? 'long' : 'short'} ${fmtN(Math.abs(net))} vTKN), so the insurance fund ${amm > 0 ? 'keeps' : 'pays'} the difference, $${fmt(Math.abs(amm))}.` : ''));
     repegCheck(S);
     snap(S, `Hour ${S.hour}`);
   }
@@ -490,7 +490,7 @@ if (typeof module !== 'undefined') module.exports = Perp;
         }
         return st;
       })(),
-      takeaway: S => `Same $25,000 short, and Alice still loses her $1,000, but there is no bad debt. The insurance fund ends ${sgn(S.IF - S.IF0)} instead of −$1,208.76 in lesson 4. Keepers shrank Alice’s position between Carol’s trades, so her loss never outran her margin. Carol’s short is up ${sgn(S.traders.carol.pos ? Perp.pnl(S, S.traders.carol.pos) : 0)}, less than the +$2,195 in lesson 4, because Alice’s vSUI was sold before Carol’s later trades, so Carol shorted at lower prices. The keeper earned ${usd(S.keeper)}.` },
+      takeaway: S => `Same $25,000 short, and Alice still loses her $1,000, but there is no bad debt. The insurance fund ends ${sgn(S.IF - S.IF0)} instead of −$1,208.76 in lesson 4. Keepers shrank Alice’s position between Carol’s trades, so her loss never outran her margin. Carol’s short is up ${sgn(S.traders.carol.pos ? Perp.pnl(S, S.traders.carol.pos) : 0)}, less than the +$2,195 in lesson 4, because Alice’s vTKN was sold before Carol’s later trades, so Carol shorted at lower prices. The keeper earned ${usd(S.keeper)}.` },
     { key: 'repeg', title: 'Repeg', tag: '5', opts: { insurance: 2000 },
       intro: 'If funding doesn’t close the gap, this design moves the vAMM price itself after three hours over 10%. Someone pays for that.',
       steps: [
@@ -601,7 +601,7 @@ if (typeof module !== 'undefined') module.exports = Perp;
     const flags = `<span class="flags" title="Hours in a row over the 10% limit">${[0, 1, 2].map(i => `<i class="${i < S.flags ? 'on' : ''}"></i>`).join('')}</span>`;
     const owed = Perp.owed(S), cover = S.vault + S.IF;
     $('kpis').innerHTML = [
-      kpi('vAMM price', '$' + p.toFixed(4), `${nf(S.B)} vSUI · ${usd(S.Q)}`),
+      kpi('vAMM price', '$' + p.toFixed(4), `${nf(S.B)} vTKN · ${usd(S.Q)}`),
       kpi(S.lag ? 'Oracle (lagging)' : 'Oracle (real price)', '$' + S.oracle.toFixed(4), `gap ${spct(gap)}${over ? ' · over 10%' : ''} ${flags}${S.lag ? ` · real price $${S.real.toFixed(2)}` : ''}`, over ? 'alert' : ''),
       kpi('Insurance fund', usd(S.IF), `${sgn(S.IF - S.IF0)} since start`, 'fund'),
       kpi('Vault (traders’ margin)', usd(S.vault), owed > cover + 0.01 ? `owes ${usd(owed)}: short ${usd(owed - cover)}` : `owes ${usd(owed)} if all closed`, owed > cover + 0.01 ? 'alert' : ''),
@@ -616,7 +616,7 @@ if (typeof module !== 'undefined') module.exports = Perp;
       const w = Math.max(0, Math.min(100, (mr / 0.25) * 100)), cls = mr < Perp.P.mmr ? 'crit' : mr < 0.1 ? 'warn' : '';
       return `<tr class="${mr < Perp.P.mmr ? 'liq' : ''}"><td>${t.name}</td><td><span class="side ${p.side}">${p.side}</span> ${p.lev}×</td><td class="n">${nf(Math.abs(p.size))}</td><td class="n">$${p.entry.toFixed(4)}</td><td class="n">${usd(p.margin)}</td><td class="n ${pl > 0.004 ? 'up' : pl < -0.004 ? 'dn' : ''}">${sgn(pl)}</td><td class="n ${p.funding < -0.004 ? 'up' : p.funding > 0.004 ? 'dn' : ''}">${sgn(-p.funding)}</td><td class="n">${usd(eq)}</td><td><div class="mr"><span class="n">${pct(mr)}</span><span class="mrbar" title="Liquidation below 6.25%"><i class="${cls}" style="width:${w.toFixed(1)}%"></i><b style="left:25%"></b><b class="p" style="left:5%"></b></span></div></td></tr>`;
     });
-    $('pos').innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Trader</th><th>Side</th><th class="n">Size (vSUI)</th><th class="n">Entry</th><th class="n">Margin</th><th class="n">Profit/loss</th><th class="n">Funding</th><th class="n">Equity</th><th class="n">Margin ratio</th></tr></thead><tbody>${rows.join('')}</tbody></table></div><p class="d">Margin ratio = equity ÷ position value. The red mark is 6.25%: below it, a keeper can liquidate. The amber mark is 1.25%: below it, liquidation is full instead of 25%.</p>` : '<p class="d">No open positions.</p>';
+    $('pos').innerHTML = rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Trader</th><th>Side</th><th class="n">Size (vTKN)</th><th class="n">Entry</th><th class="n">Margin</th><th class="n">Profit/loss</th><th class="n">Funding</th><th class="n">Equity</th><th class="n">Margin ratio</th></tr></thead><tbody>${rows.join('')}</tbody></table></div><p class="d">Margin ratio = equity ÷ position value. The red mark is 6.25%: below it, a keeper can liquidate. The amber mark is 1.25%: below it, liquidation is full instead of 25%.</p>` : '<p class="d">No open positions.</p>';
   }
   function renderLog() {
     const items = S.log.slice().reverse().map((e, i) => `<li class="kind-${e.kind}${i === 0 ? ' latest' : ''}${e.kind === 'fail' ? ' fail' : ''}"><div class="t"><span>hour ${e.hour}</span>${e.title}</div>${e.note ? `<p class="note">${e.note}</p>` : ''}${e.flows.length ? `<div class="flows">${e.flows.filter(f => f[2] > 0.004).map(f => `<span class="flow${/Insurance/.test(f[0] + f[1]) ? ' if' : ''}">${f[0]} → ${f[1]} ${usd(f[2])}${f[3] ? ' · ' + f[3] : ''}</span>`).join('')}</div>` : ''}</li>`);

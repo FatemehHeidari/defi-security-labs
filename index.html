@@ -127,7 +127,7 @@ footer { padding-block: 0 40px; color: var(--faint); font-size: 13px; }
       <article class="lab pdesk">
         <span class="tag">Real-time game · perps</span>
         <h2>Perp Panic Desk</h2>
-        <p>You get $10,000 and 24 hours of a SUI perpetual on a vAMM, in the style of Perpetual Protocol v1. Go long or short up to 10×, stake in the insurance fund, or liquidate others as a keeper.</p>
+        <p>You get $10,000 and 24 hours of a TKN perpetual on a vAMM, in the style of Perpetual Protocol v1. Go long or short up to 10×, stake in the insurance fund, or liquidate others as a keeper.</p>
         <ul>
           <li>Eight scenarios, from crowded longs bleeding funding and long and short squeezes to a slow oracle, a gap crash that empties the insurance fund, and a repeg</li>
           <li>Before you start, it runs seven positions on the same market (2× and 10× longs and shorts, an insurance fund stake, a keeper) and shows what goes wrong for each</li>
@@ -174,7 +174,7 @@ footer { padding-block: 0 40px; color: var(--faint); font-size: 13px; }
         <tbody>
           <tr><td>Panic Desk</td><td>The debrief said a loan became liquidatable at minute 58 but was liquidated at minute 51.</td><td>Record the health factor before bots act each minute, not after.</td><td class="how">my review</td></tr>
           <tr><td>Panic Desk</td><td>Each move's impact, computed by leaving that one move out, didn't add up to the total result.</td><td>Score moves in sequence, so the impacts sum to the final result.</td><td class="how">my review</td></tr>
-          <tr><td>Panic Desk</td><td>"If you had stopped after this buy" priced SUI at the session's end, which read as if the price had already crashed at minute 0.</td><td>Reworded so both endings are clearly held to the end of the session.</td><td class="how">my review</td></tr>
+          <tr><td>Panic Desk</td><td>"If you had stopped after this buy" priced TKN at the session's end, which read as if the price had already crashed at minute 0.</td><td>Reworded so both endings are clearly held to the end of the session.</td><td class="how">my review</td></tr>
           <tr><td>Crash Chain</td><td>One unprofitable loan stopped all liquidations for the rest of the run.</td><td>Skip that loan and continue with the next one.</td><td class="how">agent’s tests</td></tr>
           <tr><td>Perp Workbench</td><td>The total-USDC check counted unpaid IOUs as money.</td><td>Count only real cash, and report unpaid amounts separately.</td><td class="how">agent’s tests</td></tr>
           <tr><td>Risk Lab</td><td>The insurance fund could go negative.</td><td>Floor it at zero and show the shortfall as its own line.</td><td class="how">agent’s tests</td></tr>
